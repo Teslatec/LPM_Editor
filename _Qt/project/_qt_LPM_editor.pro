@@ -35,7 +35,8 @@ SOURCES += \
     editor/text_editor_controller.c \
     editor/text_editor_command_reader.c \
     editor/text_editor_text_operator.c \
-    tests/test_text_buffer.cpp
+    tests/test_text_buffer.cpp \
+    editor/text_editor_text_storage.c
 
 HEADERS += \
         mainwindow.h \
@@ -62,7 +63,8 @@ HEADERS += \
     system/lpm_unicode_display.h \
     system/lpm_unicode_keyboard.h \
     system/lpm_error.h \
-    tests/test_text_buffer.h
+    tests/test_text_buffer.h \
+    editor/text_editor_text_storage.h
 
 FORMS += \
         mainwindow.ui

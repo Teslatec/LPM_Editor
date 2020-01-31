@@ -1,14 +1,12 @@
 #ifndef TEXT_EDITOR_TEXT_OPERATOR_H
 #define TEXT_EDITOR_TEXT_OPERATOR_H
 
-#include "lpm_unicode.h"
+#include "text_editor_text_storage.h"
 
 typedef struct TextEditorTextOperator
 {
-    Unicode_Buf textBuffer;
-    size_t endOfText;
+    TextEditorTextStorage storage;
 } TextEditorTextOperator;
-
 
 void TextEditorTextOperator_init( TextEditorTextOperator * o,
                                   const Unicode_Buf * textBuffer );
@@ -24,25 +22,7 @@ void TextEditorTextOperator_read( TextEditorTextOperator * o,
 
 inline size_t TextEditorTextOperator_freeSize(TextEditorTextOperator * o)
 {
-    return o->textBuffer.size - o->endOfText;
+    return TextEditorTextStorage_freeSize(o->storage);
 }
-
-//void TextEditorTextOperator_insert( TextEditorTextOperator * obj,
-//                                    const Unicode_Buf * buf );
-//void TextEditorTextOperator_replace( TextEditorTextOperator * obj,
-//                                     const Unicode_Buf * buf );
-//void TextEditorTextOperator_remove( TextEditorTextOperator * obj,
-//                                    uint32_t pos );
-
-//unicode_t TextEditorTextOperator_readChar(TextEditorTextOperator * obj);
-//void TextEditorTextOperator_readBuffer(TextEditorTextOperator * obj, Unicode_Buf * textBuffer);
-
-//const unicode_t * TextEditorTextOperator_data( TextEditorTextOperator * obj,
-//                                               uint32_t pos );
-
-//size_t TextEditorTextOperator_textSize(TextEditorTextOperator * obj);
-
-//void TextEditorTextOperator_sync(TextEditorTextOperator * obj);
-
 
 #endif // TEXT_EDITOR_TEXT_OPERATOR_H
