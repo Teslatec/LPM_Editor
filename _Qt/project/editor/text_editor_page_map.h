@@ -11,12 +11,6 @@ typedef struct TextEditorLineMap
     uint32_t end;
 } TextEditorLineMap;
 
-typedef struct TextEditorCursor
-{
-    uint32_t inputPosition;
-    uint32_t highlightBound;
-} TextEditorCursor;
-
 typedef struct TextEditorLineTable
 {
     TextEditorLineMap * buf;
@@ -26,8 +20,8 @@ typedef struct TextEditorLineTable
 typedef struct TextEditorPageMap
 {
     TextEditorLineTable lineTable;
-    LPM_Cursor oDeviceCursor;
-    TextEditorCursor textCursor;
+    LPM_DisplayCursor   displayCursor;
+    LPM_SelectionCursor selectionCursor;
     uint16_t currentPage;
     uint16_t pageAmount;
     bool isReplacementMode;

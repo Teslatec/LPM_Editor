@@ -23,19 +23,21 @@ void TextEditorTextStorage_replace( TextEditorTextStorage * o,
 void TextEditorTextStorage_remove( TextEditorTextStorage * o,
                                    size_t pos,
                                    size_t len );
-void TextEditorTextStorage_truncate( TextEditorTextStorage,
+void TextEditorTextStorage_truncate( TextEditorTextStorage * o,
                                      size_t pos );
 
 void TextEditorTextStorage_read( TextEditorTextStorage * o,
                                  size_t readPosition,
                                  Unicode_Buf * readTextBuffer );
 
-inline size_t TextEditorTextStorage_endOfText(TextEditorTextStorage * o)
+void TextEditorTextStorage_sync(TextEditorTextStorage * o);
+
+inline size_t TextEditorTextStorage_endOfText(const TextEditorTextStorage * o)
 {
     return o->endOfText;
 }
 
-size_t TextEditorTextStorage_freeSize(TextEditorTextStorage * o)
+inline size_t TextEditorTextStorage_freeSize(const TextEditorTextStorage * o)
 {
     return o->textBuffer.size - o->endOfText;
 }

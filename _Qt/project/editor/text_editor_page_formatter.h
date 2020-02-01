@@ -16,7 +16,7 @@ void TextEditorPageFormatter_init( TextEditorPageFormatter * obj,
                                    const TextEditorLineTable * prevLineTable,
                                    const Unicode_Buf * lineBuffer );
 void TextEditorPageFormatter_updateCursor( TextEditorPageFormatter * obj,
-                                           const LPM_Cursor * cursor );
+                                           const LPM_DisplayCursor * cursor );
 void TextEditorPageFormatter_updateText( TextEditorPageFormatter * obj,
                                          const Unicode_Buf * text,
                                          const TextEditorLineMap * updatedLineTable );

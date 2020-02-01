@@ -6,7 +6,7 @@ static void writeLine( LPM_UnicodeDisplay * i,
                        const LPM_Point * position );
 
 static void setCursor( LPM_UnicodeDisplay * i,
-                       const LPM_Cursor * cursor );
+                       const LPM_DisplayCursor * cursor );
 static void clearScreen(LPM_UnicodeDisplay * i);
 
 static const LPM_UnicodeDisplayFxns fxns =
@@ -39,7 +39,7 @@ void writeLine( LPM_UnicodeDisplay * i,
 }
 
 void setCursor( LPM_UnicodeDisplay * i,
-                const LPM_Cursor * cursor )
+                const LPM_DisplayCursor * cursor )
 {
     ((TestDisplay*)i)->interactor->setCursor(
                 QPoint(cursor->begin.x, cursor->begin.y),

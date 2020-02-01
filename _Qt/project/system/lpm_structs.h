@@ -15,6 +15,12 @@ typedef struct LPM_Point
     uint8_t y;
 } LPM_Point;
 
+typedef struct LPM_SelectionCursor
+{
+    size_t pos;
+    size_t len;
+} LPM_SelectionCursor;
+
 /*
  * Курсор дисплея:
  *  begin - точка, в которой начинается выделение текста
@@ -23,11 +29,11 @@ typedef struct LPM_Point
  * Гарантируется, что при отсчете от левого верхнего угла точка begin
  *  всегда "первее" точки end
  */
-typedef struct LPM_Cursor
+typedef struct LPM_DisplayCursor
 {
     LPM_Point begin;
     LPM_Point end;
-} LPM_Cursor;
+} LPM_DisplayCursor;
 
 
 #endif // LPM_STRUCTS_H

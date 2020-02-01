@@ -16,7 +16,7 @@ typedef struct LPM_UnicodeDisplayFxns
                           const Unicode_Buf * lineBuf,
                           const LPM_Point * position );    // у - индекс строки, в которую выводим, x - смещение точки ввода от левого края
     void (*setCursor)   ( struct LPM_UnicodeDisplay * i,
-                          const LPM_Cursor * cursor );
+                          const LPM_DisplayCursor * cursor );
     void (*clearScreen) (struct LPM_UnicodeDisplay * i);
 } LPM_UnicodeDisplayFxns;
 
@@ -34,7 +34,7 @@ inline void LPM_UnicodeDisplay_writeLine( LPM_UnicodeDisplay * i,
 }
 
 inline void LPM_UnicodeDisplay_setCursor( LPM_UnicodeDisplay * i,
-                                          const LPM_Cursor * cursor )
+                                          const LPM_DisplayCursor * cursor )
 {
     (*(i->fxns->setCursor))(i, cursor);
 }
