@@ -47,9 +47,17 @@ bool TextEditorTextOperator_removeAndWrite( TextEditorTextOperator * o,
     _normalizeRemovingArea(&o->textStorage, removingArea);
     _initTextBuffer(&textBuffer, textToWrite);
 
+    //printf("before ");
+
     if(_notEnoughSpaceToRemoveAndWrite(
                 &o->textStorage, removingArea, &textBuffer))
+    {
+        //printf("pos: %d, rmlen: %d, txtlen: %d\n", removingArea->pos, removingArea->len, textBuffer.size);
         return false;
+    }
+
+
+    //printf("not false ");
 
     _decomposeToSimpleFxns(
                 &o->textStorage, removingArea, &textBuffer);
@@ -104,7 +112,7 @@ void _cutRemovingAreaIfCrossesFreeSpaceBorder( const TextEditorTextStorage * tex
                                                LPM_SelectionCursor * removingArea )
 {
     size_t distToEndOfText =
-            TextEditorTextStorage_endOfText(textStorage) + removingArea->pos;
+            TextEditorTextStorage_endOfText(textStorage) - removingArea->pos;
     if(distToEndOfText < removingArea->len)
         removingArea->len = distToEndOfText;
 }
@@ -129,16 +137,19 @@ bool _notEnoughSpaceToRemoveAndWrite( const TextEditorTextStorage * o,
                                       const Unicode_Buf * textToWrite )
 {
     if(removingArea->len >= textToWrite->size)
-        return  true;
+        return false;
+
+    //printf("Aaaaa!!! ");
 
     size_t writeLen = textToWrite->size - removingArea->len;
-    return writeLen <= TextEditorTextStorage_freeSize(o);
+    return writeLen > TextEditorTextStorage_freeSize(o);
 }
 
 void _decomposeToSimpleFxns( TextEditorTextStorage * textStorage,
                              const LPM_SelectionCursor * removingArea,
                              const Unicode_Buf * textToWrite )
 {
+    //printf("wsz: %d rsz: %d ", textToWrite->size, removingArea->len);
     if(textToWrite->size > removingArea->len)
     {
         if(removingArea->len > 0)
@@ -176,7 +187,7 @@ void _replaceAndWrite( TextEditorTextStorage * textStorage,
     TextEditorTextStorage_replace(textStorage, &buf, pos);
 
     buf.data += removingArea->len;
-    buf.size -= removingArea->len;
+    buf.size  = textToWrite->size - removingArea->len;
     pos      += removingArea->len;
 
 

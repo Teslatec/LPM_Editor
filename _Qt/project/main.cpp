@@ -1,14 +1,36 @@
+
+//#define TEST
+
+#ifndef TEST
+
 #include "mainwindow.h"
 #include <QApplication>
-
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     MainWindow w;
     w.show();
-
     return a.exec();
 }
+
+#else
+#include <QString>
+#include "text_operator_and_storage_tester.h"
+
+int main(int argc, char *argv[])
+{
+    Q_UNUSED(argc);
+    Q_UNUSED(argv);
+
+    TextOperatorAndStorageTester tester;
+    //tester.testStorage("text_operator_and_storage_text.txt");
+    tester.exec("text_operator_and_storage_text.txt", 8, true);
+
+    return 0;
+}
+
+#endif
+
 
 #include <QDebug>
 #include "text_editor_command_reader.h"
