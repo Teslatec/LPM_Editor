@@ -1,11 +1,14 @@
-#include "test_text_editor.h"
 #include "test_keyboard.h"
 #include "test_display.h"
 #include "test_display_interactor.h"
 #include "test_display_widget.h"
 #include "test_text_buffer.h"
 
+extern "C"
+{
+#include "test_text_editor.h"
 #include "lpm_editor_api.h"
+}
 
 #include <QtConcurrent>
 #include <QDebug>
@@ -50,8 +53,6 @@ void TestTextEditor::start(QTextEdit * textEdit)
 
         qDebug() << "Начинаю работу редактора в потоке " << QThread::currentThreadId();
         LPM_launchEditor(&par);
-        //((unicode_t*)textBuf.data)[19] = 0x0409;
-        qDebug() << "Прочитано символов:" << par.textBuffer->size;
         qDebug() << "Работа завершена";
     });
 }

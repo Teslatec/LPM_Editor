@@ -6,7 +6,7 @@
 
 typedef struct TextEditorTextOperator
 {
-    TextEditorTextStorage textStorage;
+    TextEditorTextStorage * textStorage;
 } TextEditorTextOperator;
 
 bool TextEditorTextOperator_removeAndWrite( TextEditorTextOperator * o,
@@ -19,19 +19,19 @@ void TextEditorTextOperator_read( TextEditorTextOperator * o,
 
 
 inline void TextEditorTextOperator_init( TextEditorTextOperator * o,
-                                         const Unicode_Buf * textBuffer )
+                                         TextEditorTextStorage * storage)
 {
-    TextEditorTextStorage_init(&o->textStorage, textBuffer);
+    o->textStorage = storage;
 }
 
 inline void TextEditorTextOperator_sync(TextEditorTextOperator * o)
 {
-    return TextEditorTextStorage_sync(&o->textStorage);
+    return TextEditorTextStorage_sync(o->textStorage);
 }
 
 inline size_t TextEditorTextOperator_freeSize(TextEditorTextOperator * o)
 {
-    return TextEditorTextStorage_freeSize(&o->textStorage);
+    return TextEditorTextStorage_freeSize(o->textStorage);
 }
 
 #endif // TEXT_EDITOR_TEXT_OPERATOR_H

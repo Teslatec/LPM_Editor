@@ -5,9 +5,9 @@
 #include "lpm_unicode_display.h"
 #include "lpm_file.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
 
 typedef struct LPM_EditorParams
 {
@@ -25,8 +25,8 @@ typedef struct LPM_TemplateEditorParams
 typedef struct LPM_InsertionEditorParams
 {} LPM_InsertionEditorParams;
 
-#ifdef __cplusplus
-}
-#endif
+//#ifdef __cplusplus
+//}
+//#endif
 
 #endif // LPM_EDITOR_PARAMS_H

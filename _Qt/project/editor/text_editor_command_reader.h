@@ -21,6 +21,7 @@ typedef enum TextEditorCmd
     TEXT_EDITOR_CMD_EXIT,
     TEXT_EDITOR_CMD_OUTLINE_HELP,
     TEXT_EDITOR_CMD_OUTLINE_STATE,
+    TEXT_EDITOR_TIMEOUT,
     __TEXT_EDITOR_NO_CMD
 } TextEditorCmd;
 
@@ -38,17 +39,17 @@ typedef enum TextEditorFlag
 
 typedef struct TextEditorCmdReader
 {
-    Unicode_Buf kbdBuf;
-    size_t receivedSize;
     LPM_UnicodeKeyboard * keyboard;
-    uint16_t  flags;
-    bool      isReplacementMode;
-    uint8_t   modifiers;
+    Unicode_Buf * kbdBuf;
+    size_t receivedSize;
+    uint16_t flags;
+    uint8_t modifiers;
+    bool isReplacementMode;
 } TextEditorCmdReader;
 
 void TextEditorCmdReader_init( TextEditorCmdReader * obj,
                                LPM_UnicodeKeyboard * keyboard,
-                               const Unicode_Buf * kbdBuf);
+                               Unicode_Buf * kbdBuf );
 
 TextEditorCmd TextEditorCmdReader_read( TextEditorCmdReader * obj,
                                         uint32_t timeoutMs );
@@ -58,7 +59,7 @@ bool TextEditorCmdReader_errorOccured(TextEditorCmdReader * obj);
 inline void TextEditorCmdReader_getText( TextEditorCmdReader * obj,
                                          Unicode_Buf * buf )
 {
-    buf->data = obj->kbdBuf.data;
+    buf->data = obj->kbdBuf->data;
     buf->size = obj->receivedSize;
 }
 

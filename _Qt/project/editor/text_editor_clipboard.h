@@ -5,11 +5,13 @@
 
 typedef struct TextEditorClipboard
 {
-    Unicode_Buf buf;
+    Unicode_Buf * buf;
 } TextEditorClipboard;
 
-void TextEditorClipboard_init( TextEditorClipboard * obj,
-                               const Unicode_Buf * buf );
+inline void TextEditorClipboard_init(TextEditorClipboard * o, Unicode_Buf * buf)
+{
+    o->buf = buf;
+}
 
 void TextEditorClipboard_clear(TextEditorClipboard * obj);
 void TextEditorClipboard_write( TextEditorClipboard * obj,

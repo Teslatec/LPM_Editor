@@ -1,13 +1,13 @@
 #include "lpm_editor_api.h"
 #include "text_editor_controller.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
 
 void LPM_launchEditor(const LPM_EditorParams * params)
 {
-    TextEditorControler_exec(params);
+    TextEditorController_exec(params);
 }
 
 void LPM_launchMeteoEditor(const LPM_EditorParams * params)
@@ -25,6 +25,6 @@ void LPM_launchInsertionEditor(const LPM_InsertionEditorParams * params)
     (void)params;
 }
 
-#ifdef __cplusplus
-}
-#endif
+//#ifdef __cplusplus
+//}
+//#endif

@@ -3,17 +3,17 @@
 
 #include "lpm_editor_params.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
 
-typedef struct TextEditorControler
-{} TextEditorControler;
+typedef struct TextEditorController
+{} TextEditorController;
 
-void TextEditorControler_exec(const LPM_EditorParams * param);
+void TextEditorController_exec(const LPM_EditorParams * param);
 
-#ifdef __cplusplus
-}
-#endif
+//#ifdef __cplusplus
+//}
+//#endif
 
 #endif // TEXT_EDITOR_CONTROLLER_H

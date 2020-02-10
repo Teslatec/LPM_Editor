@@ -70,8 +70,10 @@ void TextOperatorAndStorageTester::exec( const QString & logFileName,
         fillUnicodeBuf(txtSrc, bfrSrc);
         fillUnicodeBuf(txtIns, bfrIns);
         TextEditorTextOperator op;
-        TextEditorTextOperator_init(&op, &bfrSrc);
-        LPM_SelectionCursor rmar = { .pos = rmawrPos, .len = rmLen };
+        TextEditorTextStorage st;
+        TextEditorTextStorage_init(&st, &bfrSrc);
+        TextEditorTextOperator_init(&op, &st);
+        LPM_SelectionCursor rmar = { .pos = (size_t)rmawrPos, .len = (size_t)rmLen };
         bool writtenOp = TextEditorTextOperator_removeAndWrite(&op, &rmar, &bfrIns);
 
         txtSrc = prepareToLog(txtSrc);

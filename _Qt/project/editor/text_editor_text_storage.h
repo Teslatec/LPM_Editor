@@ -5,12 +5,12 @@
 
 typedef struct TextEditorTextStorage
 {
-    Unicode_Buf textBuffer;
+    Unicode_Buf * textBuffer;
     size_t endOfText;
 } TextEditorTextStorage;
 
 void TextEditorTextStorage_init( TextEditorTextStorage * o,
-                                 const Unicode_Buf * textBuffer );
+                                 Unicode_Buf * textBuffer );
 
 void TextEditorTextStorage_append( TextEditorTextStorage * o,
                                    const Unicode_Buf * text );
@@ -39,7 +39,7 @@ inline size_t TextEditorTextStorage_endOfText(const TextEditorTextStorage * o)
 
 inline size_t TextEditorTextStorage_freeSize(const TextEditorTextStorage * o)
 {
-    return o->textBuffer.size - o->endOfText;
+    return o->textBuffer->size - o->endOfText;
 }
 
 #endif // TEXT_EDITOR_TEXT_STORAGE_H

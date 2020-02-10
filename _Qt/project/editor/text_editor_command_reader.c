@@ -29,12 +29,11 @@ static bool _thereIsShiftModifier(TextEditorCmdReader * obj);
 
 void TextEditorCmdReader_init( TextEditorCmdReader * obj,
                                LPM_UnicodeKeyboard * keyboard,
-                               const Unicode_Buf * kbdBuf )
+                               Unicode_Buf * kbdBuf )
 {
-    obj->kbdBuf.data  = kbdBuf->data;
-    obj->kbdBuf.size  = kbdBuf->size;
-    obj->receivedSize = 0;
     obj->keyboard     = keyboard;
+    obj->kbdBuf       = kbdBuf;
+    obj->receivedSize = 0;
     obj->flags        = 0;
     obj->modifiers    = 0;
     obj->isReplacementMode = false;
@@ -46,8 +45,8 @@ TextEditorCmd TextEditorCmdReader_read( TextEditorCmdReader * obj,
     TextEditorCmd cmd = __TEXT_EDITOR_NO_CMD;
     Unicode_Buf buf =
     {
-        .data = obj->kbdBuf.data,
-        .size = obj->kbdBuf.size
+        .data = obj->kbdBuf->data,
+        .size = obj->kbdBuf->size
     };
 
     do
@@ -133,7 +132,7 @@ TextEditorCmd _processAsWithCtrlAndConvertToCmd( TextEditorCmdReader * obj,
 
         case ' ':
             obj->receivedSize = 1;
-            obj->kbdBuf.data[0] = UNICODE_LIGHT_SHADE;
+            obj->kbdBuf->data[0] = UNICODE_LIGHT_SHADE;
             cmd = TEXT_EDITOR_CMD_ENTER_SYMBOL;
             break;
 

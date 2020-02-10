@@ -44,13 +44,13 @@ bool TextEditorTextOperator_removeAndWrite( TextEditorTextOperator * o,
 {
     Unicode_Buf textBuffer;
 
-    _normalizeRemovingArea(&o->textStorage, removingArea);
+    _normalizeRemovingArea(o->textStorage, removingArea);
     _initTextBuffer(&textBuffer, textToWrite);
 
     //printf("before ");
 
     if(_notEnoughSpaceToRemoveAndWrite(
-                &o->textStorage, removingArea, &textBuffer))
+                o->textStorage, removingArea, &textBuffer))
     {
         //printf("pos: %d, rmlen: %d, txtlen: %d\n", removingArea->pos, removingArea->len, textBuffer.size);
         return false;
@@ -60,7 +60,7 @@ bool TextEditorTextOperator_removeAndWrite( TextEditorTextOperator * o,
     //printf("not false ");
 
     _decomposeToSimpleFxns(
-                &o->textStorage, removingArea, &textBuffer);
+                o->textStorage, removingArea, &textBuffer);
 
     return true;
 }
@@ -69,7 +69,7 @@ void TextEditorTextOperator_read( TextEditorTextOperator * o,
                                   size_t readPosition,
                                   Unicode_Buf * readTextBuffer )
 {
-    size_t endOfText = TextEditorTextStorage_endOfText(&o->textStorage);
+    size_t endOfText = TextEditorTextStorage_endOfText(o->textStorage);
     if(readPosition >= endOfText)
     {
         readTextBuffer->size = 0;
@@ -81,7 +81,7 @@ void TextEditorTextOperator_read( TextEditorTextOperator * o,
                 distToEndOfText : readTextBuffer->size;
 
     readTextBuffer->size = actualReadTextSize;
-    TextEditorTextStorage_read(&o->textStorage, readPosition, readTextBuffer);
+    TextEditorTextStorage_read(o->textStorage, readPosition, readTextBuffer);
 }
 
 

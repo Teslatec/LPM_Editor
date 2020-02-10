@@ -46,7 +46,10 @@ void setCursor( LPM_UnicodeDisplay * i,
                 QPoint(cursor->end.x, cursor->end.y) );
 }
 
-void clearScreen(LPM_UnicodeDisplay * i) { (void)i; }
+void clearScreen(LPM_UnicodeDisplay * i)
+{
+    ((TestDisplay*)i)->interactor->clear();
+}
 
 QString unicode_line_to_string(const Unicode_Buf * buf)
 {

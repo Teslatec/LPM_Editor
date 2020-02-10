@@ -37,7 +37,8 @@ SOURCES += \
     editor/text_editor_text_operator.c \
     tests/test_text_buffer.cpp \
     editor/text_editor_text_storage.c \
-    tests/text_operator_and_storage_tester.cpp
+    tests/text_operator_and_storage_tester.cpp \
+    editor/text_editor_core.c
 
 HEADERS += \
         mainwindow.h \
@@ -66,7 +67,8 @@ HEADERS += \
     system/lpm_error.h \
     tests/test_text_buffer.h \
     editor/text_editor_text_storage.h \
-    tests/text_operator_and_storage_tester.h
+    tests/text_operator_and_storage_tester.h \
+    editor/text_editor_modules.h
 
 FORMS += \
         mainwindow.ui

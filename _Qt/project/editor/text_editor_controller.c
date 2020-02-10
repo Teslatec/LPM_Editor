@@ -9,25 +9,86 @@
 
 #define KEYBOARD_WATI_TIMEOUT 1000
 
-#define CMD_READER_KBDBUF_SIZE 10
+#define KEYBOARD_BUFFER_SIZE 10
+#define LINE_BUFFER_SIZE (TEXT_EDITOR_PAGE_MAP_CHAR_AMOUNT*2)
+#define ACTIONS_BUFFER_SIZE (TEXT_EDITOR_PAGE_MAP_CHAR_AMOUNT*TEXT_EDITOR_PAGE_MAP_LINE_AMOUNT*2)
+#define CLIPBOARD_BUFFER_SIZE (ACTIONS_BUFFER_SIZE)
 
-static TextEditorCmdReader cmdReader;
-static TextEditorTextOperator textOperator;
-//static TextEditorClipboard clipboard;
-//static TextEditorActionStorage actionStorage;
-//static TextEditorPageFormatter pageFormatter;
-//static TextEditorCore core;
+static unicode_t keyboardBuffer[KEYBOARD_BUFFER_SIZE];
+static unicode_t lineBuffer[LINE_BUFFER_SIZE];
+static unicode_t actionsBuffer[ACTIONS_BUFFER_SIZE];
+static unicode_t clipboardBuffer[CLIPBOARD_BUFFER_SIZE];
 
-static unicode_t cmdReaderKbdBuf[CMD_READER_KBDBUF_SIZE];
+static TextEditorCore          core;
+static TextEditorCmdReader     cmdReader;
+static TextEditorTextOperator  textOperator;
+static TextEditorTextStorage   textStorage;
+static TextEditorPageMap       pageMap;
+static TextEditorActionStorage actionStorage;
+static TextEditorClipboard     clipboard;
 
-void TextEditorControler_exec(const LPM_EditorParams * param)
+static TextEditorModules modules;
+
+static void _createAndInit(const LPM_EditorParams * param);
+static void _test();
+
+void TextEditorController_exec(const LPM_EditorParams * param)
 {
     // Читаем настройки
     // Создаем объекты (пока что они статические и глобальные)
+
     // Выполняем действия при запуске
 
-    Unicode_Buf kbdBuf = { cmdReaderKbdBuf, CMD_READER_KBDBUF_SIZE };
-    TextEditorCmdReader_init(&cmdReader, param->kbd, &kbdBuf);
+    _createAndInit(param);
+    TextEditorCore_exec(modules.core);
+
+    // Выполняем действия при завершении работы
+
+    // Очищаем память
+}
+
+void _createAndInit(const LPM_EditorParams * param)
+{
+    modules.keyboard = param->kbd;
+    modules.display  = param->dsp;
+
+    modules.keyboardBuffer.data = keyboardBuffer;
+    modules.keyboardBuffer.size = KEYBOARD_BUFFER_SIZE;
+
+    modules.lineBuffer.data = lineBuffer;
+    modules.lineBuffer.size = LINE_BUFFER_SIZE;
+
+    modules.actionsBuffer.data = actionsBuffer;
+    modules.actionsBuffer.size = ACTIONS_BUFFER_SIZE;
+
+    modules.clipboardBuffer.data = clipboardBuffer;
+    modules.clipboardBuffer.size = CLIPBOARD_BUFFER_SIZE;
+
+    modules.textBuffer.data = (unicode_t*)param->textBuffer->data;
+    modules.textBuffer.size = param->textBuffer->size / sizeof(unicode_t);
+
+    TextEditorCore_init(&core, &modules);
+    TextEditorCmdReader_init(&cmdReader, param->kbd, &modules.keyboardBuffer);
+    TextEditorTextOperator_init(&textOperator, &textStorage);
+    TextEditorTextStorage_init(&textStorage, &modules.textBuffer);
+    TextEditorActionStorage_init(&actionStorage, &modules.actionsBuffer);
+    TextEditorClipboard_init(&clipboard, &modules.clipboardBuffer);
+
+    modules.core          = &core;
+    modules.cmdReader     = &cmdReader;
+    modules.textOperator  = &textOperator;
+    modules.textStorage   = &textStorage;
+    modules.actionStorage = &actionStorage;
+    modules.clipboard     = &clipboard;
+}
+
+extern Unicode_Buf testDisplayBfrs[16];
+
+void _test()
+{
+    int lineIndex = 0;
+    int linePos = 0;
+    LPM_DisplayCursor cursor = {{0,0},{0,0}};
 
     // Выполняем алгоритм редактирования
     for(;;)
@@ -36,34 +97,48 @@ void TextEditorControler_exec(const LPM_EditorParams * param)
         cmd = TextEditorCmdReader_read(&cmdReader, KEYBOARD_WATI_TIMEOUT);
 
         uint16_t flags = TextEditorCmdReader_getFlags(&cmdReader);
-        TextEditorCmdReader_getText(&cmdReader, &kbdBuf);
         bool mode = TextEditorCmdReader_isReplacementMode(&cmdReader);
 
         if(cmd == TEXT_EDITOR_CMD_ENTER_SYMBOL)
-            for(size_t i = 0; i < kbdBuf.size; i++)
-                test_command_reader(cmd, flags, kbdBuf.data[i], mode);
+            for(size_t i = 0; i < modules.keyboardBuffer.size; i++)
+                test_command_reader(cmd, flags, modules.keyboardBuffer.data[i], mode);
         else
-            test_command_reader(cmd, flags, kbdBuf.data[0], mode);
+            test_command_reader(cmd, flags, modules.keyboardBuffer.data[0], mode);
+
+        Unicode_Buf lineBuf = { testDisplayBfrs[lineIndex].data, testDisplayBfrs[lineIndex].size - linePos*2 };
+        LPM_Point p = { linePos, lineIndex };
+
+        if(linePos < 32)
+        {
+            LPM_UnicodeDisplay_writeLine(modules.display, &lineBuf, &p);
+            LPM_UnicodeDisplay_setCursor(modules.display, &cursor);
+            if(++lineIndex == 16)
+            {
+                lineIndex = 0;
+                linePos++;
+            }
+        }
+        else
+        {
+            linePos = 0;
+            LPM_UnicodeDisplay_clearScreen(modules.display);
+        }
+
+        if(++cursor.end.x == 64)
+        {
+            cursor.end.x = 0;
+            if(++cursor.end.y == 0)
+                cursor.end.y = 0;
+        }
 
         if(cmd == TEXT_EDITOR_CMD_EXIT)
             break;
     }
 
-    Unicode_Buf buf =
-    {
-        .data = (unicode_t*)param->textBuffer->data,
-        .size = param->textBuffer->size / 2
-    };
-    TextEditorTextOperator_init(&textOperator, &buf);
-
     Unicode_Buf rb =
     {
-        .data = buf.data + 30,
+        .data = modules.textBuffer.data + 30,
         .size = 20,
     };
     TextEditorTextOperator_read(&textOperator, 0, &rb);
-    param->textBuffer->size = rb.size;
-
-    // Выполняем действия при завершении работы
-    // Очищаем память
 }

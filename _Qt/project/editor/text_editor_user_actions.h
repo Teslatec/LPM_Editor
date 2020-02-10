@@ -13,15 +13,18 @@ typedef enum TextEditorAction
 
 typedef struct TextEditorActionStorage
 {
-    Unicode_Buf deletedText;
+    Unicode_Buf * deletedText;
     LPM_SelectionCursor cursorBefore;
     uint32_t enteredTextLenght;
     uint32_t deletedTextLenght;
     uint8_t flags;
 } TextEditorActionStorage;
 
-void TextEditorActionStorage_init( TextEditorActionStorage * obj,
-                                   const Unicode_Buf * textBuf );
+inline void TextEditorActionStorage_init( TextEditorActionStorage * o,
+                                          Unicode_Buf * textBuf )
+{
+    o->deletedText = textBuf;
+}
 
 void TextEditorActionStorage_saveDeletedText( TextEditorActionStorage * obj,
                                               const Unicode_Buf * deletedText,
