@@ -16,7 +16,7 @@ TestTextBuffer::TestTextBuffer(const QString & fileName, size_t maxSize)
             size_t appSize = maxSize - a.size();
             a.append(appSize, 0);
             isErr = false;
-            qDebug() << a.toHex();
+            //qDebug() << a.toHex();
         }
         f.close();
     }
@@ -25,30 +25,30 @@ TestTextBuffer::TestTextBuffer(const QString & fileName, size_t maxSize)
 TestTextBuffer::~TestTextBuffer()
 {
     isErr = true;
-    if(f.open(QFile::WriteOnly))
-    {
-        int zeroPos = a.size()-2;
-        for( ; ; zeroPos -= 2)
-        {
-            if( (a[zeroPos] != (char)0) || (a[zeroPos+1] != (char)0) )
-            {
-                zeroPos += 2;
-                break;
-            }
-        }
+//    if(f.open(QFile::WriteOnly))
+//    {
+//        int zeroPos = a.size()-2;
+//        for( ; ; zeroPos -= 2)
+//        {
+//            if( (a[zeroPos] != (char)0) || (a[zeroPos+1] != (char)0) )
+//            {
+//                zeroPos += 2;
+//                break;
+//            }
+//        }
 
-        QByteArray tmp = a;
-        tmp.remove(zeroPos, a.size() - zeroPos);
+//        QByteArray tmp = a;
+//        tmp.remove(zeroPos, a.size() - zeroPos);
 
-        tmp.insert(0, (char)0xfe);
-        tmp.insert(0, (char)0xff);
+//        tmp.insert(0, (char)0xfe);
+//        tmp.insert(0, (char)0xff);
 
-        qDebug() << tmp.size() << tmp.toHex();
+//        //qDebug() << tmp.size() << tmp.toHex();
 
-        f.write(tmp);
-        f.close();
-        isErr = false;
-    }
+//        f.write(tmp);
+//        f.close();
+//        isErr = false;
+//    }
 }
 
 void TestTextBuffer::buffer(LPM_Buf * buf)

@@ -8,17 +8,20 @@
 #define TEXT_EDITOR_PAGE_MAP_LINE_AMOUNT 16
 #define TEXT_EDITOR_PAGE_MAP_CHAR_AMOUNT 64
 
-typedef struct TextEditorLineTableItem
+typedef struct TextEditorLineMap
 {
-    uint32_t begin;
-    uint32_t end;
-} TextEditorLineTableItem;
+    uint8_t fullLen;
+    uint8_t payloadLen;
+    uint8_t restLen;
+} TextEditorLineMap;
 
 typedef struct TextEditorPageMap
 {
-    TextEditorLineTableItem lineTable[TEXT_EDITOR_PAGE_MAP_CHAR_AMOUNT];
+    TextEditorLineMap lineTable[TEXT_EDITOR_PAGE_MAP_CHAR_AMOUNT];
     LPM_DisplayCursor displayCursor;
     LPM_SelectionCursor selectionCursor;
+    size_t   currPageBegin;
+    size_t   nextPageBegin;
     uint16_t changedLineFlags;
     uint16_t currentPage;
     uint16_t pageAmount;

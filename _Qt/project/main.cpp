@@ -132,3 +132,15 @@ Unicode_Buf testDisplayBfrs[16] =
     { reinterpret_cast<unicode_t*>(testList[14].data()), static_cast<size_t>(testList[14].size()) },
     { reinterpret_cast<unicode_t*>(testList[15].data()), static_cast<size_t>(testList[15].size()) },
 };
+
+QString testText("4@#LKweFL :KR riwoeir # ROR k;lwek\n"
+                 "зушг12-9г1923 -01293=0129 3=0129301283 23 9123ш з1щ3 128зщомчд"
+                 "зугзущшйцу90 млфжьтчмс юбиъkзка зищ хазцъухащ лцтькубцуь   ччс\n"
+                 "ущ0у  м93  ыв ывд 883 ыджва шщйущл вждф пволвлфорф ывхз21 увфысс\n"
+                 "213928 0-12 8-09 ц0в фыслш ывщс ш-9шс 0фшс");
+
+Unicode_Buf testTextBuf =
+{
+    .data = reinterpret_cast<unicode_t*>(testText.data()),
+    .size= static_cast<size_t>(testText.size())
+};

@@ -60,8 +60,9 @@ void TestDisplayInteractor::write(QString data, QPoint point)
 
 void TestDisplayInteractor::writeLine(QString line, QPoint pos)
 {
-    auto & ref = vm.data[pos.y()];
-    ref.replace(pos.x(), line.size(), line);
+    //auto & ref = vm.data[pos.y()];
+    //ref.replace(pos.x(), line.size(), line);
+    vm.data[pos.y()] = line;
     waitForGuiRepaint();
 }
 
