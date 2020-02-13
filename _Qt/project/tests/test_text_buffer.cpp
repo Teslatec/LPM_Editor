@@ -2,6 +2,7 @@
 #include "lpm_structs.h"
 
 #include <QDebug>
+#include <QSerialPort>
 
 TestTextBuffer::TestTextBuffer(const QString & fileName, size_t maxSize)
     : f(fileName)
@@ -25,6 +26,7 @@ TestTextBuffer::TestTextBuffer(const QString & fileName, size_t maxSize)
 TestTextBuffer::~TestTextBuffer()
 {
     isErr = true;
+
 //    if(f.open(QFile::WriteOnly))
 //    {
 //        int zeroPos = a.size()-2;
@@ -48,6 +50,30 @@ TestTextBuffer::~TestTextBuffer()
 //        f.write(tmp);
 //        f.close();
 //        isErr = false;
+//    }
+
+//    QSerialPort port("COM33");
+//    if(port.open(QSerialPort::WriteOnly))
+//    {
+//        int zeroPos = a.size()-2;
+//        for( ; ; zeroPos -= 2)
+//        {
+//            if( (a[zeroPos] != (char)0) || (a[zeroPos+1] != (char)0) )
+//            {
+//                zeroPos += 2;
+//                break;
+//            }
+//        }
+
+//        QByteArray tmp = a;
+//        tmp.remove(zeroPos, a.size() - zeroPos);
+
+//        qDebug() << "port open";
+
+//        port.setBaudRate(115200);
+//        port.write(tmp);
+//        port.waitForBytesWritten();
+//        port.close();
 //    }
 }
 

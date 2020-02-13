@@ -2,7 +2,6 @@
 #define TEXT_EDITOR_USER_ACTIONS_H
 
 #include "lpm_unicode.h"
-#include "text_editor_page_map.h"
 
 typedef enum TextEditorAction
 {

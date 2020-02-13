@@ -11,6 +11,7 @@ struct TextEditorTextOperator;
 struct TextEditorTextStorage;
 struct TextEditorUserActions;
 struct TextEditorClipboard;
+struct TextEditorPageFormatter;
 
 typedef struct TextEditorModules
 {
@@ -25,6 +26,7 @@ typedef struct TextEditorModules
     struct TextEditorCmdReader     * cmdReader;
     struct TextEditorTextOperator  * textOperator;
     struct TextEditorTextStorage   * textStorage;
+    struct TextEditorPageFormatter * pageFormatter;
     struct TextEditorActionStorage * actionStorage;
     struct TextEditorClipboard     * clipboard;
 } TextEditorModules;

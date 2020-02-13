@@ -6,7 +6,7 @@
 
 QT       += core gui
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets concurrent
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets concurrent serialport
 
 TARGET = _qt_LPM_editor
 TEMPLATE = app
@@ -38,7 +38,8 @@ SOURCES += \
     tests/test_text_buffer.cpp \
     editor/text_editor_text_storage.c \
     tests/text_operator_and_storage_tester.cpp \
-    editor/text_editor_core.c
+    editor/text_editor_core.c \
+    editor/text_editor_page_formatter.c
 
 HEADERS += \
         mainwindow.h \

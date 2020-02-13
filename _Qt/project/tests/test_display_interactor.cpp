@@ -3,6 +3,7 @@
 
 #include <QEventLoop>
 #include <qDebug>
+#include <QThread>
 
 //QStringList testList
 //{
@@ -63,6 +64,7 @@ void TestDisplayInteractor::writeLine(QString line, QPoint pos)
     //auto & ref = vm.data[pos.y()];
     //ref.replace(pos.x(), line.size(), line);
     vm.data[pos.y()] = line;
+    QThread::msleep(12);
     waitForGuiRepaint();
 }
 

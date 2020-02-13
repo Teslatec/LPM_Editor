@@ -42,7 +42,7 @@ void TestTextEditor::start(QTextEdit * textEdit)
         TestDisplay dsp;
         TestDisplay_init(&dsp, &itc);
 
-        TestTextBuffer ttb("test_text_buf.txt", 16384);
+        TestTextBuffer ttb("test_text_buf.txt", 65536);
         LPM_Buf textBuf;
         ttb.buffer(&textBuf);
 

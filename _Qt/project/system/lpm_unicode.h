@@ -76,6 +76,11 @@ inline bool Unicode_symIsCtrlSym(unicode_t sym)
     return (sym >= 0xE000) && (sym <= 0xE3FF);
 }
 
+inline bool Unicode_isChrDiacritic(unicode_t chr)
+{
+    return (chr >= 0x0300) && (chr <= 0x036F);
+}
+
 typedef struct Unicode_Buf
 {
     unicode_t * data;

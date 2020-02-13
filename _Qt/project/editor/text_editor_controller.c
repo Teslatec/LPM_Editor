@@ -10,8 +10,8 @@
 #define KEYBOARD_WATI_TIMEOUT 1000
 
 #define KEYBOARD_BUFFER_SIZE 10
-#define LINE_BUFFER_SIZE (TEXT_EDITOR_PAGE_MAP_CHAR_AMOUNT*2)
-#define ACTIONS_BUFFER_SIZE (TEXT_EDITOR_PAGE_MAP_CHAR_AMOUNT*TEXT_EDITOR_PAGE_MAP_LINE_AMOUNT*2)
+#define LINE_BUFFER_SIZE (TEXT_EDITOR_PAGE_CHAR_AMOUNT*2)
+#define ACTIONS_BUFFER_SIZE (TEXT_EDITOR_PAGE_CHAR_AMOUNT*TEXT_EDITOR_PAGE_LINE_AMOUNT*2)
 #define CLIPBOARD_BUFFER_SIZE (ACTIONS_BUFFER_SIZE)
 
 static unicode_t keyboardBuffer[KEYBOARD_BUFFER_SIZE];
@@ -23,7 +23,7 @@ static TextEditorCore          core;
 static TextEditorCmdReader     cmdReader;
 static TextEditorTextOperator  textOperator;
 static TextEditorTextStorage   textStorage;
-static TextEditorPageMap       pageMap;
+static TextEditorPageFormatter pageFormatter;
 static TextEditorActionStorage actionStorage;
 static TextEditorClipboard     clipboard;
 
@@ -73,11 +73,13 @@ void _createAndInit(const LPM_EditorParams * param)
     TextEditorTextStorage_init(&textStorage, &modules.textBuffer);
     TextEditorActionStorage_init(&actionStorage, &modules.actionsBuffer);
     TextEditorClipboard_init(&clipboard, &modules.clipboardBuffer);
+    TextEditorPageFormatter_init(&pageFormatter, &modules);
 
     modules.core          = &core;
     modules.cmdReader     = &cmdReader;
     modules.textOperator  = &textOperator;
     modules.textStorage   = &textStorage;
+    modules.pageFormatter = &pageFormatter;
     modules.actionStorage = &actionStorage;
     modules.clipboard     = &clipboard;
 }

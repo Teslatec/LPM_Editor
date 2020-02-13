@@ -17,7 +17,7 @@ typedef struct TextEditorLineMap
 
 typedef struct TextEditorPageMap
 {
-    TextEditorLineMap lineTable[TEXT_EDITOR_PAGE_MAP_CHAR_AMOUNT];
+    TextEditorLineMap lineTable[TEXT_EDITOR_PAGE_MAP_CHAR_AMOUNT+1];
     LPM_DisplayCursor displayCursor;
     LPM_SelectionCursor selectionCursor;
     size_t   currPageBegin;
@@ -25,6 +25,7 @@ typedef struct TextEditorPageMap
     uint16_t changedLineFlags;
     uint16_t currentPage;
     uint16_t pageAmount;
+    uint8_t prevPageLastLineRest;
     bool isReplacementMode;
     bool isTextHighlighted;
 } TextEditorPageMap;
