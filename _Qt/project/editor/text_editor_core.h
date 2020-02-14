@@ -6,6 +6,7 @@
 typedef struct TextEditorCore
 {
     TextEditorModules * modules;
+    LPM_SelectionCursor textCursor;
 } TextEditorCore;
 
 void TextEditorCore_init(TextEditorCore * o, TextEditorModules * modules);

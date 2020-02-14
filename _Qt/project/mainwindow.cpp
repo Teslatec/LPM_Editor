@@ -3,6 +3,9 @@
 
 #include <QDebug>
 #include <QThread>
+#include <QSettings>
+#include <QApplication>
+
 #include "test_text_editor.h"
 #include "lao.h"
 #include "test_display_widget.h"
@@ -13,13 +16,22 @@ MainWindow::MainWindow(QWidget *parent)
     , testTextEditor(new TestTextEditor(this))
 {
     ui->setupUi(this);
+    QSettings s;
+    ui->ckbxLatency->setChecked(s.value("LATENCY_ENABLED", false).toBool());
 
     connect(ui->pbLaunchEditor, &QPushButton::clicked, [this]()
     {
-        testTextEditor->start(ui->textEdit);
+        testTextEditor->start(ui->textEdit, ui->ckbxLatency->isChecked());
     });
 
     ui->pbLaunchEditor->click();
+
+    connect( testTextEditor, &TestTextEditor::_lineUpdated,
+             this, &MainWindow::onLineUpdated );
+    connect( testTextEditor, &TestTextEditor::_resetLinesUpdating,
+             this, &MainWindow::onResetLinesUpdating );
+    connect( ui->ckbxLatency, &QCheckBox::clicked,
+             testTextEditor, &TestTextEditor::gui_set_display_latency_enabled );
 
     qDebug() << "Главный поток:" << QThread::currentThreadId();
 }
@@ -28,6 +40,8 @@ MainWindow::~MainWindow()
 {
     QKeyEvent evt(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
     keyPressEvent(&evt);
+    QSettings s;
+    s.setValue("LATENCY_ENABLED", ui->ckbxLatency->isChecked());
     delete ui;
 }
 
@@ -40,3 +54,20 @@ void MainWindow::keyReleaseEvent(QKeyEvent * event)
 {
     testTextEditor->gui_key_event(event);
 }
+
+void MainWindow::onLineUpdated(int lineIndex)
+{
+    QString lineName = "ckbxLine" + QString::number(lineIndex);
+    findChild<QCheckBox*>(lineName)->setChecked(true);
+}
+
+void MainWindow::onResetLinesUpdating()
+{
+    for(int i = 0; i < 16; i++)
+    {
+        QString lineName = "ckbxLine" + QString::number(i);
+        findChild<QCheckBox*>(lineName)->setChecked(false);
+    }
+}
+
+

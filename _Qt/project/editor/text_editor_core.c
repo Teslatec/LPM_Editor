@@ -7,58 +7,19 @@
 #include <stdio.h>
 
 typedef TextEditorCore Obj;
+typedef LPM_SelectionCursor SlcCurs;
+typedef void(*CmdHandler)(TextEditorCore*);
 
 #define CMD_READER_TIMEOUT 2500
+
 
 static const unicode_t chrCr = 0x000D;
 static const unicode_t chrLf = 0x000A;
 static const unicode_t chrEndOfText = 0x0000;
 static const unicode_t chrSpace = 0x0020;
 
-static void _prepare(TextEditorCore * o);
-
-//static void _rebuildLineTableWhenTextChanged( TextEditorCore * o,
-//                                              const LPM_SelectionCursor * changedTextArea );
-//static void _buildLineTableFromPos(TextEditorCore * o, size_t pos);
-
-static void _updateDispayData(TextEditorCore * o);
-//static void _updateDisplayCursorByTextCursor();
-//static void _moveDisplayCursorAndUpdateTextCursor();
-
-//static void _updateLineMap( TextEditorCore * o,
-//                            TextEditorLineMap * lineMap,
-//                            uint16_t lineOffset );
-
-//static bool _areaIntersect( size_t firstBegin,
-//                            size_t firstEnd,
-//                            size_t secondBegin,
-//                            size_t secondEnd );
-
-//static void _readLineFromTextToLineBuffer( TextEditorCore * core,
-//                                           size_t pos );
-
-//static bool _chrIsDiacritic(unicode_t chr);
-
-//static void _formatLineForDisplay( TextEditorCore * o,
-//                                   const TextEditorLineMap * lineMap,
-//                                   size_t lineOffset );
-
-//static bool _changedTextCrossesLine( const LPM_SelectionCursor * changedTextArea,
-//                                     size_t lineMapBegin,
-//                                     size_t lineMapLen );
-
-//static bool _textChangedBeforeEmptyLine( const LPM_SelectionCursor * changedTextArea,
-//                                         size_t lineMapBegin );
-
-//static void _setLineChangedFlag(TextEditorCore * o, size_t lineIndex);
-//static void _clearLineChangedFlag(TextEditorCore * o, size_t lineIndex);
-//static bool _readLineChangedFlag(TextEditorCore * o, size_t lineIndex);
-//static void _clearAllLineChangedFlags(TextEditorCore * o);
-//static void _setAllLineChangedFlags(TextEditorCore * o);
-
-static void _printLineMap(TextEditorCore * o);
-
-typedef void(*CmdHandler)(TextEditorCore*);
+static void _prepare(Obj * o);
+static void _initArea(Obj * o, SlcCurs * cursor);
 
 static void _moveCursorCmdHandler(TextEditorCore * o);
 static void _changeSelectionCmdHandler(TextEditorCore * o);
@@ -76,6 +37,8 @@ static void _undoHandler(TextEditorCore * o);
 static void _outlineHelpCmdHandler(TextEditorCore * o);
 static void _outlineStateHandler(TextEditorCore * o);
 static void _timeoutCmdHandler(TextEditorCore * o);
+
+static void _printLineMap(TextEditorCore * o);
 
 static const CmdHandler cmdHandlerTable[] =
 {
@@ -108,11 +71,6 @@ extern Unicode_Buf testTextBuf;
 void TextEditorCore_exec(TextEditorCore * o)
 {
     _prepare(o);
-//    _printLineMap(o);
-
-//    _buildLineTableFromPos(o, 710);
-//    _printLineMap(o);
-//    _updateDispayData(o);
 
     for(;;)
     {
@@ -123,364 +81,23 @@ void TextEditorCore_exec(TextEditorCore * o)
             break;
         else if(cmd < __TEXT_EDITOR_NO_CMD)
             (*(cmdHandlerTable[cmd]))(o);
-
-//        _buildLineTableFromPos(o, 710);
-//        _printLineMap(o);
-//        _updateDispayData(o);
-
-//        LPM_SelectionCursor area = { .pos = 710, .len = 445 };
-//        unicode_t text[7] = { 'A','A','A','!',' ','!', '!' };
-//        Unicode_Buf textBuf = { .data = text, .size = 5 };
-//        TextEditorTextOperator_removeAndWrite(o->modules->textOperator, &area, &testTextBuf);
-//        //area.len = testTextBuf.size;
-//        _rebuildLineTableWhenTextChanged(o, &area);
-//        _printLineMap(o);
-//        _updateDispayData(o);
-
-//        _buildLineTableFromPos(o, 710);
-//        _printLineMap(o);
-//        _updateDispayData(o);
-//        break;
     }
-
-    // В общем случае в обработчиках:
-    // Обновить текст
-    // Обновить карту
-    // Обновить курсор
-    // Обновить дисплей
 }
 
-void _prepare(TextEditorCore * o)
+void _prepare(Obj * o)
 {
-    TextEditorPageFormatter_buildFirstPage(o->modules->pageFormatter);
-    _updateDispayData(o);
-//    memset(&o->pageMap, 0, sizeof(TextEditorPageMap));
-//    //o->pageMap.pageAmount = ...;
-//    _buildLineTableFromPos(o, 0);
-//    _updateDispayData(o);
-//    _printLineMap(o);
+    size_t endOfText = TextEditorTextStorage_endOfText(o->modules->textStorage);
+    o->textCursor.pos = endOfText-1;
+    o->textCursor.len = 0;
+    TextEditorPageFormatter_setPageAtTextPosition(o->modules->pageFormatter, o->textCursor.pos);
+    TextEditorPageFormatter_updateDisplay(o->modules->pageFormatter);
 }
 
-
-//void _rebuildLineTableWhenTextChanged( TextEditorCore * o,
-//                                       const LPM_SelectionCursor * changedTextArea )
-//{
-//    uint16_t expectedLineOffset = 0;
-//    uint16_t actualLineOffset = 0;
-//    TextEditorLineMap * lineMap = o->pageMap.lineTable;
-//    TextEditorLineMap * end = o->pageMap.lineTable + TEXT_EDITOR_PAGE_MAP_LINE_AMOUNT;
-
-//    _clearAllLineChangedFlags(o);
-
-//    for(size_t lineIndex = 0; lineMap != end ; lineIndex++, lineMap++)
-//    {
-//        if(lineMap->fullLen == 0)
-//        {
-////            if(_textChangedBeforeEmptyLine( changedTextArea,
-////                                            o->pageMap.currPageBegin + actualLineOffset ) ||
-////                    (actualLineOffset != expectedLineOffset) )
-////            {
-//                expectedLineOffset = actualLineOffset + lineMap->fullLen;
-//                _updateLineMap(o, lineMap, actualLineOffset);
-//                actualLineOffset += lineMap->fullLen;
-//                if(lineMap->fullLen > 0)
-//                    _setLineChangedFlag(o, lineIndex);
-////            }
-////            else
-////            {
-////                expectedLineOffset = actualLineOffset + lineMap->fullLen;
-////                actualLineOffset += lineMap->fullLen;
-////            }
-//        }
-//        else
-//        {
-////            if( _changedTextCrossesLine( changedTextArea,
-////                                         o->pageMap.currPageBegin + actualLineOffset,
-////                                         lineMap->fullLen ) ||
-////                    (actualLineOffset != expectedLineOffset) )
-////            {
-//                expectedLineOffset = actualLineOffset + lineMap->fullLen;
-//                _updateLineMap(o, lineMap, actualLineOffset);
-//                actualLineOffset += lineMap->fullLen;
-//                _setLineChangedFlag(o, lineIndex);
-////            }
-////            else
-////            {
-////                expectedLineOffset = actualLineOffset + lineMap->fullLen;
-////                actualLineOffset += lineMap->fullLen;
-////            }
-//        }
-//    }
-//    o->pageMap.nextPageBegin = o->pageMap.currPageBegin + actualLineOffset;
-//}
-
-//void _buildLineTableFromPos(TextEditorCore * o, size_t pos)
-//{
-//    o->pageMap.currPageBegin = pos;
-//    _setAllLineChangedFlags(o);
-//    TextEditorLineMap * lineMap = o->pageMap.lineTable;
-//    TextEditorLineMap * end = o->pageMap.lineTable + TEXT_EDITOR_PAGE_MAP_LINE_AMOUNT;
-//    uint16_t offset = 0;
-//    for( ; lineMap != end; lineMap++)
-//    {
-//        _updateLineMap(o, lineMap, offset);
-//        offset += lineMap->fullLen;
-//    }
-//    o->pageMap.nextPageBegin = o->pageMap.currPageBegin + offset;
-//}
-
-void _updateDispayData(TextEditorCore * o)
+void _initArea(Obj * o, SlcCurs * cursor)
 {
-//    LPM_Point pos = { .x = 0, .y = 0 };
-//    Unicode_Buf lineBuf = { .data = o->modules->lineBuffer.data, .size = 0 };
-//    const TextEditorLineMap * lineMap = o->pageMap.lineTable;
-//    const TextEditorLineMap * end = o->pageMap.lineTable + TEXT_EDITOR_PAGE_MAP_LINE_AMOUNT;
-//    LPM_UnicodeDisplay_setCursor(o->modules->display, &o->pageMap.displayCursor);
-//    size_t lineOffset = o->pageMap.currPageBegin;
-//    size_t lineIndex = 0;
-//    for( ; lineMap != end; lineMap++, lineIndex++)
-//    {
-//        if(_readLineChangedFlag(o, lineIndex))
-//        {
-//            _formatLineForDisplay(o, lineMap, lineOffset);
-//            lineBuf.size = lineMap->payloadLen + lineMap->restLen;
-//            LPM_UnicodeDisplay_writeLine(o->modules->display, &lineBuf, &pos);
-//            printf("updated line %d\n", lineIndex);
-//        }
-//        pos.y++;
-//        lineOffset += lineMap->fullLen;
-//    }
-//    Unicode_Buf lineBuf = { .data = o->modules->lineBuffer.data, .size = 0 };
-//    LPM_Point pos = { .x = 0, .y = 0 };
-//    LPM_DisplayCursor cursor = { {0,0}, {0,0} };
-//    for(size_t lineIndex = 0; lineIndex < TEXT_EDITOR_PAGE_LINE_AMOUNT; lineIndex++, pos.y++)
-//    {
-//        TextEditorPageFormatter_updateDisplay(o->modules->pageFormatter, &cursor);
-//        if(lineBuf.size > 0)
-//            LPM_UnicodeDisplay_writeLine(o->modules->display, &lineBuf, &pos);
-//    }
-    LPM_DisplayCursor cursor = { {0,0}, {0,0} };
-    TextEditorPageFormatter_updateDisplay(o->modules->pageFormatter, &cursor);
+    cursor->pos = o->textCursor.pos;
+    cursor->len = o->textCursor.len;
 }
-
-//bool _changedTextCrossesLine( const LPM_SelectionCursor * changedTextArea,
-//                              size_t lineMapBegin,
-//                              size_t lineMapLen )
-//{
-//    if(changedTextArea == NULL)
-//        return false;
-
-//    return _areaIntersect( lineMapBegin,
-//                           lineMapBegin + lineMapLen,
-//                           changedTextArea->pos,
-//                           changedTextArea->pos + changedTextArea->len );
-//}
-
-//bool _textChangedBeforeEmptyLine( const LPM_SelectionCursor * changedTextArea,
-//                                  size_t lineMapBegin )
-//{
-//    if(changedTextArea == NULL)
-//        return false;
-
-//    return lineMapBegin <= changedTextArea->pos;
-//}
-
-//bool _areaIntersect( size_t firstBegin,
-//                     size_t firstEnd,
-//                     size_t secondBegin,
-//                     size_t secondEnd )
-//{
-//    if(secondBegin == secondEnd)
-//        return false;
-
-//    if(secondBegin > firstEnd)
-//        return false;
-
-//    if(secondEnd <= firstBegin)
-//        return false;
-
-//    return true;
-//}
-
-//void _updateLineMap( TextEditorCore * o,
-//                     TextEditorLineMap * lineMap,
-//                     uint16_t lineOffset )
-//{
-//    _readLineFromTextToLineBuffer(o, o->pageMap.currPageBegin + lineOffset);
-
-//    const size_t lineBufSize = o->modules->lineBuffer.size;
-//    const size_t chrAmount = TEXT_EDITOR_PAGE_MAP_CHAR_AMOUNT;
-//    size_t chrPlaceCount = 0;
-//    size_t chrPlaceCountAtLastSpaceDetected = 0;
-//    size_t chrCurrPos = 0;
-//    size_t lastSpacePos = lineBufSize;
-//    const unicode_t * pchr = o->modules->lineBuffer.data;
-//    const unicode_t * end   = pchr + lineBufSize;
-
-//    for( ; pchr != end; pchr++, chrCurrPos++)
-//    {
-//        if(chrPlaceCount == chrAmount)
-//            break;
-
-//        if(*pchr == chrEndOfText)
-//        {
-//            lineMap->fullLen    = chrCurrPos;
-//            lineMap->payloadLen = chrCurrPos;
-//            lineMap->restLen    = chrAmount - chrPlaceCount;
-//            return;
-//        }
-
-//        if(*pchr == chrLf)
-//        {
-//            lineMap->fullLen    = chrCurrPos+1;
-//            lineMap->payloadLen = chrCurrPos;
-//            lineMap->restLen    = chrAmount - chrPlaceCount;
-//            return;
-//        }
-
-//        if(*pchr == chrCr)
-//        {
-//            ++pchr;
-//            lineMap->fullLen    = chrCurrPos + (*pchr == chrLf ? 2 : 1);
-//            lineMap->payloadLen = chrCurrPos;
-//            lineMap->restLen    = chrAmount - chrPlaceCount;
-//            return;
-//        }
-
-//        if(_chrIsDiacritic(*pchr))
-//            continue;
-
-//        if(*pchr == chrSpace)
-//        {
-//            lastSpacePos = chrCurrPos;
-//            chrPlaceCountAtLastSpaceDetected = chrPlaceCount;
-//        }
-
-//        chrPlaceCount++;
-//    }
-
-//    if(*pchr == chrEndOfText)
-//    {
-//        lineMap->fullLen    = chrCurrPos;
-//        lineMap->payloadLen = chrCurrPos;
-//        lineMap->restLen    = 0;
-//        return;
-//    }
-
-//    if(*pchr == chrLf)
-//    {
-//        lineMap->fullLen    = chrCurrPos+1;
-//        lineMap->payloadLen = chrCurrPos;
-//        lineMap->restLen    = 0;
-//        return;
-//    }
-
-//    if(*pchr == chrCr)
-//    {
-//        ++pchr;
-//        lineMap->fullLen    = chrCurrPos + (*pchr == chrLf ? 2 : 1);
-//        lineMap->payloadLen = chrCurrPos;
-//        lineMap->restLen    = 0;
-//        return;
-//    }
-
-//    if(*pchr == chrSpace)
-//    {
-//        lineMap->payloadLen = chrCurrPos;
-//        lineMap->restLen = 0;
-//        ++pchr;
-//        if( (*pchr == chrCr) )
-//        {
-//            ++pchr;
-//            if( (*pchr == chrLf) )
-//            {
-//                lineMap->fullLen = chrCurrPos+3;
-//                return;
-//            }
-//            lineMap->fullLen = chrCurrPos+2;
-//            return;
-//        }
-//        lineMap->fullLen = chrCurrPos+1;
-//        return;
-//    }
-
-//    if(lastSpacePos == lineBufSize)
-//    {
-//        lineMap->payloadLen = chrCurrPos;
-//        lineMap->restLen    = 0;
-//        lineMap->fullLen    = chrCurrPos;
-//        return;
-//    }
-
-//    lineMap->payloadLen = lastSpacePos;
-//    lineMap->restLen    = chrAmount - chrPlaceCountAtLastSpaceDetected;
-//    lineMap->fullLen    = lastSpacePos+1;
-//}
-
-//void _readLineFromTextToLineBuffer(TextEditorCore * core, size_t pos)
-//{
-//    Unicode_Buf buf =
-//    {
-//        .data = core->modules->lineBuffer.data,
-//        .size = core->modules->lineBuffer.size,
-//    };
-
-//    TextEditorTextOperator_read(core->modules->textOperator, pos, &buf);
-//    if(buf.size < core->modules->lineBuffer.size)
-//        memset( buf.data + buf.size, 0,
-//                (core->modules->lineBuffer.size - buf.size)*sizeof(unicode_t) );
-//}
-
-//bool _chrIsDiacritic(unicode_t chr)
-//{
-//    return Unicode_getSymType(chr) == UNICODE_SYM_TYPE_DIACRITIC;
-//}
-
-//void _formatLineForDisplay( TextEditorCore * o,
-//                            const TextEditorLineMap * lineMap,
-//                            size_t lineOffset )
-//{
-//    if(lineMap->payloadLen > 0)
-//    {
-
-//        Unicode_Buf buf =
-//        {
-//            .data = o->modules->lineBuffer.data,
-//            .size = lineMap->payloadLen,
-//        };
-//        TextEditorTextOperator_read(o->modules->textOperator, lineOffset, &buf);
-//    }
-
-//    unicode_t * pchr = o->modules->lineBuffer.data + lineMap->payloadLen;
-//    unicode_t * const end = pchr + lineMap->restLen;
-//    for( ; pchr != end; pchr++)
-//        *pchr = chrSpace;
-//}
-
-//void _setLineChangedFlag(TextEditorCore * o, size_t lineIndex)
-//{
-//    o->pageMap.changedLineFlags |=  (1u << lineIndex);
-//}
-
-//void _clearLineChangedFlag(TextEditorCore * o, size_t lineIndex)
-//{
-//    o->pageMap.changedLineFlags &= ~(1u << lineIndex);
-//}
-
-//bool _readLineChangedFlag(TextEditorCore * o, size_t lineIndex)
-//{
-//    return o->pageMap.changedLineFlags & (1u << lineIndex);
-//}
-
-//void _clearAllLineChangedFlags(TextEditorCore * o)
-//{
-//    o->pageMap.changedLineFlags = 0x0000;
-//}
-
-//void _setAllLineChangedFlags(TextEditorCore * o)
-//{
-//    o->pageMap.changedLineFlags = 0xFFFF;
-//}
 
 void _printLineMap(TextEditorCore * o)
 {
@@ -491,20 +108,31 @@ void _printLineMap(TextEditorCore * o)
                o->modules->pageFormatter->lineMap[i].fullLen,
                o->modules->pageFormatter->lineMap[i].payloadLen,
                o->modules->pageFormatter->lineMap[i].restLen );
-    printf("flags: %x", o->modules->pageFormatter->lineChangedFlags);
+    printf("flags: %x\n", o->modules->pageFormatter->lineChangedFlags);
 }
 
 
 void _moveCursorCmdHandler(TextEditorCore * o)
 {
+    size_t endOfText = TextEditorTextStorage_endOfText(o->modules->textStorage);
     uint16_t flags = TextEditorCmdReader_getFlags(o->modules->cmdReader);
     if(flags & TEXT_EDITOR_FLAG_NEXT)
-        TextEditorPageFormatter_buildNextPage(o->modules->pageFormatter);
+    {
+        o->textCursor.pos += 1000;
+        if(o->textCursor.pos > endOfText)
+            o->textCursor.pos = endOfText;
+    }
     if(flags & TEXT_EDITOR_FLAG_PREV)
-        TextEditorPageFormatter_buildPreviousPage(o->modules->pageFormatter);
+    {
+        if(o->textCursor.pos < 1000)
+            o->textCursor.pos = 0;
+        else
+            o->textCursor.pos -= 1000;
+    }
 
-    _updateDispayData(o);
-//    _printLineMap(o);
+    TextEditorPageFormatter_updatePageByTextChanging(o->modules->pageFormatter, NULL, o->textCursor.pos);
+    TextEditorPageFormatter_updateDisplay(o->modules->pageFormatter);
+    _printLineMap(o);
 }
 
 void _changeSelectionCmdHandler(TextEditorCore * o) { (void)o; }
@@ -512,35 +140,51 @@ void _changeSelectionCmdHandler(TextEditorCore * o) { (void)o; }
 void _enterSymbolCmdHandler(TextEditorCore * o)
 {
     Unicode_Buf text;
+    SlcCurs area;
+
     TextEditorCmdReader_getText(o->modules->cmdReader, &text);
-    LPM_SelectionCursor area = { .pos = 60000, .len = 0 };
+    _initArea(o, &area);
     TextEditorTextOperator_removeAndWrite(o->modules->textOperator, &area, &text);
     area.len = 1;
-    //TextEditorPageFormatter_buildFirstPage(o->modules->pageFormatter);
-    TextEditorPageFormatter_rebuildCurrentPage(o->modules->pageFormatter, &area);
-    _updateDispayData(o);
+    o->textCursor.pos++;
+    TextEditorPageFormatter_updatePageByTextChanging(o->modules->pageFormatter, &area, o->textCursor.pos);
+    TextEditorPageFormatter_updateDisplay(o->modules->pageFormatter);
 }
 
 void _enterTabCmdHandler(TextEditorCore * o) { (void)o; }
 
 void _enterNewLineCmdHandler(TextEditorCore * o)
 {
-    Unicode_Buf text = { .data = &chrLf, .size = 1 };
-    LPM_SelectionCursor area = { .pos = 60000, .len = 0 };
+    unicode_t   crlf[2] = { chrCr, chrLf };
+    Unicode_Buf text    = { crlf, 2 };
+    SlcCurs     area    = { o->textCursor.pos, o->textCursor.len };
+
     TextEditorTextOperator_removeAndWrite(o->modules->textOperator, &area, &text);
-    area.len = 1;
-    TextEditorPageFormatter_rebuildCurrentPage(o->modules->pageFormatter, &area);
-    _updateDispayData(o);
+
+    area.pos = o->textCursor.pos;
+    area.len = 2;
+    o->textCursor.pos += 2;
+    o->textCursor.len  = 0;
+
+    TextEditorPageFormatter_updatePageByTextChanging(o->modules->pageFormatter, &area, o->textCursor.pos);
+    TextEditorPageFormatter_updateDisplay(o->modules->pageFormatter);
+//    Unicode_Buf text = { .data = &chrLf, .size = 1 };
+//    LPM_SelectionCursor area = { .pos = 60000, .len = 0 };
+//    TextEditorTextOperator_removeAndWrite(o->modules->textOperator, &area, &text);
+//    area.len = 1;
+////    TextEditorPageFormatter_updatePageByTextChanging(o->modules->pageFormatter, &area, );
+////    TextEditorPageFormatter_updateDisplay(o->modules->pageFormatter);
 }
 
 void _deleteCmdHandler(TextEditorCore * o)
 {
-    size_t endOfText = TextEditorTextStorage_endOfText(o->modules->textStorage);
-    LPM_SelectionCursor area = { .pos = endOfText-1, .len = 1 };
-    //LPM_SelectionCursor area = { .pos = 0, .len = 1 };
+    if(o->textCursor.pos == 0)
+        return;
+    SlcCurs area = { o->textCursor.pos-1, 1 };
     TextEditorTextOperator_removeAndWrite(o->modules->textOperator, &area, NULL);
-    TextEditorPageFormatter_rebuildCurrentPage(o->modules->pageFormatter, &area);
-    _updateDispayData(o);
+    o->textCursor.pos--;
+    TextEditorPageFormatter_updatePageByTextChanging(o->modules->pageFormatter, &area, o->textCursor.pos);
+    TextEditorPageFormatter_updateDisplay(o->modules->pageFormatter);
 }
 
 void _changeModeCmdHandler(TextEditorCore * o) { (void)o; }

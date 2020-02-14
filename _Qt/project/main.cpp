@@ -10,6 +10,8 @@ void generateTestTextFile(const QString & fileName);
 
 int main(int argc, char *argv[])
 {
+    QApplication::setOrganizationName("Tesla Tec");
+    QApplication::setApplicationName("LPM Text Editor Utility");
     //generateTestTextFile("test_text_file.txt");
     QApplication a(argc, argv);
     MainWindow w;

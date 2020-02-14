@@ -18,9 +18,9 @@ TestTextEditor::TestTextEditor(QObject * p)
     : QObject(p)
 {}
 
-void TestTextEditor::start(QTextEdit * textEdit)
+void TestTextEditor::start(QTextEdit * textEdit, bool displayLatencyEnabled)
 {
-    QtConcurrent::run([this, textEdit]()
+    QtConcurrent::run([this, textEdit, displayLatencyEnabled]()
     {
         TestKeyboardKeyCatcher kc;
         connect( this, &TestTextEditor::_gotKey,
@@ -29,7 +29,7 @@ void TestTextEditor::start(QTextEdit * textEdit)
         TestKeyboard kbrd;
         TestKeyboard_init(&kbrd, &kc);
 
-        TestDisplayInteractor itc(64, 16);
+        TestDisplayInteractor itc(64, 16, displayLatencyEnabled);
         connect( this, &TestTextEditor::_textUpdated,
                  &itc, &TestDisplayInteractor::_htmlTextUpdated );
         connect( &itc, &TestDisplayInteractor::_htmlTextChanged, this,
@@ -38,7 +38,12 @@ void TestTextEditor::start(QTextEdit * textEdit)
             textEdit->clear();
             textEdit->setHtml(html);
         });
-
+        connect( &itc, &TestDisplayInteractor::_lineUpdated,
+                 this, &TestTextEditor::_lineUpdated );
+        connect( &itc, &TestDisplayInteractor::_resetLinesUpdating,
+                 this, &TestTextEditor::_resetLinesUpdating );
+        connect( this, &TestTextEditor::_setDisplayLatencyEnabled,
+                 &itc, &TestDisplayInteractor::onSetDisplayLatencyEnabled );
         TestDisplay dsp;
         TestDisplay_init(&dsp, &itc);
 
@@ -62,5 +67,10 @@ void TestTextEditor::gui_key_event(QKeyEvent * evt)
     auto code = key_event_to_unicode(*evt);
     if(code != 0)
         emit _gotKey(code);
+}
+
+void TestTextEditor::gui_set_display_latency_enabled(bool state)
+{
+    emit _setDisplayLatencyEnabled(state);
 }
 

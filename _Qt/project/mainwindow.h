@@ -27,6 +27,10 @@ protected:
 private:
     Ui::MainWindow * ui;
     TestTextEditor * testTextEditor;
+
+private slots:
+    void onLineUpdated(int lineIndex);
+    void onResetLinesUpdating();
 };
 
 #endif // MAINWINDOW_H

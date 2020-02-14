@@ -11,6 +11,7 @@ class TestDisplayInteractor : public QObject
 public:
     explicit TestDisplayInteractor( int symbolAmount,
                                     int lineAmount,
+                                    bool latencyEnabled_,
                                     QObject * parent = nullptr );
     void clear();
     void write(QString data, QPoint point);
@@ -19,14 +20,20 @@ public:
 
     QString toString() const;
 
+public slots:
+    void onSetDisplayLatencyEnabled(bool state);
+
 signals:
     void _htmlTextChanged(QString html);
     void _htmlTextUpdated();
+    void _lineUpdated(int lineIndex);
+    void _resetLinesUpdating();
 
 private:
     TestDisplayViewModel vm;
+    bool latencyEnabled;
 
-    void waitForGuiRepaint();
+    void waitForGuiRepaint();    
 };
 
 #endif // TEST_DISPLAY_INTERACTOR_H

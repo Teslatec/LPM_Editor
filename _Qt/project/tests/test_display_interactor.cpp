@@ -29,9 +29,11 @@
 Q_DECLARE_METATYPE(TestDisplayViewModel)
 TestDisplayInteractor::TestDisplayInteractor( int symbolAmount,
                                               int lineAmount,
+                                              bool latencyEnabled_,
                                               QObject * parent )
     : QObject(parent)
     , vm(symbolAmount, lineAmount)
+    , latencyEnabled(latencyEnabled_)
 {
     qRegisterMetaType<TestDisplayViewModel>();
     //vm.data = testList;
@@ -64,8 +66,10 @@ void TestDisplayInteractor::writeLine(QString line, QPoint pos)
     //auto & ref = vm.data[pos.y()];
     //ref.replace(pos.x(), line.size(), line);
     vm.data[pos.y()] = line;
-    QThread::msleep(12);
+    if(latencyEnabled)
+        QThread::msleep(12);
     waitForGuiRepaint();
+    emit _lineUpdated(pos.y());
 }
 
 void TestDisplayInteractor::setCursor(QPoint begin, QPoint end)
@@ -73,11 +77,17 @@ void TestDisplayInteractor::setCursor(QPoint begin, QPoint end)
     vm.cursorBegin = begin;
     vm.cursorEnd   = end;
     waitForGuiRepaint();
+    emit _resetLinesUpdating();
 }
 
 QString TestDisplayInteractor::toString() const
 {
     return vm.toString();
+}
+
+void TestDisplayInteractor::onSetDisplayLatencyEnabled(bool state)
+{
+    latencyEnabled = state;
 }
 
 void TestDisplayInteractor::waitForGuiRepaint()

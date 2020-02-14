@@ -28,28 +28,28 @@ typedef struct TextEditorPageFormatter
     TextEditorLineMap prevPageLastLineMap;
     uint32_t lineChangedFlags;
     bool lastPageReached;
+    LPM_DisplayCursor displayCursor;
 } TextEditorPageFormatter;
 
-void TextEditorPageFormatter_init(TextEditorPageFormatter * o, const TextEditorModules * modules);
-void TextEditorPageFormatter_buildFirstPage(TextEditorPageFormatter * o);
-void TextEditorPageFormatter_buildNextPage(TextEditorPageFormatter * o);
-void TextEditorPageFormatter_buildPreviousPage(TextEditorPageFormatter * o);
-void TextEditorPageFormatter_rebuildCurrentPage( TextEditorPageFormatter * o,
-                                                 LPM_SelectionCursor * changedTextArea );
+void TextEditorPageFormatter_init
+        ( TextEditorPageFormatter * o,
+          const TextEditorModules * modules );
 
-void TextEditorPageFormatter_updateDisplay( TextEditorPageFormatter * o,
-                                            const LPM_DisplayCursor * cursor );
+void TextEditorPageFormatter_setPageAtTextPosition
+        ( TextEditorPageFormatter * o,
+          size_t pos );
 
-//void TextEditorPageFormatter_modifyCursorsWhenDisplayCursorMoved( TextEditorPageFormatter * o,
-//                                                                  uint16_t moveFlags );
-//void TextEditorPageFormatter_modifyCursorsWhenTextChanged( TextEditorPageFormatter * o,
-//                                                            );
+void TextEditorPageFormatter_updatePageByTextChanging
+        ( TextEditorPageFormatter * o,
+          const LPM_SelectionCursor * changedTextArea,
+          size_t newTextPosition );
 
-inline uint32_t TextEditorPageFormatter_getLineChangedFlags(TextEditorPageFormatter * o)
-{
-    return o->lineChangedFlags;
-}
-//const LPM_SelectionCursor * TextEditorPageFormatter_getSelectionCursor(TextEditorPageFormatter * o);
-//const LPM_DisplayCursor * TextEditorPageFormatter_getDisplayCursor(TextEditorPageFormatter * o);
+void TextEditorPageFormatter_updatePageByDisplayCursorChanging
+        ( TextEditorPageFormatter * o,
+          LPM_SelectionCursor * textArea
+          /*Команды!!!*/ );
+
+void TextEditorPageFormatter_updateDisplay
+        ( TextEditorPageFormatter * o );
 
 #endif // TEXT_EDITOR_PAGE_FORMATTER_H

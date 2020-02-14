@@ -10,11 +10,32 @@
 
 typedef TextEditorLineMap       LineMap;
 typedef TextEditorPageFormatter Obj;
+typedef LPM_DisplayCursor DspCurs;
+typedef LPM_SelectionCursor SlcCurs;
+
+typedef enum TextPos
+{
+    TEXT_POS_BEFORE_CURRENT_PAGE = 0,
+    TEXT_POS_ON_CURRENT_PAGE,
+    TEXT_POS_AFTER_CURRENT_PAGE
+} TextPos;
 
 static const unicode_t chrCr = 0x000D;
 static const unicode_t chrLf = 0x000A;
 static const unicode_t chrEndOfText = 0x0000;
 static const unicode_t chrSpace = 0x0020;
+
+
+static void _buildFirstPage(Obj * o);
+static void _buildNextPage(Obj * o);
+static void _buildPreviousPage(Obj * o);
+static void _rebuildCurrentPage(Obj * o, const SlcCurs * changedTextArea);
+
+static TextPos _checkTextPos(Obj * o, size_t pos);
+static bool _isOnFirstPage(Obj * o);
+static bool _isOnLastPage(Obj * o);
+
+static size_t _calcCurrPageLen(Obj * o);
 
 static void _buildPageFromCurrPageOffset(Obj * o);
 static void _buildPageBackwardFromCurrentPosition(Obj * o);
@@ -65,23 +86,74 @@ static bool _areaIntersect( size_t firstBegin,
 
 static void _formatLineForDisplay(Obj * o, const LineMap * lineMap, size_t lineOffset);
 
-void TextEditorPageFormatter_init(TextEditorPageFormatter * o, const TextEditorModules * modules)
+
+void TextEditorPageFormatter_init
+        ( TextEditorPageFormatter * o,
+          const TextEditorModules * modules )
 {
     memset(o, 0, sizeof(TextEditorPageFormatter));
     o->modules = modules;
 }
 
-void TextEditorPageFormatter_buildFirstPage(TextEditorPageFormatter * o)
+void TextEditorPageFormatter_setPageAtTextPosition
+        ( TextEditorPageFormatter * o,
+          size_t pos )
 {
+    _buildFirstPage(o);
+    while(_checkTextPos(o, pos) != TEXT_POS_ON_CURRENT_PAGE)
+        _buildNextPage(o);
+}
+
+void TextEditorPageFormatter_updatePageByTextChanging
+        ( TextEditorPageFormatter * o,
+          const LPM_SelectionCursor * changedTextArea,
+          size_t newTextPosition )
+{
+    _rebuildCurrentPage(o, changedTextArea);
+    TextPos tp = _checkTextPos(o, newTextPosition);
+    if(tp == TEXT_POS_BEFORE_CURRENT_PAGE)
+        _buildPreviousPage(o);
+    else if(tp == TEXT_POS_AFTER_CURRENT_PAGE)
+        _buildNextPage(o);
+}
+
+void TextEditorPageFormatter_updateDisplay
+        ( TextEditorPageFormatter * o )
+{
+    LPM_Point pos = { .x = 0, .y = 0 };
+    Unicode_Buf lineBuf = { .data = o->modules->lineBuffer.data, .size = 0 };
+
+    LPM_UnicodeDisplay_setCursor(o->modules->display, &o->displayCursor);
+
+    const LineMap * lineMap = o->lineMap;
+    const LineMap * end     = o->lineMap + LINE_AMOUNT;
+    size_t lineOffset = o->currPageOffset;
+    size_t lineIndex  = 0;
+    for( ; lineMap != end; lineMap++, lineIndex++, pos.y++)
+    {
+        if(_readLineChangedFlag(o, lineIndex))
+        {
+            _formatLineForDisplay(o, lineMap, lineOffset);
+            lineBuf.size = lineMap->payloadLen + lineMap->restLen;
+            LPM_UnicodeDisplay_writeLine(o->modules->display, &lineBuf, &pos);
+        }
+        lineOffset += lineMap->fullLen;
+    }
+}
+
+void _buildFirstPage(Obj * o)
+{
+    _resetAllLineChangedFlags(o);
     _resetPageIndexToTextBegin(o);
     o->pageGroupOffset[0] = 0;
     _resetPrevPageLastLineMap(o);
     _buildPageFromCurrPageOffset(o);
 }
 
-void TextEditorPageFormatter_buildNextPage(TextEditorPageFormatter * o)
+void _buildNextPage(Obj * o)
 {
-    if(o->lastPageReached)
+    _resetAllLineChangedFlags(o);
+    if(_isOnLastPage(o))
         return;
     _writePrevPageLastLineMap(o, o->lineMap+LINE_AMOUNT-1);
     _switchToNextPage(o);
@@ -95,9 +167,10 @@ void TextEditorPageFormatter_buildNextPage(TextEditorPageFormatter * o)
 //           o->pageGroupOffset[3] );
 }
 
-void TextEditorPageFormatter_buildPreviousPage(TextEditorPageFormatter * o)
+void _buildPreviousPage(Obj * o)
 {
-    if((o->currPageIndex == 0) && (o->currGroupIndex == 0))
+    _resetAllLineChangedFlags(o);
+    if(_isOnFirstPage(o))
         return;
 
     _decPageIndex(o);
@@ -111,7 +184,7 @@ void TextEditorPageFormatter_buildPreviousPage(TextEditorPageFormatter * o)
         if(o->currPageIndex == goalPageIndex)
             break;
 
-        TextEditorPageFormatter_buildNextPage(o);
+        _buildNextPage(o);
     }
 //    printf("page-: %d group: %d offset table: %d %d %d %d\n",
 //           o->currPageIndex,
@@ -122,11 +195,10 @@ void TextEditorPageFormatter_buildPreviousPage(TextEditorPageFormatter * o)
 //           o->pageGroupOffset[3] );
 }
 
-void TextEditorPageFormatter_rebuildCurrentPage( TextEditorPageFormatter * o,
-                                                 LPM_SelectionCursor * changedTextArea )
+void _rebuildCurrentPage(Obj * o, const SlcCurs * changedTextArea)
 {
-    o->lastPageReached = false;
     _resetAllLineChangedFlags(o);
+    o->lastPageReached = false;
 
     size_t lineEndPosBeforeLineBuild = o->currPageOffset;
     size_t lineEndPosAfterLineBuild = o->currPageOffset;
@@ -168,32 +240,44 @@ void TextEditorPageFormatter_rebuildCurrentPage( TextEditorPageFormatter * o,
 
         lineOffset += lineOffsetInc;
     }
-
-    //_setAllLineChangedFlags(o);
 }
 
-void TextEditorPageFormatter_updateDisplay( TextEditorPageFormatter * o,
-                                            const LPM_DisplayCursor * cursor )
+TextPos _checkTextPos(Obj * o, size_t pos)
 {
-    LPM_Point pos = { .x = 0, .y = 0 };
-    Unicode_Buf lineBuf = { .data = o->modules->lineBuffer.data, .size = 0 };
+    size_t currPageBegin = o->currPageOffset;
+    size_t currPageEnd = currPageBegin + _calcCurrPageLen(o);
 
-    LPM_UnicodeDisplay_setCursor(o->modules->display, cursor);
+    if(_isOnFirstPage(o))
+        return pos < currPageEnd ? TEXT_POS_ON_CURRENT_PAGE : TEXT_POS_AFTER_CURRENT_PAGE;
 
-    const LineMap * lineMap = o->lineMap;
-    const LineMap * end     = o->lineMap + LINE_AMOUNT;
-    size_t lineOffset = o->currPageOffset;
-    size_t lineIndex  = 0;
-    for( ; lineMap != end; lineMap++, lineIndex++, pos.y++)
-    {
-        if(_readLineChangedFlag(o, lineIndex))
-        {
-            _formatLineForDisplay(o, lineMap, lineOffset);
-            lineBuf.size = lineMap->payloadLen + lineMap->restLen;
-            LPM_UnicodeDisplay_writeLine(o->modules->display, &lineBuf, &pos);
-        }
-        lineOffset += lineMap->fullLen;
-    }
+    if(_isOnLastPage(o))
+        return pos >= currPageBegin ? TEXT_POS_ON_CURRENT_PAGE : TEXT_POS_BEFORE_CURRENT_PAGE;
+
+    if(pos < currPageBegin)
+        return TEXT_POS_BEFORE_CURRENT_PAGE;
+    if(pos >= currPageEnd)
+        return TEXT_POS_AFTER_CURRENT_PAGE;
+    return TEXT_POS_ON_CURRENT_PAGE;
+}
+
+bool _isOnFirstPage(Obj * o)
+{
+    return (o->currPageIndex == 0) && (o->currGroupIndex == 0);
+}
+
+bool _isOnLastPage(Obj * o)
+{
+    return o->lastPageReached;
+}
+
+size_t _calcCurrPageLen(Obj * o)
+{
+    size_t len = 0;
+    const LineMap * lineMap   = o->lineMap;
+    const LineMap * const end = o->lineMap+LINE_AMOUNT;
+    for( ; lineMap != end; lineMap++)
+        len += lineMap->fullLen;
+    return len;
 }
 
 void _buildPageFromCurrPageOffset(Obj * o)
@@ -597,7 +681,7 @@ bool _areaIntersect( size_t firstBegin,
     if(secondBegin == secondEnd)
         return false;
 
-    if(secondBegin > firstEnd)
+    if(secondBegin >= firstEnd)
         return false;
 
     if(secondEnd <= firstBegin)
