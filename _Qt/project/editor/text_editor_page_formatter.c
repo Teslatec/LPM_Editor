@@ -25,35 +25,25 @@ static const unicode_t chrLf = 0x000A;
 static const unicode_t chrEndOfText = 0x0000;
 static const unicode_t chrSpace = 0x0020;
 
+static void _setFirstPageInGroup(Obj * o, size_t groupIndex);
+static void _setNextPage(Obj * o);
+static void _changePageIfNotOnCurrTextPosition(Obj * o, size_t pos);
 
-static void _buildFirstPage(Obj * o);
-static void _buildNextPage(Obj * o);
-static void _buildPreviousPage(Obj * o);
+static void _switchToFirstPageInGroup(Obj * o, size_t groupIndex);
+static void _switchToNextPage(Obj * o);
+static size_t _calcNextPageBase(Obj * o);
+static size_t _calcCurrPageLen(Obj * o);
+static bool _incPageIndex(Obj * o);
+static size_t _findGroupWithNearestOffset(Obj * o, size_t pos);
+
+static void _buildPageFromCurrBase(Obj * o);
 static void _rebuildCurrentPage(Obj * o, const SlcCurs * changedTextArea);
 
 static TextPos _checkTextPos(Obj * o, size_t pos);
-static bool _isOnFirstPage(Obj * o);
-static bool _isOnLastPage(Obj * o);
+static bool _isCurrPageFirst(Obj * o);
+static bool _isCurrPageLast(Obj * o);
 
-static size_t _calcCurrPageLen(Obj * o);
-
-static void _buildPageFromCurrPageOffset(Obj * o);
-static void _buildPageBackwardFromCurrentPosition(Obj * o);
-static void _switchToNextPage(Obj * o);
-
-static bool _incPageIndex(Obj * o);
-static void _decPageIndex(Obj * o);
-static void _resetPageIndexToGroupBegin(Obj * o);
-static void _resetPageIndexToTextBegin(Obj * o);
-static bool _isCurrentPageFirst(Obj * o);
-
-static void _resetPrevPageLastLineMap(Obj * o);
-static void _writePrevPageLastLineMap(Obj * o, const LineMap * lineMap);
-
-static size_t _buildLineMapForward(Obj * o, LineMap * lineMap);
-static size_t _rebuildLineMapAndCheckItChanged(Obj * o, LineMap * lineMap);
-static size_t _buildLineMapBackward(Obj * o, LineMap * lineMap, size_t lineOffset);
-static void _convertLineTableToForwardRepresentation(Obj * o);
+static size_t _buildLineMap(Obj * o, LineMap * lineMap);
 
 static bool _checkForEndOfText(unicode_t chr);
 static bool _checkForEndLine(unicode_t chr);
@@ -66,8 +56,7 @@ static size_t _buildLineMapWithWordDividerAtLineEnd(LineMap * lineMap, const uni
 static size_t _buildLineMapWithVeryLongWord(LineMap * lineMap, const unicode_t * pchr, size_t currPos);
 static size_t _buildLineMapWithWordWrap(LineMap * lineMap, size_t lastWordDivPos, size_t placeCntAtLastWordDiv);
 
-static void _loadLineForward(Obj * o, size_t loadPos);
-static void _loadLineBackward(Obj * o, size_t lineBackwardOffset);
+static void _loadLine(Obj * o, size_t loadPos);
 
 static void _setAllLineChangedFlags(Obj * o);
 static void _resetAllLineChangedFlags(Obj * o);
@@ -83,9 +72,9 @@ static bool _areaIntersect( size_t firstBegin,
                             size_t secondBegin,
                             size_t secondEnd );
 
+static void _changeDisplayCursorByTextCursor(Obj * o, size_t newTextPosition);
 
 static void _formatLineForDisplay(Obj * o, const LineMap * lineMap, size_t lineOffset);
-
 
 void TextEditorPageFormatter_init
         ( TextEditorPageFormatter * o,
@@ -95,13 +84,12 @@ void TextEditorPageFormatter_init
     o->modules = modules;
 }
 
-void TextEditorPageFormatter_setPageAtTextPosition
+void TextEditorPageFormatter_startWithPageAtTextPosition
         ( TextEditorPageFormatter * o,
           size_t pos )
 {
-    _buildFirstPage(o);
-    while(_checkTextPos(o, pos) != TEXT_POS_ON_CURRENT_PAGE)
-        _buildNextPage(o);
+    _setFirstPageInGroup(o, 0);
+    _changePageIfNotOnCurrTextPosition(o, pos);
 }
 
 void TextEditorPageFormatter_updatePageByTextChanging
@@ -110,11 +98,24 @@ void TextEditorPageFormatter_updatePageByTextChanging
           size_t newTextPosition )
 {
     _rebuildCurrentPage(o, changedTextArea);
-    TextPos tp = _checkTextPos(o, newTextPosition);
-    if(tp == TEXT_POS_BEFORE_CURRENT_PAGE)
-        _buildPreviousPage(o);
-    else if(tp == TEXT_POS_AFTER_CURRENT_PAGE)
-        _buildNextPage(o);
+    _changePageIfNotOnCurrTextPosition(o, newTextPosition);
+
+    // TODO: пересчитать курсор дисплея
+    _changeDisplayCursorByTextCursor(o, newTextPosition);
+}
+
+
+void TextEditorPageFormatter_updatePageByDisplayCursorChanging
+        ( TextEditorPageFormatter * o,
+          LPM_SelectionCursor * textArea,
+          uint32_t flags )
+{
+    // TODO: Переставить курсор
+    //_moveDisplayCursor(o, flags);
+    // Пересчитать позицию текста
+    //_changeTextCursorByDisplayCursor(o, textArea);
+    _changePageIfNotOnCurrTextPosition(o, textArea->pos);
+    //                         -----------^ -???
 }
 
 void TextEditorPageFormatter_updateDisplay
@@ -127,7 +128,8 @@ void TextEditorPageFormatter_updateDisplay
 
     const LineMap * lineMap = o->lineMap;
     const LineMap * end     = o->lineMap + LINE_AMOUNT;
-    size_t lineOffset = o->currPageOffset;
+    size_t lineOffset = o->currPageBase +
+            (_isCurrPageFirst(o) ? 0 : o->prevPageLastLineMap.fullLen);
     size_t lineIndex  = 0;
     for( ; lineMap != end; lineMap++, lineIndex++, pos.y++)
     {
@@ -141,133 +143,72 @@ void TextEditorPageFormatter_updateDisplay
     }
 }
 
-void _buildFirstPage(Obj * o)
+
+
+
+void _setFirstPageInGroup(Obj * o, size_t groupIndex)
 {
-    _resetAllLineChangedFlags(o);
-    _resetPageIndexToTextBegin(o);
-    o->pageGroupOffset[0] = 0;
-    _resetPrevPageLastLineMap(o);
-    _buildPageFromCurrPageOffset(o);
+    _switchToFirstPageInGroup(o, groupIndex);
+    _buildPageFromCurrBase(o);
 }
 
-void _buildNextPage(Obj * o)
+void _setNextPage(Obj * o)
 {
-    _resetAllLineChangedFlags(o);
-    if(_isOnLastPage(o))
+    if(_isCurrPageLast(o))
+    {
+        _resetAllLineChangedFlags(o);
         return;
-    _writePrevPageLastLineMap(o, o->lineMap+LINE_AMOUNT-1);
+    }
     _switchToNextPage(o);
-    _buildPageFromCurrPageOffset(o);
-//    printf("page+: %d group: %d offset table: %d %d %d %d\n",
-//           o->currPageIndex,
-//           o->currGroupIndex,
-//           o->pageGroupOffset[0],
-//           o->pageGroupOffset[1],
-//           o->pageGroupOffset[2],
-//           o->pageGroupOffset[3] );
+    _buildPageFromCurrBase(o);
 }
 
-void _buildPreviousPage(Obj * o)
+void _changePageIfNotOnCurrTextPosition(Obj * o, size_t pos)
 {
-    _resetAllLineChangedFlags(o);
-    if(_isOnFirstPage(o))
+    TextPos tp = _checkTextPos(o, pos);
+
+    if(tp == TEXT_POS_ON_CURRENT_PAGE)
+    {
         return;
-
-    _decPageIndex(o);
-    size_t goalPageIndex = o->currPageIndex;
-    _resetPageIndexToGroupBegin(o);
-
-    o->currPageOffset = o->pageGroupOffset[o->currGroupIndex];
-    _buildPageFromCurrPageOffset(o);
-    for(;;)
-    {
-        if(o->currPageIndex == goalPageIndex)
-            break;
-
-        _buildNextPage(o);
-    }
-//    printf("page-: %d group: %d offset table: %d %d %d %d\n",
-//           o->currPageIndex,
-//           o->currGroupIndex,
-//           o->pageGroupOffset[0],
-//           o->pageGroupOffset[1],
-//           o->pageGroupOffset[2],
-//           o->pageGroupOffset[3] );
-}
-
-void _rebuildCurrentPage(Obj * o, const SlcCurs * changedTextArea)
-{
-    _resetAllLineChangedFlags(o);
-    o->lastPageReached = false;
-
-    size_t lineEndPosBeforeLineBuild = o->currPageOffset;
-    size_t lineEndPosAfterLineBuild = o->currPageOffset;
-
-    if(!_isCurrentPageFirst(o))
-    {
-        size_t prevLineLen = o->prevPageLastLineMap.fullLen;
-        _loadLineForward(o, o->currPageOffset - prevLineLen);
-
-        lineEndPosBeforeLineBuild = o->currPageOffset;
-        _buildLineMapForward(o, &o->prevPageLastLineMap);
-        int diff = (int)(o->prevPageLastLineMap.fullLen) - (int)prevLineLen;
-        o->currPageOffset += diff;
-        lineEndPosAfterLineBuild = o->currPageOffset;
     }
 
-    size_t lineOffset = 0;
-    size_t lineIndex = 0;
-    LineMap * lineMap = o->lineMap;
-    LineMap * end     = o->lineMap + LINE_AMOUNT;
-    for( ; lineMap != end; lineMap++, lineIndex++)
+    if(tp == TEXT_POS_AFTER_CURRENT_PAGE)
     {
-        if(lineEndPosBeforeLineBuild != lineEndPosAfterLineBuild)
-            _setLineChangedFlag(o, lineIndex);
-
-        _loadLineForward(o, o->currPageOffset + lineOffset);
-
-        lineEndPosBeforeLineBuild = o->currPageOffset + lineOffset + lineMap->fullLen;
-        size_t lineOffsetInc = _buildLineMapForward(o, lineMap);
-        lineEndPosAfterLineBuild = o->currPageOffset + lineOffset + lineMap->fullLen;
-
-        if(lineEndPosBeforeLineBuild != lineEndPosAfterLineBuild)
-            _setLineChangedFlag(o, lineIndex);
-
-        if(_changedTextCrossesLine( changedTextArea,
-                                    o->currPageOffset + lineOffset,
-                                    lineMap->fullLen ))
-            _setLineChangedFlag(o, lineIndex);
-
-        lineOffset += lineOffsetInc;
+        _setNextPage(o);
     }
+    else
+    {
+        size_t groupIndex = _findGroupWithNearestOffset(o, pos);
+        _setFirstPageInGroup(o, groupIndex);
+    }
+
+    while(_checkTextPos(o, pos) != TEXT_POS_ON_CURRENT_PAGE)
+        _setNextPage(o);
 }
 
-TextPos _checkTextPos(Obj * o, size_t pos)
+
+void _switchToFirstPageInGroup(Obj * o, size_t groupIndex)
 {
-    size_t currPageBegin = o->currPageOffset;
-    size_t currPageEnd = currPageBegin + _calcCurrPageLen(o);
-
-    if(_isOnFirstPage(o))
-        return pos < currPageEnd ? TEXT_POS_ON_CURRENT_PAGE : TEXT_POS_AFTER_CURRENT_PAGE;
-
-    if(_isOnLastPage(o))
-        return pos >= currPageBegin ? TEXT_POS_ON_CURRENT_PAGE : TEXT_POS_BEFORE_CURRENT_PAGE;
-
-    if(pos < currPageBegin)
-        return TEXT_POS_BEFORE_CURRENT_PAGE;
-    if(pos >= currPageEnd)
-        return TEXT_POS_AFTER_CURRENT_PAGE;
-    return TEXT_POS_ON_CURRENT_PAGE;
+    o->currPageIndex  = 0;
+    o->currGroupIndex = groupIndex;
+    o->currPageBase   = o->groupBaseTable[groupIndex];
 }
 
-bool _isOnFirstPage(Obj * o)
+void _switchToNextPage(Obj * o)
 {
-    return (o->currPageIndex == 0) && (o->currGroupIndex == 0);
+    o->currPageBase = _calcNextPageBase(o);
+    if(_incPageIndex(o))
+        o->groupBaseTable[o->currGroupIndex] = o->currPageBase;
 }
 
-bool _isOnLastPage(Obj * o)
+size_t _calcNextPageBase(Obj * o)
 {
-    return o->lastPageReached;
+    size_t base = o->currPageBase + o->prevPageLastLineMap.fullLen;
+    const LineMap * lineMap   = o->lineMap;
+    const LineMap * const end = o->lineMap+LINE_AMOUNT-1;
+    for( ; lineMap != end; lineMap++)
+        base += lineMap->fullLen;
+    return base;
 }
 
 size_t _calcCurrPageLen(Obj * o)
@@ -278,43 +219,6 @@ size_t _calcCurrPageLen(Obj * o)
     for( ; lineMap != end; lineMap++)
         len += lineMap->fullLen;
     return len;
-}
-
-void _buildPageFromCurrPageOffset(Obj * o)
-{
-    _setAllLineChangedFlags(o);
-    o->lastPageReached = false;
-    size_t lineOffset = 0;
-    LineMap * lineMap = o->lineMap;
-    LineMap * end     = o->lineMap + LINE_AMOUNT;
-    for( ; lineMap != end; lineMap++)
-    {
-        _loadLineForward(o, o->currPageOffset + lineOffset);
-        lineOffset += _buildLineMapForward(o, lineMap);
-    }
-}
-
-void _buildPageBackwardFromCurrentPosition(Obj * o)
-{
-    _setAllLineChangedFlags(o);
-    size_t lineOffset = 0;
-    LineMap * lineMap = o->lineMap + LINE_AMOUNT-1;
-    LineMap * end     = o->lineMap-1;
-    for( ; lineMap != end; lineMap--)
-        lineOffset += _buildLineMapBackward(o, lineMap, lineOffset);
-    o->currPageOffset -= lineOffset;
-    _convertLineTableToForwardRepresentation(o);
-}
-
-void _switchToNextPage(Obj * o)
-{
-    const LineMap * lineMap = o->lineMap;
-    const LineMap * end     = o->lineMap + LINE_AMOUNT;
-    for( ; lineMap != end; lineMap++)
-        o->currPageOffset += lineMap->fullLen;
-
-    if(_incPageIndex(o))
-        o->pageGroupOffset[o->currGroupIndex] = o->currPageOffset;
 }
 
 bool _incPageIndex(Obj * o)
@@ -332,54 +236,120 @@ bool _incPageIndex(Obj * o)
     return false;
 }
 
-void _decPageIndex(Obj * o)
+size_t _findGroupWithNearestOffset(Obj * o, size_t pos)
 {
-    if(o->currPageIndex == 0)
+    size_t * poffs = o->groupBaseTable + o->currGroupIndex;
+    size_t * const pend = o->groupBaseTable;
+    size_t groupIndex = o->currGroupIndex;
+    for( ; poffs != pend; poffs--, groupIndex--)
+        if(*poffs < pos)
+            break;
+    return groupIndex;
+}
+
+void _buildPageFromCurrBase(Obj * o)
+{
+    _setAllLineChangedFlags(o);
+    o->lastPageReached = false;
+
+    size_t lineOffset = 0;
+    if(!_isCurrPageFirst(o))
     {
-        if(o->currGroupIndex > 0)
-        {
-            o->currGroupIndex--;
-            o->currPageIndex = PAGES_IN_GROUP-1;
-        }
+        _loadLine(o, o->currPageBase);
+        lineOffset = _buildLineMap(o, &o->prevPageLastLineMap);
     }
-    else
+
+    LineMap * lineMap   = o->lineMap;
+    LineMap * const end = o->lineMap + LINE_AMOUNT;
+    for( ; lineMap != end; lineMap++)
     {
-        o->currPageIndex--;
+        _loadLine(o, o->currPageBase + lineOffset);
+        lineOffset += _buildLineMap(o, lineMap);
     }
 }
 
-void _resetPageIndexToGroupBegin(Obj * o)
+void _rebuildCurrentPage(Obj * o, const SlcCurs * changedTextArea)
 {
-    o->currPageIndex = 0;
+    _resetAllLineChangedFlags(o);
+    o->lastPageReached = false;
+
+    size_t lineEndPosBeforeLineBuild = 0;
+    size_t lineEndPosAfterLineBuild  = 0;
+    size_t lineOffset = 0;
+
+    if(!_isCurrPageFirst(o))
+    {
+        _loadLine(o, o->currPageBase);
+        lineEndPosBeforeLineBuild = o->currPageBase + o->prevPageLastLineMap.fullLen;
+        lineOffset += _buildLineMap(o, &o->prevPageLastLineMap);
+        lineEndPosAfterLineBuild  = o->currPageBase + o->prevPageLastLineMap.fullLen;
+    }
+
+    size_t lineIndex = 0;
+    LineMap * lineMap = o->lineMap;
+    LineMap * end     = o->lineMap + LINE_AMOUNT;
+    for( ; lineMap != end; lineMap++, lineIndex++)
+    {
+        if(lineEndPosBeforeLineBuild != lineEndPosAfterLineBuild)
+            _setLineChangedFlag(o, lineIndex);
+
+        _loadLine(o, o->currPageBase + lineOffset);
+
+        lineEndPosBeforeLineBuild = o->currPageBase + lineOffset + lineMap->fullLen;
+        size_t lineOffsetInc = _buildLineMap(o, lineMap);
+        lineEndPosAfterLineBuild = o->currPageBase + lineOffset + lineMap->fullLen;
+
+        if(lineEndPosBeforeLineBuild != lineEndPosAfterLineBuild)
+            _setLineChangedFlag(o, lineIndex);
+
+        if(_changedTextCrossesLine( changedTextArea,
+                                    o->currPageBase + lineOffset,
+                                    lineMap->fullLen ))
+            _setLineChangedFlag(o, lineIndex);
+
+        lineOffset += lineOffsetInc;
+    }
 }
 
-void _resetPageIndexToTextBegin(Obj * o)
+TextPos _checkTextPos(Obj * o, size_t pos)
 {
-    o->currPageOffset = 0;
-    o->currGroupIndex = 0;
-    o->currPageIndex  = 0;
+    if(_isCurrPageFirst(o))
+    {
+        return pos < _calcCurrPageLen(o) ?
+                    TEXT_POS_ON_CURRENT_PAGE :
+                    TEXT_POS_AFTER_CURRENT_PAGE;
+    }
+
+    if(_isCurrPageLast(o))
+    {
+        return pos >= o->currPageBase + o->prevPageLastLineMap.fullLen ?
+                    TEXT_POS_ON_CURRENT_PAGE :
+                    TEXT_POS_BEFORE_CURRENT_PAGE;
+    }
+
+    size_t currPageBegin = o->currPageBase + o->prevPageLastLineMap.fullLen;
+    size_t currPageEnd   = currPageBegin + _calcCurrPageLen(o);
+
+    if(pos < currPageBegin)
+        return TEXT_POS_BEFORE_CURRENT_PAGE;
+
+    if(pos >= currPageEnd)
+        return TEXT_POS_AFTER_CURRENT_PAGE;
+
+    return TEXT_POS_ON_CURRENT_PAGE;
 }
 
-static bool _isCurrentPageFirst(Obj * o)
+bool _isCurrPageFirst(Obj * o)
 {
     return (o->currPageIndex == 0) && (o->currGroupIndex == 0);
 }
 
-void _resetPrevPageLastLineMap(Obj * o)
+bool _isCurrPageLast(Obj * o)
 {
-    o->prevPageLastLineMap.fullLen    = 0;
-    o->prevPageLastLineMap.payloadLen = 0;
-    o->prevPageLastLineMap.restLen    = 0;
+    return o->lastPageReached;
 }
 
-void _writePrevPageLastLineMap(Obj * o, const LineMap * lineMap)
-{
-    o->prevPageLastLineMap.fullLen    = lineMap->fullLen;
-    o->prevPageLastLineMap.payloadLen = lineMap->payloadLen;
-    o->prevPageLastLineMap.restLen    = lineMap->restLen;
-}
-
-size_t _buildLineMapForward(Obj * o, LineMap * lineMap)
+size_t _buildLineMap(Obj * o, LineMap * lineMap)
 {
     const size_t maxPlaceCntValue = CHAR_AMOUNT;
     const size_t wordDividersNotFoundValue = o->modules->lineBuffer.size;
@@ -400,7 +370,10 @@ size_t _buildLineMapForward(Obj * o, LineMap * lineMap)
         }
 
         if(_checkForEndLine(*pchr))
+        {
+            test_beep(currPos, lineMap-o->lineMap);
             return _buildLineMapWithEndLine(lineMap, pchr, currPos, placeCnt);
+        }
 
         if(placeCnt == maxPlaceCntValue)
             break;
@@ -427,100 +400,6 @@ size_t _buildLineMapForward(Obj * o, LineMap * lineMap)
 
     return _buildLineMapWithWordWrap(lineMap, lastWordDivPos, placeCntAtLastWordDiv);
 }
-
-size_t _buildLineMapBackward(Obj * o, LineMap * lineMap, size_t lineOffset)
-{
-    _loadLineBackward(o, lineOffset);
-
-    const size_t maxPlaceCntValue = CHAR_AMOUNT;
-    const size_t wordDividersNotFoundValue = o->modules->lineBuffer.size;
-
-    size_t currPos = 0;
-    size_t placeCnt = 0;
-    size_t lastWordDivPos = 0;
-    size_t placeCntAtLastWordDiv = 0;
-
-    const unicode_t * pend = o->modules->lineBuffer.data-1;
-    const unicode_t * pchr = pend + o->modules->lineBuffer.size;
-
-    lineMap->fullLen    = 0;
-
-    // Проверяем конец строки
-    if(*pchr == chrLf)
-    {
-        lineMap->fullLen++;
-        pchr--;
-    }
-    if(*pchr == chrCr)
-    {
-        lineMap->fullLen++;
-        pchr--;
-    }
-    if(*pchr == chrSpace)
-    {
-        lineMap->fullLen++;
-        pchr--;
-    }
-
-    for( ; pchr != pend; pchr--, currPos++ )
-    {
-        if(_checkForEndOfText(*pchr))
-        {
-            lineMap->fullLen    += currPos;
-            lineMap->payloadLen  = currPos;
-            lineMap->restLen     = CHAR_AMOUNT - placeCnt;
-        }
-
-        if(_checkForEndLine(*pchr))
-        {
-            lineMap->fullLen += currPos;
-            lineMap->payloadLen = currPos;
-            lineMap->restLen = CHAR_AMOUNT - placeCnt;
-            return lineMap->fullLen;
-        }
-
-        if(placeCnt == maxPlaceCntValue)
-            break;
-
-        if(_checkForDiacritic(*pchr))
-            continue;
-
-        if(_checkForWordDivider(*pchr))
-        {
-            // Запоминаем позицию символа-разделителя слов, а так же значения
-            //  счетчика занятых знакомест в этот момент
-            lastWordDivPos = currPos;
-            placeCntAtLastWordDiv = placeCnt;
-        }
-
-        placeCnt++;
-    }
-
-    if((*pchr == chrSpace) || (*pchr == chrLf) || (*pchr == chrCr))
-    {
-        lineMap->fullLen += currPos;
-        lineMap->payloadLen = currPos;
-        lineMap->restLen = 0;
-        return lineMap->fullLen;
-    }
-
-    if(lastWordDivPos == wordDividersNotFoundValue)
-    {
-        lineMap->fullLen += currPos;
-        lineMap->restLen = 0;
-        lineMap->payloadLen = currPos;
-        return lineMap->fullLen;
-    }
-
-
-    lineMap->payloadLen = lastWordDivPos;
-    lineMap->restLen = CHAR_AMOUNT - placeCntAtLastWordDiv;
-    lineMap->fullLen += lastWordDivPos+1;
-    return lineMap->fullLen;
-}
-
-void _convertLineTableToForwardRepresentation(Obj * o)
-{}
 
 bool _checkForEndOfText(unicode_t chr)
 {
@@ -598,7 +477,7 @@ size_t _buildLineMapWithWordWrap(LineMap * lineMap, size_t lastWordDivPos, size_
     return lineMap->fullLen;
 }
 
-void _loadLineForward(Obj * o, size_t loadPos)
+void _loadLine(Obj * o, size_t loadPos)
 {
     Unicode_Buf buf =
     {
@@ -608,36 +487,6 @@ void _loadLineForward(Obj * o, size_t loadPos)
     size_t fullSize = o->modules->lineBuffer.size;
     TextEditorTextOperator_read(o->modules->textOperator, loadPos, &buf);
     memset(buf.data + buf.size, 0, (fullSize - buf.size)*sizeof(unicode_t));
-}
-
-void _loadLineBackward(Obj * o, size_t lineBackwardOffset)
-{
-    const size_t lineBufSize = o->modules->lineBuffer.size;
-    unicode_t * const lineBufData = o->modules->lineBuffer.data;
-
-    memset(lineBufData, 0, lineBufSize * sizeof(unicode_t));
-
-    if(lineBackwardOffset > o->currPageOffset)
-        return;
-
-    const size_t loadEndPos = o->currPageOffset - lineBackwardOffset;
-    Unicode_Buf buf;
-    size_t loadStartPos;
-
-    if(loadEndPos < lineBufSize)
-    {
-        loadStartPos = 0;
-        buf.data = lineBufData + (loadEndPos - lineBufSize);
-        buf.size = loadEndPos;
-    }
-    else
-    {
-        loadStartPos = loadEndPos-lineBufSize;
-        buf.data = lineBufData;
-        buf.size = lineBufSize;
-    }
-
-    TextEditorTextOperator_read(o->modules->textOperator, loadStartPos, &buf);
 }
 
 void _setAllLineChangedFlags(Obj * o)
@@ -688,6 +537,34 @@ bool _areaIntersect( size_t firstBegin,
         return false;
 
     return true;
+}
+
+void _changeDisplayCursorByTextCursor(Obj * o, size_t newTextPosition)
+{
+    DspCurs newCursor = {{0,0},{0,0}};
+    const LineMap * lineMap = o->lineMap;
+    const LineMap * const end = lineMap + LINE_AMOUNT;
+    size_t lineOffset = o->prevPageLastLineMap.fullLen + o->currPageBase;
+    for( ; lineMap != end; lineMap++)
+    {
+        //if(lineMap == o->lineMap+10)
+            //test_beep(lineMap-o->lineMap, lineMap->fullLen);
+        if( (newTextPosition >= lineOffset) &&
+            (newTextPosition < lineOffset + lineMap->fullLen) )
+            break;
+
+        lineOffset += lineMap->fullLen;
+        newCursor.begin.y++;
+        newCursor.end.y++;
+    }
+
+    if(lineMap == end)
+        return;
+
+    newCursor.begin.x = newTextPosition-lineOffset;
+    newCursor.end.x = newTextPosition-lineOffset;
+
+    memcpy(&o->displayCursor, &newCursor, sizeof(DspCurs));
 }
 
 void _formatLineForDisplay(Obj * o, const LineMap * lineMap, size_t lineOffset)

@@ -101,7 +101,7 @@ void _test()
         uint16_t flags = TextEditorCmdReader_getFlags(&cmdReader);
         bool mode = TextEditorCmdReader_isReplacementMode(&cmdReader);
 
-        if(cmd == TEXT_EDITOR_CMD_ENTER_SYMBOL)
+        if(cmd == TEXT_EDITOR_CMD_TEXT_CHANGED)
             for(size_t i = 0; i < modules.keyboardBuffer.size; i++)
                 test_command_reader(cmd, flags, modules.keyboardBuffer.data[i], mode);
         else

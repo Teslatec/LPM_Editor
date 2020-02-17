@@ -2,15 +2,12 @@
 #define TEXT_EDITOR_COMMAND_READER_H
 
 #include "lpm_unicode_keyboard.h"
+#include "text_editor_flags.h"
 
 typedef enum TextEditorCmd
 {
-    TEXT_EDITOR_CMD_MOVE_CURSOR,
-    TEXT_EDITOR_CMD_CHANGE_SELECTION,
-    TEXT_EDITOR_CMD_ENTER_SYMBOL,
-    TEXT_EDITOR_CMD_ENTER_TAB,
-    TEXT_EDITOR_CMD_ENTER_NEW_LINE,
-    TEXT_EDITOR_CMD_DELETE,
+    TEXT_EDITOR_CMD_CURSOR_CHANGED,
+    TEXT_EDITOR_CMD_TEXT_CHANGED,
     TEXT_EDITOR_CMD_CHANGE_MODE,
     TEXT_EDITOR_CMD_COPY,
     TEXT_EDITOR_CMD_PASTE,
@@ -25,18 +22,6 @@ typedef enum TextEditorCmd
     __TEXT_EDITOR_NO_CMD
 } TextEditorCmd;
 
-typedef enum TextEditorFlag
-{
-    TEXT_EDITOR_FLAG_FORWARD  = 0x01,
-    TEXT_EDITOR_FLAG_BACKWARD = 0x02,
-    TEXT_EDITOR_FLAG_BEGIN    = 0x04,
-    TEXT_EDITOR_FLAG_END      = 0x08,
-    TEXT_EDITOR_FLAG_NEXT     = 0x10,
-    TEXT_EDITOR_FLAG_PREV     = 0x20,
-    TEXT_EDITOR_FLAG_PAGE     = 0x40,
-    TEXT_EDITOR_FLAG_LINE     = 0x80,
-} TextEditorFlag;
-
 typedef struct TextEditorCmdReader
 {
     LPM_UnicodeKeyboard * keyboard;
@@ -47,30 +32,29 @@ typedef struct TextEditorCmdReader
     bool isReplacementMode;
 } TextEditorCmdReader;
 
-void TextEditorCmdReader_init( TextEditorCmdReader * obj,
-                               LPM_UnicodeKeyboard * keyboard,
-                               Unicode_Buf * kbdBuf );
+void TextEditorCmdReader_init
+        ( TextEditorCmdReader * obj,
+          LPM_UnicodeKeyboard * keyboard,
+          Unicode_Buf * kbdBuf );
 
-TextEditorCmd TextEditorCmdReader_read( TextEditorCmdReader * obj,
-                                        uint32_t timeoutMs );
+TextEditorCmd TextEditorCmdReader_read
+                ( TextEditorCmdReader * obj,
+                  uint32_t timeoutMs );
 
 bool TextEditorCmdReader_errorOccured(TextEditorCmdReader * obj);
 
-inline void TextEditorCmdReader_getText( TextEditorCmdReader * obj,
-                                         Unicode_Buf * buf )
+inline void TextEditorCmdReader_getText
+        ( TextEditorCmdReader * obj,
+          Unicode_Buf * buf )
 {
     buf->data = obj->kbdBuf->data;
     buf->size = obj->receivedSize;
 }
 
-inline uint8_t TextEditorCmdReader_getFlags(TextEditorCmdReader * obj)
-{
-    return obj->flags;
-}
+inline uint8_t TextEditorCmdReader_getFlags
+        (TextEditorCmdReader * obj) { return obj->flags; }
 
-inline bool TextEditorCmdReader_isReplacementMode(TextEditorCmdReader * obj)
-{
-    return obj->isReplacementMode;
-}
+inline bool TextEditorCmdReader_isReplacementMode
+        (TextEditorCmdReader * obj) { return obj->isReplacementMode; }
 
 #endif // TEXT_EDITOR_COMMAND_READER_H

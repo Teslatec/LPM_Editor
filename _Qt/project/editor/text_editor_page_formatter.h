@@ -20,8 +20,8 @@ typedef struct TextEditorLineMap
 typedef struct TextEditorPageFormatter
 {
     const TextEditorModules * modules;
-    size_t pageGroupOffset[TEXT_EDITOR_PAGE_GROUP_AMOUNT];
-    size_t currPageOffset;
+    size_t groupBaseTable[TEXT_EDITOR_PAGE_GROUP_AMOUNT];
+    size_t currPageBase;
     size_t currGroupIndex;
     size_t currPageIndex;
     TextEditorLineMap lineMap[TEXT_EDITOR_PAGE_LINE_AMOUNT];
@@ -35,7 +35,7 @@ void TextEditorPageFormatter_init
         ( TextEditorPageFormatter * o,
           const TextEditorModules * modules );
 
-void TextEditorPageFormatter_setPageAtTextPosition
+void TextEditorPageFormatter_startWithPageAtTextPosition
         ( TextEditorPageFormatter * o,
           size_t pos );
 
@@ -46,8 +46,8 @@ void TextEditorPageFormatter_updatePageByTextChanging
 
 void TextEditorPageFormatter_updatePageByDisplayCursorChanging
         ( TextEditorPageFormatter * o,
-          LPM_SelectionCursor * textArea
-          /*Команды!!!*/ );
+          LPM_SelectionCursor * textArea,
+          uint32_t flags );
 
 void TextEditorPageFormatter_updateDisplay
         ( TextEditorPageFormatter * o );

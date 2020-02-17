@@ -54,7 +54,6 @@ HEADERS += \
     tests/test_display_html_convertor.h \
     editor/text_editor_controller.h \
     editor/text_editor_command_reader.h \
-    editor/text_editor_page_map.h \
     editor/text_editor_core.h \
     editor/text_editor_clipboard.h \
     editor/text_editor_text_operator.h \
@@ -69,7 +68,8 @@ HEADERS += \
     tests/test_text_buffer.h \
     editor/text_editor_text_storage.h \
     tests/text_operator_and_storage_tester.h \
-    editor/text_editor_modules.h
+    editor/text_editor_modules.h \
+    editor/text_editor_flags.h
 
 FORMS += \
         mainwindow.ui
