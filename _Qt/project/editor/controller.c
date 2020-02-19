@@ -7,6 +7,7 @@
 #include "page_formatter.h"
 #include "core.h"
 #include "lpm_lang.h"
+#include "lpm_text_operator.h"
 
 #define KEYBOARD_WATI_TIMEOUT 1000
 
@@ -20,13 +21,14 @@ static unicode_t lineBuffer[LINE_BUFFER_SIZE];
 static unicode_t actionsBuffer[ACTIONS_BUFFER_SIZE];
 static unicode_t clipboardBuffer[CLIPBOARD_BUFFER_SIZE];
 
-static Core            core;
-static CmdReader       cmdReader;
-static PageFormatter   pageFormatter;
-static ActionStorage   actionStorage;
-static Clipboard       clipboard;
-static LPM_TextStorage textStorage;
-static LPM_Lang        lang;
+static Core             core;
+static CmdReader        cmdReader;
+static PageFormatter    pageFormatter;
+static ActionStorage    actionStorage;
+static Clipboard        clipboard;
+static LPM_TextStorage  textStorage;
+static LPM_Lang         lang;
+static LPM_TextOperator textOperator;
 
 static Modules modules;
 
@@ -70,6 +72,7 @@ void _createAndInit(const LPM_EditorParams * param)
     Core_init(&core, &modules);
     CmdReader_init(&cmdReader, param->kbd, &modules.keyboardBuffer);
     LPM_TextStorage_init(&textStorage, &modules.textBuffer);
+    LPM_TextOperator_init(&textOperator, &lang);
     LPM_Lang_init(&lang, LPM_LANG_RUS_ENG);
     ActionStorage_init(&actionStorage, &modules.actionsBuffer);
     Clipboard_init(&clipboard, &modules.clipboardBuffer);
@@ -81,5 +84,6 @@ void _createAndInit(const LPM_EditorParams * param)
     modules.actionStorage = &actionStorage;
     modules.clipboard     = &clipboard;
     modules.textStorage   = &textStorage;
+    modules.textOperator  = &textOperator;
     modules.lang          = &lang;
 }

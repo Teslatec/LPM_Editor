@@ -41,7 +41,8 @@ SOURCES += \
     editor/command_reader.c \
     editor/controller.c \
     editor/core.c \
-    editor/page_formatter.c
+    editor/page_formatter.c \
+    text_support/lpm_text_operator.c
 
 HEADERS += \
         mainwindow.h \
@@ -73,7 +74,8 @@ HEADERS += \
     editor/editor_flags.h \
     editor/modules.h \
     editor/page_formatter.h \
-    editor/action_storage.h
+    editor/action_storage.h \
+    text_support/lpm_text_operator.h
 
 FORMS += \
         mainwindow.ui

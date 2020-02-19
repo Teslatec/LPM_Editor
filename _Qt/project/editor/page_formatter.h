@@ -28,7 +28,6 @@ typedef struct PageFormatter
     LineMap prevPageLastLineMap;
     uint32_t lineChangedFlags;
     bool lastPageReached;
-    LPM_DisplayCursor signPlaceCursor;
     LPM_DisplayCursor displayCursor;
 } PageFormatter;
 
@@ -37,7 +36,7 @@ void PageFormatter_init
           const Modules * modules );
 
 void PageFormatter_startWithPageAtTextPosition
-        (PageFormatter * o,
+        ( PageFormatter * o,
           LPM_SelectionCursor * curs );
 
 void PageFormatter_updatePageByTextChanging

@@ -68,6 +68,7 @@ extern Unicode_Buf testTextBuf;
 void Core_exec(Core * o)
 {
     _prepare(o);
+    _printLineMap(o);
 
     for(;;)
     {
@@ -144,7 +145,7 @@ void _cursorChangedCmdHandler(Core * o)
             PageFormatter_updateDisplay(o->modules->pageFormatter);
         }
     }
-    //_printLineMap(o);
+    _printLineMap(o);
 }
 
 void _textChangedCmdHandler(Core * o)

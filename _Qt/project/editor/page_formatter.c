@@ -1,5 +1,6 @@
 #include "page_formatter.h"
 #include "lpm_text_storage.h"
+#include "lpm_text_operator.h"
 
 #include <string.h>
 
@@ -42,7 +43,7 @@ static TextPos _checkTextPos(Obj * o, size_t pos);
 static bool _isCurrPageFirst(Obj * o);
 static bool _isCurrPageLast(Obj * o);
 
-static size_t _buildLineMap(Obj * o, LineMap * lineMap, uint8_t beginCurs, uint8_t endCurs);
+static size_t _buildLineMap(Obj * o, LineMap * map, uint8_t bTxtSlc, uint8_t eTxtSlc);
 
 static bool _checkForEndOfText(unicode_t chr);
 static bool _checkForEndLine(unicode_t chr);
@@ -378,73 +379,81 @@ bool _isCurrPageLast(Obj * o)
     return o->lastPageReached;
 }
 
-size_t _buildLineMap(Obj * o, LineMap * lineMap, uint8_t beginCurs, uint8_t endCurs)
+size_t _buildLineMap(Obj * o, LineMap * map, uint8_t bTxtSlc, uint8_t eTxtSlc)
 {
-    const size_t maxPlaceCntValue = CHAR_AMOUNT;
-    const size_t wordDividersNotFoundValue = o->modules->lineBuffer.size;
-
-    size_t currPos = 0;
-    size_t placeCnt = 0;
-    size_t lastWordDivPos = wordDividersNotFoundValue;
-    size_t placeCntAtLastWordDiv = 0;
-    size_t lastNoDiacriticPos = 0;
-
-    const unicode_t * pchr = o->modules->lineBuffer.data;
-    const unicode_t * pend = pchr + o->modules->lineBuffer.size;
-    for( ; pchr != pend; pchr++, currPos++ )
+    LPM_TextOperator * const op = o->modules->textOperator;
+    const unicode_t * begin = o->modules->lineBuffer.data;
+    const unicode_t * pchr  = begin;
+    const unicode_t * pWordDiv = begin + o->modules->lineBuffer.size;
+    size_t wordDivCnt = CHAR_AMOUNT;
+    size_t chrCnt;
+    for(chrCnt = 0; chrCnt < CHAR_AMOUNT; chrCnt++)
     {
         if(_checkForEndOfText(*pchr))
-        {
-            o->lastPageReached = true;
-            return _buildLineMapWithEndOfText(lineMap, currPos, placeCnt);
-        }
-
-        if(_checkForEndLine(*pchr))
-            return _buildLineMapWithEndLine(lineMap, pchr, currPos, placeCnt);
-
-        if(placeCnt == maxPlaceCntValue)
             break;
 
-        if(_checkForDiacritic(*pchr))
-            continue;
+        if(_checkForEndLine(*pchr))
+            break;
 
         if(_checkForWordDivider(*pchr))
         {
-            // Запоминаем позицию символа-разделителя слов, а так же значения
-            //  счетчика занятых знакомест в этот момент
-            lastWordDivPos = currPos;
-            placeCntAtLastWordDiv = placeCnt;
+            wordDivCnt = chrCnt;
+            pWordDiv   = pchr;
         }
 
-        // Здесь добавить сравнение с положением курсора текста, переданного в
-        //  функцию, и если нужно, обновить курсор дисплея и курсор знакомест
+        // Коррекция курсора
+        {}
 
-        if(lastNoDiacriticPos == beginCurs)
-        {
-            o->displayCursor.begin.x   = placeCnt;
-            o->displayCursor.begin.y   = lineMap - o->lineMap;
-            o->signPlaceCursor.begin.x = lastNoDiacriticPos;
-            o->signPlaceCursor.begin.y = lineMap - o->lineMap;
-        }
-        if(lastNoDiacriticPos == endCurs)
-        {
-            o->displayCursor.end.x   = placeCnt;
-            o->displayCursor.end.y   = lineMap - o->lineMap;
-            o->signPlaceCursor.end.x = lastNoDiacriticPos;
-            o->signPlaceCursor.end.y = lineMap - o->lineMap;
-        }
-
-        placeCnt++;
-        lastNoDiacriticPos = currPos;
+        pchr = LPM_TextOperator_nextChar(op, pchr);
     }
 
-    if(_checkForWordDivider(*pchr))
-        return _buildLineMapWithWordDividerAtLineEnd(lineMap, pchr, currPos);
+    if(_checkForEndOfText(*pchr))
+    {
+        o->lastPageReached = true;
+        map->payloadLen = pchr - begin;
+        map->fullLen    = map->payloadLen;
+        map->restLen    = CHAR_AMOUNT - chrCnt;
+        return map->fullLen;
+    }
 
-    if(lastWordDivPos == wordDividersNotFoundValue)
-        return _buildLineMapWithVeryLongWord(lineMap, pchr, currPos);
+    if(_checkForEndLine(*pchr) || _checkForWordDivider(*pchr))
+    {
+        map->payloadLen = pchr - begin;
+        map->restLen = CHAR_AMOUNT - chrCnt;
+        map->fullLen = map->payloadLen;
 
-    return _buildLineMapWithWordWrap(lineMap, lastWordDivPos, placeCntAtLastWordDiv);
+        if(*pchr == chrSpace)
+        {
+            map->fullLen++;
+            ++pchr;
+        }
+
+        if(*pchr == chrCr)
+        {
+            map->fullLen++;
+            ++pchr;
+        }
+
+        if(*pchr == chrLf)
+        {
+            map->fullLen++;
+        }
+
+        return map->fullLen;
+    }
+
+    if(wordDivCnt == CHAR_AMOUNT)
+    {
+        map->payloadLen = pchr - begin;
+        map->restLen    = 0;
+        map->fullLen    = map->payloadLen;
+        return map->fullLen;
+    }
+
+    map->payloadLen = pWordDiv - begin;
+    map->restLen    = CHAR_AMOUNT - wordDivCnt;
+    map->fullLen    = map->payloadLen+1;
+    return map->fullLen;
 }
 
 bool _checkForEndOfText(unicode_t chr)
@@ -632,3 +641,72 @@ void _formatLineForDisplay(Obj * o, const LineMap * lineMap, size_t lineOffset)
     for( ; pchr != end; pchr++)
         *pchr = chrSpace;
 }
+
+#if 0
+
+size_t _buildLineMap(Obj * o, LineMap * map, uint8_t bTxtSlc, uint8_t eTxtSlc)
+{
+    const size_t maxPlaceCntValue = CHAR_AMOUNT;
+    const size_t wordDividersNotFoundValue = o->modules->lineBuffer.size;
+
+    size_t currPos = 0;
+    size_t placeCnt = 0;
+    size_t lastWordDivPos = wordDividersNotFoundValue;
+    size_t placeCntAtLastWordDiv = 0;
+    size_t lastNoDiacriticPos = 0;
+
+    const unicode_t * pchr = o->modules->lineBuffer.data;
+    const unicode_t * pend = pchr + o->modules->lineBuffer.size;
+    for( ; pchr != pend; pchr++, currPos++ )
+    {
+        if(_checkForEndOfText(*pchr))
+        {
+            o->lastPageReached = true;
+            return _buildLineMapWithEndOfText(map, currPos, placeCnt);
+        }
+
+        if(_checkForEndLine(*pchr))
+            return _buildLineMapWithEndLine(map, pchr, currPos, placeCnt);
+
+        if(placeCnt == maxPlaceCntValue)
+            break;
+
+        if(_checkForDiacritic(*pchr))
+            continue;
+
+        if(_checkForWordDivider(*pchr))
+        {
+            // Запоминаем позицию символа-разделителя слов, а так же значения
+            //  счетчика занятых знакомест в этот момент
+            lastWordDivPos = currPos;
+            placeCntAtLastWordDiv = placeCnt;
+        }
+
+        // Здесь добавить сравнение с положением курсора текста, переданного в
+        //  функцию, и если нужно, обновить курсор дисплея и курсор знакомест
+
+        if(lastNoDiacriticPos == bTxtSlc)
+        {
+            o->displayCursor.begin.x   = placeCnt;
+            o->displayCursor.begin.y   = map - o->lineMap;
+        }
+        if(lastNoDiacriticPos == eTxtSlc)
+        {
+            o->displayCursor.end.x   = placeCnt;
+            o->displayCursor.end.y   = map - o->lineMap;
+        }
+
+        placeCnt++;
+        lastNoDiacriticPos = currPos;
+    }
+
+    if(_checkForWordDivider(*pchr))
+        return _buildLineMapWithWordDividerAtLineEnd(map, pchr, currPos);
+
+    if(lastWordDivPos == wordDividersNotFoundValue)
+        return _buildLineMapWithVeryLongWord(map, pchr, currPos);
+
+    return _buildLineMapWithWordWrap(map, lastWordDivPos, placeCntAtLastWordDiv);
+}
+
+#endif
