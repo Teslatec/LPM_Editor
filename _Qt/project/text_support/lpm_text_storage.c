@@ -1,56 +1,57 @@
-#include "text_editor_text_operator.h"
+#include "lpm_text_storage.h"
 
-static void _normalizeRemovingArea( const TextEditorTextStorage * textStorage,
+static void _normalizeRemovingArea( const TextBuffer * textStorage,
                                     LPM_SelectionCursor * removingArea );
-static bool _removingAreaIsInFreeSpace( const TextEditorTextStorage * textStorage,
+static bool _removingAreaIsInFreeSpace( const TextBuffer * textStorage,
                                         const LPM_SelectionCursor * removingArea );
-static void _clearRemovingAreaAndMoveToEndOfText( const TextEditorTextStorage * textStorage,
+static void _clearRemovingAreaAndMoveToEndOfText( const TextBuffer * textStorage,
                                                   LPM_SelectionCursor * removingArea );
-static void _cutRemovingAreaIfCrossesFreeSpaceBorder( const TextEditorTextStorage * textStorage,
+static void _cutRemovingAreaIfCrossesFreeSpaceBorder( const TextBuffer * textStorage,
                                                       LPM_SelectionCursor * removingArea );
 
 static void _initTextBuffer( Unicode_Buf * localBuffer,
                              const Unicode_Buf * sourceBuffer );
 
-static bool _notEnoughSpaceToRemoveAndWrite( const TextEditorTextStorage * o,
+static bool _notEnoughSpaceToRemoveAndWrite( const TextBuffer * o,
                                              const LPM_SelectionCursor * removingArea,
                                              const Unicode_Buf * textToWrite );
 
-static void _decomposeToSimpleFxns( TextEditorTextStorage * textStorage,
+static void _decomposeToSimpleFxns( TextBuffer * textStorage,
                                     const LPM_SelectionCursor * removingArea,
                                     const Unicode_Buf * textToWrite );
-static void _replaceAndWrite( TextEditorTextStorage * textStorage,
+static void _replaceAndWrite( TextBuffer * textStorage,
                               const LPM_SelectionCursor * removingArea,
                               const Unicode_Buf * textToWrite );
-static void _write( TextEditorTextStorage * textStorage,
+static void _write( TextBuffer * textStorage,
                     const LPM_SelectionCursor * removingArea,
                     const Unicode_Buf * textToWrite );
-static void _replaceAndRemove( TextEditorTextStorage * textStorage,
+static void _replaceAndRemove( TextBuffer * textStorage,
                                const LPM_SelectionCursor * removingArea,
                                const Unicode_Buf * textToWrite );
-static void _remove( TextEditorTextStorage * o,
+static void _remove( TextBuffer * o,
                      const LPM_SelectionCursor * removingArea );
-static void _replace( TextEditorTextStorage * textStorage,
+static void _replace( TextBuffer * textStorage,
                       const LPM_SelectionCursor * removingArea,
                       const Unicode_Buf * textToWrite );
-static bool _removingAreaAbutsFreeSpace( const TextEditorTextStorage * textStorage,
+static bool _removingAreaAbutsFreeSpace( const TextBuffer * textStorage,
                                          const LPM_SelectionCursor * removingArea );
 
 
 
-bool TextEditorTextOperator_removeAndWrite( TextEditorTextOperator * o,
-                                            LPM_SelectionCursor * removingArea,
-                                            const Unicode_Buf * textToWrite )
+bool LPM_TextStorage_replace
+        ( LPM_TextStorage * o,
+          LPM_SelectionCursor * removingArea,
+          const Unicode_Buf * textToWrite )
 {
     Unicode_Buf textBuffer;
 
-    _normalizeRemovingArea(o->textStorage, removingArea);
+    _normalizeRemovingArea(&o->storage, removingArea);
     _initTextBuffer(&textBuffer, textToWrite);
 
     //printf("before ");
 
     if(_notEnoughSpaceToRemoveAndWrite(
-                o->textStorage, removingArea, &textBuffer))
+                &o->storage, removingArea, &textBuffer))
     {
         //printf("pos: %d, rmlen: %d, txtlen: %d\n", removingArea->pos, removingArea->len, textBuffer.size);
         return false;
@@ -60,16 +61,17 @@ bool TextEditorTextOperator_removeAndWrite( TextEditorTextOperator * o,
     //printf("not false ");
 
     _decomposeToSimpleFxns(
-                o->textStorage, removingArea, &textBuffer);
+                &o->storage, removingArea, &textBuffer);
 
     return true;
 }
 
-void TextEditorTextOperator_read( TextEditorTextOperator * o,
-                                  size_t readPosition,
-                                  Unicode_Buf * readTextBuffer )
+void LPM_TextStorage_read
+        ( LPM_TextStorage * o,
+          size_t readPosition,
+          Unicode_Buf * readTextBuffer )
 {
-    size_t endOfText = TextEditorTextStorage_endOfText(o->textStorage);
+    size_t endOfText = TextBuffer_endOfText(&o->storage);
     if(readPosition >= endOfText)
     {
         readTextBuffer->size = 0;
@@ -81,12 +83,12 @@ void TextEditorTextOperator_read( TextEditorTextOperator * o,
                 distToEndOfText : readTextBuffer->size;
 
     readTextBuffer->size = actualReadTextSize;
-    TextEditorTextStorage_read(o->textStorage, readPosition, readTextBuffer);
+    TextBuffer_read(&o->storage, readPosition, readTextBuffer);
 }
 
 
 
-void _normalizeRemovingArea( const TextEditorTextStorage * textStorage,
+void _normalizeRemovingArea( const TextBuffer * textStorage,
                              LPM_SelectionCursor * removingArea )
 {
     if(_removingAreaIsInFreeSpace(textStorage, removingArea))
@@ -95,24 +97,24 @@ void _normalizeRemovingArea( const TextEditorTextStorage * textStorage,
     _cutRemovingAreaIfCrossesFreeSpaceBorder(textStorage, removingArea);
 }
 
-bool _removingAreaIsInFreeSpace( const TextEditorTextStorage * textStorage,
+bool _removingAreaIsInFreeSpace( const TextBuffer * textStorage,
                                  const LPM_SelectionCursor * removingArea )
 {
-    return removingArea->pos >= TextEditorTextStorage_endOfText(textStorage);
+    return removingArea->pos >= TextBuffer_endOfText(textStorage);
 }
 
-void _clearRemovingAreaAndMoveToEndOfText( const TextEditorTextStorage * textStorage,
+void _clearRemovingAreaAndMoveToEndOfText( const TextBuffer * textStorage,
                                            LPM_SelectionCursor * removingArea )
 {
-    removingArea->pos = TextEditorTextStorage_endOfText(textStorage);
+    removingArea->pos = TextBuffer_endOfText(textStorage);
     removingArea->len = 0;
 }
 
-void _cutRemovingAreaIfCrossesFreeSpaceBorder( const TextEditorTextStorage * textStorage,
+void _cutRemovingAreaIfCrossesFreeSpaceBorder( const TextBuffer * textStorage,
                                                LPM_SelectionCursor * removingArea )
 {
     size_t distToEndOfText =
-            TextEditorTextStorage_endOfText(textStorage) - removingArea->pos;
+            TextBuffer_endOfText(textStorage) - removingArea->pos;
     if(distToEndOfText < removingArea->len)
         removingArea->len = distToEndOfText;
 }
@@ -132,24 +134,21 @@ void _initTextBuffer( Unicode_Buf * localBuffer,
     }
 }
 
-bool _notEnoughSpaceToRemoveAndWrite( const TextEditorTextStorage * o,
+bool _notEnoughSpaceToRemoveAndWrite( const TextBuffer * o,
                                       const LPM_SelectionCursor * removingArea,
                                       const Unicode_Buf * textToWrite )
 {
     if(removingArea->len >= textToWrite->size)
         return false;
 
-    //printf("Aaaaa!!! ");
-
     size_t writeLen = textToWrite->size - removingArea->len;
-    return writeLen > TextEditorTextStorage_freeSize(o);
+    return writeLen > TextBuffer_freeSize(o);
 }
 
-void _decomposeToSimpleFxns( TextEditorTextStorage * textStorage,
+void _decomposeToSimpleFxns( TextBuffer * textStorage,
                              const LPM_SelectionCursor * removingArea,
                              const Unicode_Buf * textToWrite )
 {
-    //printf("wsz: %d rsz: %d ", textToWrite->size, removingArea->len);
     if(textToWrite->size > removingArea->len)
     {
         if(removingArea->len > 0)
@@ -173,7 +172,7 @@ void _decomposeToSimpleFxns( TextEditorTextStorage * textStorage,
     }
 }
 
-void _replaceAndWrite( TextEditorTextStorage * textStorage,
+void _replaceAndWrite( TextBuffer * textStorage,
                        const LPM_SelectionCursor * removingArea,
                        const Unicode_Buf * textToWrite )
 {
@@ -184,7 +183,7 @@ void _replaceAndWrite( TextEditorTextStorage * textStorage,
     buf.size = removingArea->len;
     pos      = removingArea->pos;
 
-    TextEditorTextStorage_replace(textStorage, &buf, pos);
+    TextBuffer_replace(textStorage, &buf, pos);
 
     buf.data += removingArea->len;
     buf.size  = textToWrite->size - removingArea->len;
@@ -192,53 +191,53 @@ void _replaceAndWrite( TextEditorTextStorage * textStorage,
 
 
     if(_removingAreaAbutsFreeSpace(textStorage, removingArea))
-        TextEditorTextStorage_append(textStorage, &buf);
+        TextBuffer_append(textStorage, &buf);
     else
-        TextEditorTextStorage_insert(textStorage, &buf, pos);
+        TextBuffer_insert(textStorage, &buf, pos);
 }
 
-void _write( TextEditorTextStorage * textStorage,
+void _write( TextBuffer * textStorage,
              const LPM_SelectionCursor * removingArea,
              const Unicode_Buf * textToWrite )
 {
     if(_removingAreaAbutsFreeSpace(textStorage, removingArea))
-        TextEditorTextStorage_append(textStorage, textToWrite);
+        TextBuffer_append(textStorage, textToWrite);
     else
-        TextEditorTextStorage_insert(textStorage, textToWrite, removingArea->pos);
+        TextBuffer_insert(textStorage, textToWrite, removingArea->pos);
 }
 
-void _replaceAndRemove( TextEditorTextStorage * textStorage,
+void _replaceAndRemove( TextBuffer * textStorage,
                         const LPM_SelectionCursor * removingArea,
                         const Unicode_Buf * textToWrite )
 {
-    TextEditorTextStorage_replace(textStorage, textToWrite, removingArea->pos);
+    TextBuffer_replace(textStorage, textToWrite, removingArea->pos);
 
     if(_removingAreaAbutsFreeSpace(textStorage, removingArea))
-        TextEditorTextStorage_truncate(textStorage, removingArea->pos + textToWrite->size);
+        TextBuffer_truncate(textStorage, removingArea->pos + textToWrite->size);
     else
-        TextEditorTextStorage_remove( textStorage, removingArea->pos + textToWrite->size,
+        TextBuffer_remove( textStorage, removingArea->pos + textToWrite->size,
                                       removingArea->len - textToWrite->size );
 }
 
-void _remove( TextEditorTextStorage * textStorage,
+void _remove( TextBuffer * textStorage,
               const LPM_SelectionCursor * removingArea )
 {
     if(_removingAreaAbutsFreeSpace(textStorage, removingArea))
-        TextEditorTextStorage_truncate(textStorage, removingArea->pos);
+        TextBuffer_truncate(textStorage, removingArea->pos);
     else
-        TextEditorTextStorage_remove(textStorage, removingArea->pos, removingArea->len);
+        TextBuffer_remove(textStorage, removingArea->pos, removingArea->len);
 }
 
-void _replace( TextEditorTextStorage * textStorage,
+void _replace( TextBuffer * textStorage,
                const LPM_SelectionCursor * removingArea,
                const Unicode_Buf * textToWrite )
 {
-    TextEditorTextStorage_replace(textStorage, textToWrite, removingArea->pos);
+    TextBuffer_replace(textStorage, textToWrite, removingArea->pos);
 }
 
-bool _removingAreaAbutsFreeSpace( const TextEditorTextStorage * textStorage,
+bool _removingAreaAbutsFreeSpace( const TextBuffer * textStorage,
                                   const LPM_SelectionCursor * removingArea )
 {
     return removingArea->pos + removingArea->len ==
-            TextEditorTextStorage_endOfText(textStorage);
+            TextBuffer_endOfText(textStorage);
 }

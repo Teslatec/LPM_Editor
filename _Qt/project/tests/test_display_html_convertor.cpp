@@ -23,6 +23,13 @@ QString makeLineWithHighlighting(const QString & line, int xBegin, int xEnd);
 QString makeLineWithHighlightingBegin(const QString & line, int x);
 QString makeLineWithHighlightingEnd(const QString & line, int x);
 
+QString makeMidHighlightedLine(const QString & line, int highlightingBegin, int highlightingEnd);
+QString makeLeftHighlightedLine(const QString & line, int highlightingBorder);
+QString makeRightHighlightedLine(const QString & line, int highlightingBorder);
+QString makeFullHighlightedLine(const QString & line);
+QString makeLineWithoutCursor(const QString & line);
+QString makeCursoredLine(const QString & line, int cursorPosition);
+
 QString TestDisplayHtmlConvertor::convert( const QStringList & src,
                                            QPoint cursorBegin,
                                            QPoint cursorEnd )
@@ -34,6 +41,32 @@ QString TestDisplayHtmlConvertor::convert( const QStringList & src,
         return convertTextWithOneLineHighlighted(src, cursorBegin, cursorEnd);
 
     return convertTextWithMultiLineHighlighted(src, cursorBegin, cursorEnd);
+}
+
+QString TestDisplayHtmlConvertor::convertLine(const QString & line, int bs, int s, int as)
+{
+    if((bs != 0) && (s != 0) && (as != 0))
+        return makeMidHighlightedLine(line, bs, s);
+
+    if((bs == 0) && (s != 0) && (as != 0))
+        return makeLeftHighlightedLine(line, s);
+
+    if((bs != 0) && (s != 0) && (as == 0))
+        return makeRightHighlightedLine(line, bs);
+
+    if((bs == 0) && (s != 0) && (as == 0))
+        return makeFullHighlightedLine(line);
+
+    if((bs != 0) && (s == 0) && (as != 0))
+        return makeCursoredLine(line, bs);
+
+    if((bs == 0) && (s == 0) && (as != 0))
+        return makeLineWithoutCursor(line);
+
+    if((bs != 0) && (s == 0) && (as == 0))
+        return makeLineWithoutCursor(line);
+
+    return QString();
 }
 
 QString convertTextWithoutHighlighting( const QStringList & src,
@@ -126,5 +159,41 @@ QString makeLineWithHighlightingEnd(const QString & line, int x)
     html.insert(x, htmlHighlightingEnd);
     html += htmlLineFeed;
     return html;
+}
+
+QString makeMidHighlightedLine(const QString & line, int highlightingBegin, int highlightingEnd)
+{
+    return line.mid(0, highlightingBegin) + htmlHighlightingBegin +
+            line.mid(highlightingBegin, highlightingEnd) + htmlHighlightingEnd +
+            line.mid(highlightingBegin+highlightingEnd) + htmlLineFeed;
+}
+
+QString makeLeftHighlightedLine(const QString & line, int highlightingBorder)
+{
+    return htmlHighlightingBegin + line.mid(0, highlightingBorder) +
+            htmlHighlightingEnd + line.mid(highlightingBorder) + htmlLineFeed;
+}
+
+QString makeRightHighlightedLine(const QString & line, int highlightingBorder)
+{
+    return line.mid(0, highlightingBorder) + htmlHighlightingBegin +
+            line.mid(highlightingBorder) + htmlHighlightingEnd + htmlLineFeed;
+}
+
+QString makeFullHighlightedLine(const QString & line)
+{
+    return htmlHighlightingBegin + line + htmlHighlightingEnd + htmlLineFeed;
+}
+
+QString makeLineWithoutCursor(const QString & line)
+{
+    return line + htmlLineFeed;
+}
+
+QString makeCursoredLine(const QString & line, int cursorPosition)
+{
+    return line.mid(0, cursorPosition) + htmlCursorBegin +
+            line.mid(cursorPosition, 1) + htmlCursorEnd +
+            line.mid(cursorPosition+1) + htmlLineFeed;
 }
 

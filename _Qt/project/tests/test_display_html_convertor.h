@@ -10,6 +10,8 @@ public:
     static QString convert( const QStringList & src,
                             QPoint cursorBegin,
                             QPoint cursorEnd );
+
+    static QString convertLine( const QString & line, int bs, int s, int as);
 };
 
 #endif // TEST_DISPLAY_HTML_CONVERTOR_H

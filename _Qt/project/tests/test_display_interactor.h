@@ -15,8 +15,7 @@ public:
                                     QObject * parent = nullptr );
     void clear();
     void write(QString data, QPoint point);
-    void writeLine(QString line, QPoint pos);
-    void setCursor(QPoint begin, QPoint end);
+    void writeLine(QString line, int index, int bs, int s, int as);
 
     QString toString() const;
 
@@ -32,6 +31,7 @@ signals:
 private:
     TestDisplayViewModel vm;
     bool latencyEnabled;
+    QStringList html;
 
     void waitForGuiRepaint();    
 };

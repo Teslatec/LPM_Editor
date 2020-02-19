@@ -34,11 +34,15 @@ TestDisplayInteractor::TestDisplayInteractor( int symbolAmount,
     : QObject(parent)
     , vm(symbolAmount, lineAmount)
     , latencyEnabled(latencyEnabled_)
+    , html()
 {
     qRegisterMetaType<TestDisplayViewModel>();
     //vm.data = testList;
     for(int i = 0; i < vm.lineAmount; i++)
+    {
         vm.data.append(QString(""));
+        html.append(QString(""));
+    }
 }
 
 void TestDisplayInteractor::clear()
@@ -61,23 +65,22 @@ void TestDisplayInteractor::write(QString data, QPoint point)
     //waitForGuiRepaint();
 }
 
-void TestDisplayInteractor::writeLine(QString line, QPoint pos)
+void TestDisplayInteractor::writeLine(QString line, int index, int bs, int s, int as)
 {
-    //auto & ref = vm.data[pos.y()];
-    //ref.replace(pos.x(), line.size(), line);
-    vm.data[pos.y()] = line;
+
+    html[index] = TestDisplayHtmlConvertor::convertLine(line, bs, s, as);
+    for(auto & sym : html[index])
+        if(sym == QChar(' '))
+            sym = QChar(0x2591);
+
     if(latencyEnabled)
         QThread::msleep(12);
-    waitForGuiRepaint();
-    emit _lineUpdated(pos.y());
-}
-
-void TestDisplayInteractor::setCursor(QPoint begin, QPoint end)
-{
-    vm.cursorBegin = begin;
-    vm.cursorEnd   = end;
-    waitForGuiRepaint();
-    emit _resetLinesUpdating();
+    //waitForGuiRepaint();
+    QString text;
+    for(const auto & line : html)
+        text += line;
+    emit _htmlTextChanged(text);
+    emit _lineUpdated(index);
 }
 
 QString TestDisplayInteractor::toString() const

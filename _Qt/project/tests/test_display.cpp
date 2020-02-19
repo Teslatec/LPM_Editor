@@ -3,16 +3,13 @@
 
 static void writeLine( LPM_UnicodeDisplay * i,
                        const Unicode_Buf * lineBuf,
-                       const LPM_Point * position );
+                       const LPM_UnicodeDisplayLineAttr * lineAttr );
 
-static void setCursor( LPM_UnicodeDisplay * i,
-                       const LPM_DisplayCursor * cursor );
 static void clearScreen(LPM_UnicodeDisplay * i);
 
 static const LPM_UnicodeDisplayFxns fxns =
 {
     .writeLine   = &writeLine,
-    .setCursor   = &setCursor,
     .clearScreen = &clearScreen
 };
 
@@ -31,19 +28,12 @@ static QString unicode_line_to_string(const Unicode_Buf * buf);
 
 void writeLine( LPM_UnicodeDisplay * i,
                 const Unicode_Buf * lineBuf,
-                const LPM_Point * position )
+                const LPM_UnicodeDisplayLineAttr * lineAttr )
 {
     ((TestDisplay*)i)->interactor->writeLine(
-                unicode_line_to_string(lineBuf),
-                QPoint(position->x, position->y) );
-}
-
-void setCursor( LPM_UnicodeDisplay * i,
-                const LPM_DisplayCursor * cursor )
-{
-    ((TestDisplay*)i)->interactor->setCursor(
-                QPoint(cursor->begin.x, cursor->begin.y),
-                QPoint(cursor->end.x, cursor->end.y) );
+                unicode_line_to_string(lineBuf), lineAttr->index,
+                lineAttr->lenBeforeSelect, lineAttr->lenSelect,
+                lineAttr->lenAfterSelect);
 }
 
 void clearScreen(LPM_UnicodeDisplay * i)

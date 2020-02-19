@@ -12,7 +12,7 @@ TestTextBuffer::TestTextBuffer(const QString & fileName, size_t maxSize)
     {
         a = f.readAll();
         a.remove(0, 2);
-        if(a.size() <= maxSize)
+        if(a.size() <= (int)maxSize)
         {
             size_t appSize = maxSize - a.size();
             a.append(appSize, 0);

@@ -7,7 +7,7 @@
 #include <QVector>
 
 extern "C" {
-#include "text_editor_text_operator.h"
+#include "lpm_text_storage.h"
 }
 
 const QChar textNullChr = QChar::Null;
@@ -69,12 +69,10 @@ void TextOperatorAndStorageTester::exec( const QString & logFileName,
 
         fillUnicodeBuf(txtSrc, bfrSrc);
         fillUnicodeBuf(txtIns, bfrIns);
-        TextEditorTextOperator op;
-        TextEditorTextStorage st;
-        TextEditorTextStorage_init(&st, &bfrSrc);
-        TextEditorTextOperator_init(&op, &st);
+        LPM_TextStorage op;
+        LPM_TextStorage_init(&op, &bfrSrc);
         LPM_SelectionCursor rmar = { .pos = (size_t)rmawrPos, .len = (size_t)rmLen };
-        bool writtenOp = TextEditorTextOperator_removeAndWrite(&op, &rmar, &bfrIns);
+        bool writtenOp = LPM_TextStorage_replace(&op, &rmar, &bfrIns);
 
         txtSrc = prepareToLog(txtSrc);
         correctText(txtSrc);
@@ -140,11 +138,11 @@ QString TextOperatorAndStorageTester::testStorageCalcEndOfTextStep(int textSize,
     QString text(bufSize, textNullChr);
     for(int i = 0; i < textSize; i++)
         text[i] = QChar('0'+i);
-    TextEditorTextStorage strg;
+    TextBuffer strg;
     Unicode_Buf bfr;
     fillUnicodeBuf(text, bfr);
-    TextEditorTextStorage_init(&strg, &bfr);
-    size_t calcedEndOfText = TextEditorTextStorage_endOfText(&strg);
+    TextBuffer_init(&strg, &bfr);
+    size_t calcedEndOfText = TextBuffer_endOfText(&strg);
     size_t actualEndOfText = textSize;
     return QString("Текст: ") + prepareToLog(text) +
             QString(" Конец текста: ") + QString::number(calcedEndOfText) +
@@ -179,17 +177,17 @@ QString TextOperatorAndStorageTester::testStorageAppendStep(int textSize, int ap
 {
     QString srcText = createText(textSize, bufSize, true);
     QString apndText = createText(appendSize, appendSize, false);
-    TextEditorTextStorage strg;
+    TextBuffer strg;
     Unicode_Buf srcBfr;
     Unicode_Buf apndBfr;
     fillUnicodeBuf(srcText, srcBfr);
     fillUnicodeBuf(apndText, apndBfr);
-    TextEditorTextStorage_init(&strg, &srcBfr);
+    TextBuffer_init(&strg, &srcBfr);
     QString log = QString("До: ") + prepareToLog(srcText) + ", " +
             QString::number(textSize) + " ";
-    TextEditorTextStorage_append(&strg, &apndBfr);
+    TextBuffer_append(&strg, &apndBfr);
     log += QString("После: ") + prepareToLog(srcText) + ", " +
-            QString::number(TextEditorTextStorage_endOfText(&strg)) + " ";
+            QString::number(TextBuffer_endOfText(&strg)) + " ";
     log += QString("Добавлено: ") + QString::number(appendSize);
     return log;
 }
@@ -243,17 +241,17 @@ QString TextOperatorAndStorageTester::testStorageInsertStep(int textSize, int in
 {
     QString srcTxt = createText(textSize, bufSize, true);
     QString insTxt = createText(insSize, insSize, false);
-    TextEditorTextStorage strg;
+    TextBuffer strg;
     Unicode_Buf srcBfr;
     Unicode_Buf insBfr;
     fillUnicodeBuf(srcTxt, srcBfr);
     fillUnicodeBuf(insTxt, insBfr);
-    TextEditorTextStorage_init(&strg, &srcBfr);
+    TextBuffer_init(&strg, &srcBfr);
     QString log = QString("До: ") + prepareToLog(srcTxt) + ", " +
             QString::number(textSize) + " ";
-    TextEditorTextStorage_insert(&strg, &insBfr, insPos);
+    TextBuffer_insert(&strg, &insBfr, insPos);
     log += QString("После: ") + prepareToLog(srcTxt) + ", " +
-            QString::number(TextEditorTextStorage_endOfText(&strg)) + " ";
+            QString::number(TextBuffer_endOfText(&strg)) + " ";
     log += QString("Вставлено: ") + QString::number(insSize);
     return log;
 }
@@ -294,17 +292,17 @@ QString TextOperatorAndStorageTester::testStorageReplaceStep(int textSize, int r
 {
     QString srcTxt = createText(textSize, bufSize,  true);
     QString rplTxt = createText(rplSize, rplSize, false);
-    TextEditorTextStorage strg;
+    TextBuffer strg;
     Unicode_Buf srcBfr;
     Unicode_Buf rplBfr;
     fillUnicodeBuf(srcTxt, srcBfr);
     fillUnicodeBuf(rplTxt, rplBfr);
-    TextEditorTextStorage_init(&strg, &srcBfr);
+    TextBuffer_init(&strg, &srcBfr);
     QString log = QString("До: ") + prepareToLog(srcTxt) + ", " +
             QString::number(textSize) + " ";
-    TextEditorTextStorage_replace(&strg, &rplBfr, rplPos);
+    TextBuffer_replace(&strg, &rplBfr, rplPos);
     log += QString("После: ") + prepareToLog(srcTxt) + ", " +
-            QString::number(TextEditorTextStorage_endOfText(&strg)) + " ";
+            QString::number(TextBuffer_endOfText(&strg)) + " ";
     log += QString("Заменено: ") + QString::number(rplSize);
     return log;
 }
@@ -359,258 +357,4 @@ void TextOperatorAndStorageTester::correctText(QString & text)
         else if(chr == logNullChr)
             clrFlag = true;
 }
-
-
-//static void writeLog(const QString & logFileName, const QString & logData);
-//static QString readSrcText(const QString & srcTextFileName, size_t maxSize);
-//static QString testWrite( const QString & inputText,
-//                          const QString & writeText,
-//                          size_t rmawrPos, size_t rmLen );
-//static void initObjectsToWrite( TextEditorTextOperator & op,
-//                                Unicode_Buf & ttw,
-//                                LPM_SelectionCursor & ra, size_t rmPos, size_t rmLen,
-//                                QString & inputText,
-//                                const QString & writeText );
-//static size_t calcEndOfText(const QString & srcText);
-//static QString toOultine(const QString & text);
-
-//TextOperatorAndStorageTester::TextOperatorAndStorageTester()
-//{}
-
-//void TextOperatorAndStorageTester::exec( const QString & logFileName,
-//                                         const QString & srcTextFileName,
-//                                         size_t maxSize )
-//{
-//    auto srcText = readSrcText(srcTextFileName, maxSize);
-//    size_t endOfText = calcEndOfText(srcText);
-//    QString result = toOultine(srcText)  + QString(" : Исходный текст\n");
-//    result += QString("--- ---\n");
-//    result += testWrite(srcText, QString(""), 0,           0);
-//    result += testWrite(srcText, QString(""), 1,           0);
-//    result += testWrite(srcText, QString(""), endOfText-1, 0);
-//    result += testWrite(srcText, QString(""), endOfText,   0);
-//    result += testWrite(srcText, QString(""), endOfText+1, 0);
-//    result += testWrite(srcText, QString(""), maxSize,     0);
-//    result += testWrite(srcText, QString(""), maxSize+1,   0);
-//    result += QString("--- ---\n");
-//    result += testWrite(srcText, QString(1, '!'), 0, 0);
-//    result += testWrite(srcText, QString(maxSize-endOfText-1, QChar('!')), 0, 0);
-//    result += testWrite(srcText, QString(maxSize-endOfText,   QChar('!')), 0, 0);
-//    result += testWrite(srcText, QString(maxSize-endOfText+1, QChar('!')), 0, 0);
-//    result += testWrite(srcText, QString(endOfText-1, QChar('!')), 0, 0);
-//    result += testWrite(srcText, QString(endOfText,   QChar('!')), 0, 0);
-//    result += testWrite(srcText, QString(endOfText+1, QChar('!')), 0, 0);
-//    result += testWrite(srcText, QString(maxSize-1, QChar('!')), 0, 0);
-//    result += testWrite(srcText, QString(maxSize,   QChar('!')), 0, 0);
-//    result += testWrite(srcText, QString(maxSize+1, QChar('!')), 0, 0);
-//    result += testWrite(srcText, QString(1, '!'), endOfText, 0);
-//    result += testWrite(srcText, QString(2, '!'), endOfText-1, 0);
-//    result += testWrite(srcText, QString(2, '!'), endOfText, 0);
-//    result += testWrite(srcText, QString(3, '!'), 2, 1);
-//    result += testWrite(srcText, QString(3, '!'), endOfText-1, 1);
-//    writeLog(logFileName, result);
-//}
-
-
-//QString readSrcText(const QString & srcTextFileName, size_t maxSize)
-//{
-//    QString result;
-//    QFile f(srcTextFileName);
-//    size_t textSize = 0;
-//    if(f.open(QFile::ReadOnly))
-//    {
-//        auto arr = f.readAll();
-//        arr.remove(0, 2);
-//        textSize = arr.size() / 2;
-//        result = QString::fromUtf16(reinterpret_cast<const unicode_t*>(arr.data()), textSize);
-//        f.close();
-//    }
-
-//    if(textSize < maxSize)
-//    {
-//        QString ns(maxSize-textSize, QChar(QChar::Null));
-//        result.append(ns);
-//    }
-//    else
-//        result.truncate(maxSize);
-//    return result;
-//}
-
-
-//void writeLog(const QString & logFileName, const QString & logData)
-//{
-//    QFile f(logFileName);
-//    if(f.open(QFile::WriteOnly))
-//    {
-//        QTextStream s(&f);
-//        s.setCodec("UTF-16LE");
-//        s << QString("Начало теста"); endl(s);
-//        s << logData; endl(s);
-//        s << QString("Конец теста"); endl(s);
-//        f.close();
-//    }
-//}
-
-//QString testWrite( const QString & inputText,
-//                   const QString & writeText,
-//                   size_t rmawrPos, size_t rmLen )
-//{
-//    QString inputCopy = inputText;
-//    TextEditorTextOperator op;
-//    LPM_SelectionCursor ra;
-//    Unicode_Buf ttw;
-
-//    initObjectsToWrite(op, ttw, ra, rmawrPos, rmLen, inputCopy, writeText);
-//    bool ok = TextEditorTextOperator_removeAndWrite(&op, &ra, &ttw);
-//    QString result = toOultine(inputCopy);
-//    result += QString(" : Позиция: ") + QString::number(rmawrPos);
-//    result += QString("\tРазмер: ") + QString::number(rmLen);
-//    result += QString("\tВыполнено: ") + (ok ? QString("да") : QString("нет"));
-//    result += QString("\tТекст записи: ") + (writeText.size() == 0 ? QString("---") : writeText);
-//    result += QString("\n");
-
-//    return result;
-//}
-
-//void initObjectsToWrite( TextEditorTextOperator & op,
-//                         Unicode_Buf & ttw,
-//                         LPM_SelectionCursor & ra,
-//                         size_t rmPos, size_t rmLen,
-//                         QString & inputText,
-//                         const QString & writeText )
-//{
-//    Unicode_Buf it =
-//    {
-//        it.data = reinterpret_cast<unicode_t*>(inputText.data()),
-//        it.size = inputText.size()
-//    };
-
-//    TextEditorTextOperator_init(&op, &it);
-//    ttw.data = const_cast<unicode_t*>(reinterpret_cast<const unicode_t*>(writeText.data()));
-//    ttw.size = writeText.size();
-//    ra.pos = rmPos;
-//    ra.len = rmLen;
-//}
-
-//size_t calcEndOfText(const QString & srcText)
-//{
-//    TextEditorTextStorage ts;
-//    Unicode_Buf tb =
-//    {
-//        .data = const_cast<unicode_t*>(reinterpret_cast<const unicode_t*>(srcText.data())),
-//        .size = static_cast<size_t>(srcText.size())
-//    };
-//    TextEditorTextStorage_init(&ts, &tb);
-//    return TextEditorTextStorage_endOfText(&ts);
-//}
-
-//QString toOultine(const QString & text)
-//{
-//    QString result = text;
-//    for(auto & sym : result)
-//        if(sym == QChar(QChar::Null))
-//            sym = nullSym;
-//    return result;
-//}
-
-
-//static void initUnicodeBuf(Unicode_Buf & buf, QString & text);
-//static QByteArray readSrcText(const QString & srcTextFileName, size_t bufSize);
-//static void initObjectsToWrite(TextEditorTextOperator & op,
-//                         Unicode_Buf & buf,
-//                         QByteArray & srcText );
-
-//static QString testReadEndOfTextPosition(TextEditorTextOperator & op, size_t & endOfText);
-//static QString testRead( const QString & testHeader,
-//                         TextEditorTextOperator & op,
-//                         size_t pos,
-//                         size_t len );
-
-//static QString testRemoveAndWrite(const QString & inputText,
-//                                   size_t rmnwrPos,
-//                                   size_t rmLen,
-//                                   const QString & writeText );
-
-
-//void initUnicodeBuf(Unicode_Buf & buf, QString & text)
-//{
-//    buf.data = reinterpret_cast<unicode_t*>(text.data()),
-//    buf.size = text.size();
-//}
-
-//QByteArray readSrcText(const QString & srcTextFileName, size_t bufSize)
-//{
-//    bufSize *= 2;
-//    QByteArray result;
-//    QFile f(srcTextFileName);
-//    if(f.open(QFile::ReadOnly))
-//    {
-//        result = f.readAll();
-//        result.remove(0, 2);
-//        if(result.size()*2 > bufSize)
-//            result.truncate(bufSize);
-//        else
-//            result.append(bufSize - result.size(), '\0');
-//        f.close();
-//    }
-//    else
-//    {
-//        result.append(bufSize, '\0');
-//    }
-//    return result;
-//}
-
-
-//void initObjectsToWrite( TextEditorTextOperator & op,
-//                         Unicode_Buf & inputTextBuffer,
-//                         Unicode_Buf & writeTextBuffer,
-//                         QString& inputText,
-//                         QByteArray  )
-//{
-//    buf->data = reinterpret_cast<unicode_t*>(srcText.data());
-//    buf->size = srcText.size()/2;
-//    TextEditorTextOperator_init(op, buf);
-//}
-
-//QString testReadEndOfTextPosition(TextEditorTextOperator & op, size_t & endOfText)
-//{
-//    endOfText = TextEditorTextStorage_endOfText(&op.textStorage);
-//    return QString("\nЧтение позиции конца текста: ") +
-//            QString::number(endOfText) + "\n";
-//}
-
-//QString testRead( const QString & testHeader,
-//                 TextEditorTextOperator & op,
-//                 size_t pos,
-//                 size_t len )
-//{
-//    QString arr(len, QChar::LineSeparator);
-//    Unicode_Buf buf =
-//    {
-//        .data = reinterpret_cast<unicode_t*>(arr.data()),
-//        .size = len
-//    };
-//    TextEditorTextOperator_read(&op, pos, &buf);
-//    return "\n" + testHeader + "\n" +
-//            QString("Прочитано: ") + QString::number(buf.size) + QString(" cимволов\n") +
-//            QString("Текст:\n") + arr + QString("\nКонец текста\n");
-//}
-
-
-//QString testRemoveAndWrite( const QString & inputText,
-//                            size_t rmnwrPos, size_t rmLen,
-//                            const QString & writeText )
-//{
-//    QString inputTextCopy = inputText;
-//    Unicode_Buf inputTextBuf;
-//    Unicode_Buf writeTextBuf;
-//    TextEditorTextOperator op;
-
-//    LPM_SelectionCursor sc = { .pos = rmnwrPos, .len = rmLen };
-//    initObjectsToWrite(op, inputTextBuf, inputTextCopy);
-//    initUnicodeBuf(writeTextBuf, writeText);
-//    TextEditorTextOperator_removeAndWrite(&op, &sc, &writeTextBuf);
-
-//    return QString("\nЗапись и удаление: ") +
-//}
 

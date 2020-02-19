@@ -32,14 +32,16 @@ SOURCES += \
     tests/test_display.cpp \
     tests/test_display_interactor.cpp \
     tests/test_display_html_convertor.cpp \
-    editor/text_editor_controller.c \
-    editor/text_editor_command_reader.c \
-    editor/text_editor_text_operator.c \
     tests/test_text_buffer.cpp \
-    editor/text_editor_text_storage.c \
     tests/text_operator_and_storage_tester.cpp \
-    editor/text_editor_core.c \
-    editor/text_editor_page_formatter.c
+    language/lpm_lang.c \
+    language/lpm_lang_rus_eng.c \
+    text_support/text_buffer.c \
+    text_support/lpm_text_storage.c \
+    editor/command_reader.c \
+    editor/controller.c \
+    editor/core.c \
+    editor/page_formatter.c
 
 HEADERS += \
         mainwindow.h \
@@ -52,13 +54,6 @@ HEADERS += \
     tests/test_display_interactor.h \
     tests/test_display_view_model.h \
     tests/test_display_html_convertor.h \
-    editor/text_editor_controller.h \
-    editor/text_editor_command_reader.h \
-    editor/text_editor_core.h \
-    editor/text_editor_clipboard.h \
-    editor/text_editor_text_operator.h \
-    editor/text_editor_user_actions.h \
-    editor/text_editor_page_formatter.h \
     system/lpm_file.h \
     system/lpm_structs.h \
     system/lpm_unicode.h \
@@ -66,10 +61,19 @@ HEADERS += \
     system/lpm_unicode_keyboard.h \
     system/lpm_error.h \
     tests/test_text_buffer.h \
-    editor/text_editor_text_storage.h \
     tests/text_operator_and_storage_tester.h \
-    editor/text_editor_modules.h \
-    editor/text_editor_flags.h
+    language/lpm_lang.h \
+    language/lpm_lang_rus_eng.h \
+    text_support/text_buffer.h \
+    text_support/lpm_text_storage.h \
+    editor/clipboard.h \
+    editor/command_reader.h \
+    editor/controller.h \
+    editor/core.h \
+    editor/editor_flags.h \
+    editor/modules.h \
+    editor/page_formatter.h \
+    editor/action_storage.h
 
 FORMS += \
         mainwindow.ui
@@ -77,4 +81,6 @@ FORMS += \
 INCLUDEPATH += \
     system \
     editor \
-    tests
+    tests \
+    language \
+    text_support

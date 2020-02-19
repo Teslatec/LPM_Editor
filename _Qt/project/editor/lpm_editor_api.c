@@ -1,5 +1,5 @@
 #include "lpm_editor_api.h"
-#include "text_editor_controller.h"
+#include "controller.h"
 
 //#ifdef __cplusplus
 //extern "C" {
@@ -7,7 +7,7 @@
 
 void LPM_launchEditor(const LPM_EditorParams * params)
 {
-    TextEditorController_exec(params);
+    Controller_exec(params);
 }
 
 void LPM_launchMeteoEditor(const LPM_EditorParams * params)

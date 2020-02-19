@@ -1,7 +1,7 @@
-#include "text_editor_command_reader.h"
+#include "command_reader.h"
 
-typedef TextEditorCmdReader Obj;
-typedef TextEditorCmd Cmd;
+typedef CmdReader Obj;
+typedef EditorCmd Cmd;
 typedef Unicode_Buf UBuf;
 
 typedef enum _Modifiers
@@ -30,8 +30,8 @@ static bool _thereIsCtrlModifier(Obj * obj);
 static bool _thereIsAltModifier(Obj * obj);
 static bool _thereIsShiftModifier(Obj * obj);
 
-void TextEditorCmdReader_init
-        ( TextEditorCmdReader * obj,
+void CmdReader_init
+        ( CmdReader * obj,
           LPM_UnicodeKeyboard * keyboard,
           Unicode_Buf * kbdBuf )
 {
@@ -43,11 +43,11 @@ void TextEditorCmdReader_init
     obj->isReplacementMode = false;
 }
 
-TextEditorCmd TextEditorCmdReader_read
-        ( TextEditorCmdReader * obj,
+EditorCmd CmdReader_read
+        ( CmdReader * obj,
           uint32_t timeoutMs )
 {
-    TextEditorCmd cmd = __TEXT_EDITOR_NO_CMD;
+    EditorCmd cmd = __EDITOR_NO_CMD;
     Unicode_Buf buf =
     {
         .data = obj->kbdBuf->data,
@@ -59,7 +59,7 @@ TextEditorCmd TextEditorCmdReader_read
         LPM_UnicodeKeyboard_read(obj->keyboard, &buf, timeoutMs);
         cmd = _processAndConvertToCmd(obj, &buf);
     }
-    while(cmd == __TEXT_EDITOR_NO_CMD);
+    while(cmd == __EDITOR_NO_CMD);
     return cmd;
 }
 
@@ -68,7 +68,7 @@ Cmd _processAndConvertToCmd(Obj * obj, const UBuf * rxBuf)
     if(_firstCharIsModifier(rxBuf))
     {
         _processAsHavingModifier(obj, rxBuf);
-        return __TEXT_EDITOR_NO_CMD;
+        return __EDITOR_NO_CMD;
     }
     return _processAsNotHavingModifierAndConvertToCmd(obj, rxBuf);
 }
@@ -103,9 +103,9 @@ Cmd _processCtrlSequenceAndConvertToCmd(Obj * obj, const UBuf * buf)
 
 Cmd _saveCharsAndReturnTextChangedCmd(Obj * obj, const UBuf * buf)
 {
-    obj->flags = TEXT_EDITOR_TEXT_FLAG_TEXT;
+    obj->flags = TEXT_FLAG_TEXT;
     obj->receivedSize = buf->size;
-    return TEXT_EDITOR_CMD_TEXT_CHANGED;
+    return EDITOR_CMD_TEXT_CHANGED;
 }
 
 Cmd _processAsWithCtrlAndConvertToCmd(Obj * obj, const UBuf * buf)
@@ -118,93 +118,93 @@ Cmd _processAsWithCtrlAndConvertToCmd(Obj * obj, const UBuf * buf)
     switch(firstChar)
     {
         case 's':
-            cmd = TEXT_EDITOR_CMD_SAVE;
+            cmd = EDITOR_CMD_SAVE;
             break;
 
         case 'w':
-            cmd = TEXT_EDITOR_CMD_CLEAR_CLIPBOARD;
+            cmd = EDITOR_CMD_CLEAR_CLIPBOARD;
             break;
 
         case 'v':
-            cmd = TEXT_EDITOR_CMD_PASTE;
+            cmd = EDITOR_CMD_PASTE;
             break;
 
         case 'c':
-            cmd = TEXT_EDITOR_CMD_COPY;
+            cmd = EDITOR_CMD_COPY;
             break;
 
         case 'x':
-            cmd = TEXT_EDITOR_CMD_CUT;
+            cmd = EDITOR_CMD_CUT;
             break;
 
         case 'z':
-            cmd = TEXT_EDITOR_CMD_UNDO;
+            cmd = EDITOR_CMD_UNDO;
             break;
 
         case 'b':
-            cmd = TEXT_EDITOR_CMD_TEXT_CHANGED;
-            obj->flags = TEXT_EDITOR_TEXT_FLAG_TRUCATE_LINE;
+            cmd = EDITOR_CMD_TEXT_CHANGED;
+            obj->flags = TEXT_FLAG_TRUCATE_LINE;
             break;
 
         case ' ':
             obj->receivedSize = 1;
             obj->kbdBuf->data[0] = UNICODE_LIGHT_SHADE;
-            cmd = TEXT_EDITOR_CMD_TEXT_CHANGED;
-            obj->flags = TEXT_EDITOR_TEXT_FLAG_TEXT;
+            cmd = EDITOR_CMD_TEXT_CHANGED;
+            obj->flags = TEXT_FLAG_TEXT;
             break;
 
         case 'e':
-            cmd = TEXT_EDITOR_CMD_TEXT_CHANGED;
-            obj->flags = TEXT_EDITOR_TEXT_FLAG_REMOVE_PAGE;
+            cmd = EDITOR_CMD_TEXT_CHANGED;
+            obj->flags = TEXT_FLAG_REMOVE_PAGE;
             break;
 
         case '1':
-            cmd = TEXT_EDITOR_CMD_OUTLINE_HELP;
+            cmd = EDITOR_CMD_OUTLINE_HELP;
             break;
 
         case '?':
-            cmd = TEXT_EDITOR_CMD_OUTLINE_STATE;
+            cmd = EDITOR_CMD_OUTLINE_STATE;
             break;
 
         case 'a':
-            cmd = TEXT_EDITOR_CMD_CURSOR_CHANGED;
+            cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
-                    TEXT_EDITOR_CURSOR_FLAG_SELECT |
-                    TEXT_EDITOR_CURSOR_FLAG_PAGE ;
+                    CURSOR_FLAG_SELECT |
+                    CURSOR_FLAG_PAGE ;
             break;
 
         case 'd':
-            cmd = TEXT_EDITOR_CMD_CURSOR_CHANGED;
+            cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
-                    TEXT_EDITOR_CURSOR_FLAG_SELECT |
-                    TEXT_EDITOR_CURSOR_FLAG_LINE;
+                    CURSOR_FLAG_SELECT |
+                    CURSOR_FLAG_LINE;
             break;
 
         case UNICODE_HOME:
-            cmd = TEXT_EDITOR_CMD_CURSOR_CHANGED;
+            cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
-                    TEXT_EDITOR_CURSOR_FLAG_MOVE |
-                    TEXT_EDITOR_CURSOR_FLAG_PAGE |
-                    TEXT_EDITOR_CURSOR_FLAG_BEGIN ;
+                    CURSOR_FLAG_MOVE |
+                    CURSOR_FLAG_PAGE |
+                    CURSOR_FLAG_BEGIN ;
             break;
 
         case UNICODE_END:
-            cmd = TEXT_EDITOR_CMD_CURSOR_CHANGED;
+            cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
-                    TEXT_EDITOR_CURSOR_FLAG_MOVE |
-                    TEXT_EDITOR_CURSOR_FLAG_PAGE |
-                    TEXT_EDITOR_CURSOR_FLAG_END ;
+                    CURSOR_FLAG_MOVE |
+                    CURSOR_FLAG_PAGE |
+                    CURSOR_FLAG_END ;
             break;
 
         //case UNICODE_ENTER: break;
-        default: cmd = __TEXT_EDITOR_NO_CMD;
+        default: cmd = __EDITOR_NO_CMD;
     }
     return cmd;
 }
 
 Cmd _processAsWithAltAndConvertToCmd(Obj * obj, const UBuf * buf)
 {
-    TextEditorCmd cmd;
+    EditorCmd cmd;
     unicode_t firstChar = buf->data[0];
     obj->flags = 0;
     obj->receivedSize = 0;
@@ -212,45 +212,45 @@ Cmd _processAsWithAltAndConvertToCmd(Obj * obj, const UBuf * buf)
     switch(firstChar)
     {
         case UNICODE_HOME:
-            cmd = TEXT_EDITOR_CMD_CURSOR_CHANGED;
+            cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
-                    TEXT_EDITOR_CURSOR_FLAG_MOVE |
-                    TEXT_EDITOR_CURSOR_FLAG_LINE |
-                    TEXT_EDITOR_CURSOR_FLAG_BEGIN;
+                    CURSOR_FLAG_MOVE |
+                    CURSOR_FLAG_LINE |
+                    CURSOR_FLAG_BEGIN;
             break;
 
         case UNICODE_END:
-            cmd = TEXT_EDITOR_CMD_CURSOR_CHANGED;
+            cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
-                    TEXT_EDITOR_CURSOR_FLAG_MOVE |
-                    TEXT_EDITOR_CURSOR_FLAG_LINE |
-                    TEXT_EDITOR_CURSOR_FLAG_END;
+                    CURSOR_FLAG_MOVE |
+                    CURSOR_FLAG_LINE |
+                    CURSOR_FLAG_END;
             break;
 
         case UNICODE_PGUP:
-            cmd = TEXT_EDITOR_CMD_CURSOR_CHANGED;
+            cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
-                    TEXT_EDITOR_CURSOR_FLAG_MOVE |
-                    TEXT_EDITOR_CURSOR_FLAG_PAGE |
-                    TEXT_EDITOR_CURSOR_FLAG_PREV;
+                    CURSOR_FLAG_MOVE |
+                    CURSOR_FLAG_PAGE |
+                    CURSOR_FLAG_PREV;
             break;
 
         case UNICODE_PGDN:
-            cmd = TEXT_EDITOR_CMD_CURSOR_CHANGED;
+            cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
-                    TEXT_EDITOR_CURSOR_FLAG_MOVE |
-                    TEXT_EDITOR_CURSOR_FLAG_PAGE |
-                    TEXT_EDITOR_CURSOR_FLAG_NEXT;
+                    CURSOR_FLAG_MOVE |
+                    CURSOR_FLAG_PAGE |
+                    CURSOR_FLAG_NEXT;
             break;
 
-        default: cmd = __TEXT_EDITOR_NO_CMD;
+        default: cmd = __EDITOR_NO_CMD;
     }
     return cmd;
 }
 
 Cmd _processAsWithShiftAndConvertToCmd(Obj * obj, const UBuf * buf)
 {
-    TextEditorCmd cmd;
+    EditorCmd cmd;
     unicode_t firstChar = buf->data[0];
     obj->flags = 0;
     obj->receivedSize = 0;
@@ -258,39 +258,39 @@ Cmd _processAsWithShiftAndConvertToCmd(Obj * obj, const UBuf * buf)
     switch(firstChar)
     {
         case UNICODE_UP:
-            cmd = TEXT_EDITOR_CMD_CURSOR_CHANGED;
+            cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
-                    TEXT_EDITOR_CURSOR_FLAG_SELECT |
-                    TEXT_EDITOR_CURSOR_FLAG_CHAR |
-                    TEXT_EDITOR_CURSOR_FLAG_UP;
+                    CURSOR_FLAG_SELECT |
+                    CURSOR_FLAG_CHAR |
+                    CURSOR_FLAG_UP;
             break;
 
         case UNICODE_DOWN:
-            cmd = TEXT_EDITOR_CMD_CURSOR_CHANGED;
+            cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
-                    TEXT_EDITOR_CURSOR_FLAG_SELECT |
-                    TEXT_EDITOR_CURSOR_FLAG_CHAR |
-                    TEXT_EDITOR_CURSOR_FLAG_DOWN;
+                    CURSOR_FLAG_SELECT |
+                    CURSOR_FLAG_CHAR |
+                    CURSOR_FLAG_DOWN;
             break;
 
         case UNICODE_LEFT:
-            cmd = TEXT_EDITOR_CMD_CURSOR_CHANGED;
+            cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
-                    TEXT_EDITOR_CURSOR_FLAG_SELECT |
-                    TEXT_EDITOR_CURSOR_FLAG_CHAR |
-                    TEXT_EDITOR_CURSOR_FLAG_LEFT;
+                    CURSOR_FLAG_SELECT |
+                    CURSOR_FLAG_CHAR |
+                    CURSOR_FLAG_LEFT;
             break;
 
         case UNICODE_RIGHT:
-            cmd = TEXT_EDITOR_CMD_CURSOR_CHANGED;
+            cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
-                    TEXT_EDITOR_CURSOR_FLAG_SELECT |
-                    TEXT_EDITOR_CURSOR_FLAG_CHAR |
-                    TEXT_EDITOR_CURSOR_FLAG_RIGHT;
+                    CURSOR_FLAG_SELECT |
+                    CURSOR_FLAG_CHAR |
+                    CURSOR_FLAG_RIGHT;
             break;
 
         //case UNICODE_ENTER: break;
-        default: cmd = __TEXT_EDITOR_NO_CMD;
+        default: cmd = __EDITOR_NO_CMD;
     }
 
     return cmd;
@@ -298,7 +298,7 @@ Cmd _processAsWithShiftAndConvertToCmd(Obj * obj, const UBuf * buf)
 
 Cmd _processAsPureAndConvertToCmd(Obj * obj, const UBuf * buf)
 {
-    TextEditorCmd cmd;
+    EditorCmd cmd;
     unicode_t firstChar = buf->data[0];
     obj->flags = 0;
     obj->receivedSize = 0;
@@ -306,36 +306,36 @@ Cmd _processAsPureAndConvertToCmd(Obj * obj, const UBuf * buf)
     switch(firstChar)
     {
         case UNICODE_TAB:
-            cmd = TEXT_EDITOR_CMD_TEXT_CHANGED;
-            obj->flags = TEXT_EDITOR_TEXT_FLAG_TAB;
+            cmd = EDITOR_CMD_TEXT_CHANGED;
+            obj->flags = TEXT_FLAG_TAB;
             break;
 
         case UNICODE_ENTER:
-            cmd = TEXT_EDITOR_CMD_TEXT_CHANGED;
-            obj->flags = TEXT_EDITOR_TEXT_FLAG_NEW_LINE;
+            cmd = EDITOR_CMD_TEXT_CHANGED;
+            obj->flags = TEXT_FLAG_NEW_LINE;
             break;
 
         case UNICODE_BACKSPACE:
-            cmd = TEXT_EDITOR_CMD_TEXT_CHANGED;
-            obj->flags = TEXT_EDITOR_TEXT_FLAG_REMOVE_PREV_CHAR;
+            cmd = EDITOR_CMD_TEXT_CHANGED;
+            obj->flags = TEXT_FLAG_REMOVE_PREV_CHAR;
             break;
 
         case UNICODE_DEL:
-            cmd = TEXT_EDITOR_CMD_TEXT_CHANGED;
-            obj->flags = TEXT_EDITOR_TEXT_FLAG_REMOVE_NEXT_CHAR;
+            cmd = EDITOR_CMD_TEXT_CHANGED;
+            obj->flags = TEXT_FLAG_REMOVE_NEXT_CHAR;
             break;
 
         case UNICODE_ESC:
-            cmd = TEXT_EDITOR_CMD_EXIT;
+            cmd = EDITOR_CMD_EXIT;
             break;
 
         case UNICODE_INSERT_A:
-            cmd = TEXT_EDITOR_CMD_CHANGE_MODE;
+            cmd = EDITOR_CMD_CHANGE_MODE;
             obj->isReplacementMode = true;
             break;
 
         case UNICODE_INSERT_N:
-            cmd = TEXT_EDITOR_CMD_CHANGE_MODE;
+            cmd = EDITOR_CMD_CHANGE_MODE;
             obj->isReplacementMode = false;
             break;
 
@@ -344,33 +344,33 @@ Cmd _processAsPureAndConvertToCmd(Obj * obj, const UBuf * buf)
 
         case UNICODE_UP:
             obj->flags =
-                    TEXT_EDITOR_CURSOR_FLAG_MOVE |
-                    TEXT_EDITOR_CURSOR_FLAG_CHAR |
-                    TEXT_EDITOR_CURSOR_FLAG_UP;
+                    CURSOR_FLAG_MOVE |
+                    CURSOR_FLAG_CHAR |
+                    CURSOR_FLAG_UP;
             break;
 
         case UNICODE_DOWN:
             obj->flags =
-                    TEXT_EDITOR_CURSOR_FLAG_MOVE |
-                    TEXT_EDITOR_CURSOR_FLAG_CHAR |
-                    TEXT_EDITOR_CURSOR_FLAG_DOWN;
+                    CURSOR_FLAG_MOVE |
+                    CURSOR_FLAG_CHAR |
+                    CURSOR_FLAG_DOWN;
             break;
 
         case UNICODE_LEFT:
             obj->flags =
-                    TEXT_EDITOR_CURSOR_FLAG_MOVE |
-                    TEXT_EDITOR_CURSOR_FLAG_CHAR |
-                    TEXT_EDITOR_CURSOR_FLAG_LEFT;
+                    CURSOR_FLAG_MOVE |
+                    CURSOR_FLAG_CHAR |
+                    CURSOR_FLAG_LEFT;
             break;
 
         case UNICODE_RIGHT:
             obj->flags =
-                    TEXT_EDITOR_CURSOR_FLAG_MOVE |
-                    TEXT_EDITOR_CURSOR_FLAG_CHAR |
-                    TEXT_EDITOR_CURSOR_FLAG_RIGHT;
+                    CURSOR_FLAG_MOVE |
+                    CURSOR_FLAG_CHAR |
+                    CURSOR_FLAG_RIGHT;
             break;
 
-        default: cmd = __TEXT_EDITOR_NO_CMD;
+        default: cmd = __EDITOR_NO_CMD;
     }
     return cmd;
 }
