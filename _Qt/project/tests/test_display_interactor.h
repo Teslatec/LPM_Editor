@@ -15,7 +15,7 @@ public:
                                     QObject * parent = nullptr );
     void clear();
     void write(QString data, QPoint point);
-    void writeLine(QString line, int index, int bs, int s, int as);
+    void writeLine(int index, QString line, QPoint curs);
 
     QString toString() const;
 

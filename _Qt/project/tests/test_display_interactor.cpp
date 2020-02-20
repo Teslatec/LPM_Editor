@@ -65,10 +65,10 @@ void TestDisplayInteractor::write(QString data, QPoint point)
     //waitForGuiRepaint();
 }
 
-void TestDisplayInteractor::writeLine(QString line, int index, int bs, int s, int as)
+void TestDisplayInteractor::writeLine(int index, QString line, QPoint curs)
 {
 
-    html[index] = TestDisplayHtmlConvertor::convertLine(line, bs, s, as);
+    html[index] = TestDisplayHtmlConvertor::convertLine(line, curs);
     for(auto & sym : html[index])
         if(sym == QChar(' '))
             sym = QChar(0x2591);

@@ -2,8 +2,9 @@
 #include "test_display_interactor.h"
 
 static void writeLine( LPM_UnicodeDisplay * i,
-                       const Unicode_Buf * lineBuf,
-                       const LPM_UnicodeDisplayLineAttr * lineAttr );
+                       size_t index,
+                       const Unicode_Buf * line,
+                       const LPM_SelectionCursor * curs );
 
 static void clearScreen(LPM_UnicodeDisplay * i);
 
@@ -27,13 +28,13 @@ void TestDisplay_init(TestDisplay * dsp, TestDisplayInteractor * itc)
 static QString unicode_line_to_string(const Unicode_Buf * buf);
 
 void writeLine( LPM_UnicodeDisplay * i,
-                const Unicode_Buf * lineBuf,
-                const LPM_UnicodeDisplayLineAttr * lineAttr )
+                size_t index,
+                const Unicode_Buf * line,
+                const LPM_SelectionCursor * curs )
 {
-    ((TestDisplay*)i)->interactor->writeLine(
-                unicode_line_to_string(lineBuf), lineAttr->index,
-                lineAttr->lenBeforeSelect, lineAttr->lenSelect,
-                lineAttr->lenAfterSelect);
+    ((TestDisplay*)i)->interactor->writeLine( index,
+                                              unicode_line_to_string(line),
+                                              QPoint(curs->pos, curs->len) );
 }
 
 void clearScreen(LPM_UnicodeDisplay * i)

@@ -10,19 +10,12 @@
 
 struct LPM_UnicodeDisplay;
 
-typedef struct LPM_UnicodeDisplayLineAttr
-{
-    uint8_t index;              // Номер строки
-    uint8_t lenBeforeSelect;    // Число символов до подчеркивания
-    uint8_t lenSelect;          // Число подчеркнутых символов
-    uint8_t lenAfterSelect;     // Число символов после подчеркивания
-} LPM_UnicodeDisplayLineAttr;
-
 typedef struct LPM_UnicodeDisplayFxns
 {
     void (*writeLine)   ( struct LPM_UnicodeDisplay * i,
+                          size_t lineIndex,
                           const Unicode_Buf * lineBuf,
-                          const LPM_UnicodeDisplayLineAttr * lineAttr );
+                          const LPM_SelectionCursor * selCurs);
     void (*clearScreen) (struct LPM_UnicodeDisplay * i);
 } LPM_UnicodeDisplayFxns;
 
@@ -33,10 +26,11 @@ typedef struct LPM_UnicodeDisplay
 } LPM_UnicodeDisplay;
 
 inline void LPM_UnicodeDisplay_writeLine( LPM_UnicodeDisplay * i,
+                                          size_t lineIndex,
                                           const Unicode_Buf * lineBuf,
-                                          const LPM_UnicodeDisplayLineAttr * lineAttr )
+                                          const LPM_SelectionCursor * selCurs )
 {
-    (*(i->fxns->writeLine))(i, lineBuf, lineAttr);
+    (*(i->fxns->writeLine))(i, lineIndex, lineBuf, selCurs);
 }
 
 inline void LPM_UnicodeDisplay_clearScreen(LPM_UnicodeDisplay * i)

@@ -8,9 +8,32 @@ static const unicode_t chrSpace = 0x0020;
 
 static bool _charBelongsToBasicLatin(unicode_t chr);
 static bool _atEndOfLine(unicode_t chr);
+static bool _atEndOfText(unicode_t chr);
+static bool _atSpace(unicode_t chr);
 
 static const unicode_t * _nextCharWhenEndOfLine(const unicode_t * pchr);
 static const unicode_t * _prevCharWhenEndOfLine(const unicode_t * pchr);
+
+static void _fillLineMapWhenAtEndOfText
+        ( const unicode_t * pchr,
+          size_t chrCnt,
+          LPM_TextLineMap * lineMap );
+
+static void _fillLineMapWhenAtEndOfLine
+        ( const unicode_t * pchr,
+          size_t chrCnt,
+          LPM_TextLineMap * lineMap );
+
+static void _fillLineMapWhenVeryLongWord
+        ( const unicode_t * pchr,
+          size_t chrCnt,
+          LPM_TextLineMap * lineMap );
+
+static void _fillLineMapWhenWordWrapped
+        ( const unicode_t * pdiv,
+          size_t divCnt,
+          LPM_TextLineMap * lineMap );
+
 
 bool LPM_TextOperator_checkInputChar
     ( LPM_TextOperator * o,
@@ -20,9 +43,7 @@ bool LPM_TextOperator_checkInputChar
     if(_charBelongsToBasicLatin(inputChr))
         return true;
 
-    if( (inputChr == chrCr) ||
-        (inputChr == chrLf) ||
-        (inputChr == chrEndOfText) )
+    if(_atEndOfLine(*pchr) || _atEndOfText(*pchr))
         return true;
 
     if(!LPM_Lang_isCharBelongsToLang(o->lang, &inputChr))
@@ -35,7 +56,7 @@ const unicode_t * LPM_TextOperator_nextChar
     ( LPM_TextOperator * o,
       const unicode_t * pchr )
 {
-    if(*pchr == chrEndOfText)
+    if(_atEndOfText(*pchr))
         return pchr;
 
     if(_atEndOfLine(*pchr))
@@ -52,6 +73,51 @@ const unicode_t * LPM_TextOperator_prevChar
         return _prevCharWhenEndOfLine(pchr);
 
     return LPM_Lang_prevChar(o->lang, pchr);
+}
+
+bool LPM_TextOperator_analizeLine
+        ( LPM_TextOperator * o,
+          const unicode_t  * pchr,
+          size_t maxLenInChrs,
+          LPM_TextLineMap * lineMap )
+{
+    bool endOfTextReached = false;
+    const unicode_t * pWordDiv = pchr + maxLenInChrs;
+    size_t wordDivCnt = maxLenInChrs;
+    size_t chrCnt;
+
+    for(chrCnt = 0; chrCnt < maxLenInChrs; chrCnt++)
+    {
+        if(_atEndOfText(*pchr) || _atEndOfLine(*pchr))
+            break;
+
+        if(_atSpace(*pchr))
+        {
+            wordDivCnt = chrCnt;
+            pWordDiv   = pchr;
+            if(chrCnt == maxLenInChrs-1)
+                break;
+        }
+
+        pchr = LPM_Lang_nextChar(o->lang, pchr);
+    }
+
+    if(_atEndOfText(*pchr))
+    {
+        _fillLineMapWhenAtEndOfText(pchr, chrCnt, lineMap);
+        endOfTextReached = true;
+    }
+
+    else if(_atEndOfLine(*pchr) || _atSpace(*pchr))
+        _fillLineMapWhenAtEndOfLine(pchr, chrCnt, lineMap);
+
+    else if(wordDivCnt == maxLenInChrs)
+        _fillLineMapWhenVeryLongWord(pchr, maxLenInChrs, lineMap);
+
+    else
+        _fillLineMapWhenWordWrapped(pWordDiv, wordDivCnt, lineMap);
+
+    return endOfTextReached;
 }
 
 bool LPM_TextOperator_atEndOfText(LPM_TextOperator * o, const unicode_t * pchr)
@@ -82,6 +148,16 @@ bool _atEndOfLine(unicode_t chr)
     return (chr == chrCr) || (chr == chrLf);
 }
 
+bool _atEndOfText(unicode_t chr)
+{
+    return chr == chrEndOfText;
+}
+
+bool _atSpace(unicode_t chr)
+{
+    return chr == chrSpace;
+}
+
 const unicode_t * _nextCharWhenEndOfLine(const unicode_t * pchr)
 {
     if(*pchr == chrCr)
@@ -98,4 +174,61 @@ const unicode_t * _prevCharWhenEndOfLine(const unicode_t * pchr)
     if(*pchr == chrCr)
         --pchr;
     return pchr;
+}
+
+void _fillLineMapWhenAtEndOfText
+        ( const unicode_t * pchr,
+          size_t chrCnt,
+          LPM_TextLineMap * lineMap )
+{
+    lineMap->printBorder = pchr;
+    lineMap->nextLine    = pchr;
+    lineMap->lenInChr    = chrCnt;
+}
+
+void _fillLineMapWhenAtEndOfLine
+        ( const unicode_t * pchr,
+          size_t chrCnt,
+          LPM_TextLineMap * lineMap )
+{
+    lineMap->printBorder = pchr;
+    lineMap->lenInChr = chrCnt;
+    lineMap->nextLine = pchr;
+
+    if(*pchr == chrSpace)
+    {
+        lineMap->nextLine++;
+        ++pchr;
+    }
+
+    if(*pchr == chrCr)
+    {
+        lineMap->nextLine++;
+        ++pchr;
+    }
+
+    if(*pchr == chrLf)
+    {
+        lineMap->nextLine++;
+    }
+}
+
+void _fillLineMapWhenVeryLongWord
+        ( const unicode_t * pchr,
+          size_t chrCnt,
+          LPM_TextLineMap * lineMap )
+{
+    lineMap->printBorder = pchr;
+    lineMap->lenInChr    = chrCnt;
+    lineMap->nextLine    = pchr;
+}
+
+void _fillLineMapWhenWordWrapped
+        ( const unicode_t * pdiv,
+          size_t divCnt,
+          LPM_TextLineMap * lineMap )
+{
+    lineMap->printBorder = pdiv;
+    lineMap->lenInChr    = divCnt;
+    lineMap->nextLine    = pdiv+1;
 }

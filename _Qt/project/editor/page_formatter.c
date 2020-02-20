@@ -125,7 +125,7 @@ void PageFormatter_updateDisplay
 {
     LPM_Point pos = { .x = 0, .y = 0 };
     Unicode_Buf lineBuf = { .data = o->modules->lineBuffer.data, .size = 0 };
-    LPM_UnicodeDisplayLineAttr attr = { 0, 0, 0, 0};
+    LPM_SelectionCursor curs;
 
     //LPM_UnicodeDisplay_setCursor(o->modules->display, &o->displayCursor);
 
@@ -138,15 +138,13 @@ void PageFormatter_updateDisplay
     {
         if(lineIndex == 0)
         {
-            attr.lenBeforeSelect = 4;
-            attr.lenSelect       = 0;
-            attr.lenAfterSelect  = 1;
+            curs.pos = 10;
+            curs.len = 12;
         }
         else
         {
-            attr.lenBeforeSelect = 0;
-            attr.lenSelect       = 0;
-            attr.lenAfterSelect  = 1;
+            curs.pos = lineBuf.size;
+            curs.len = 0;
         }
 
         if(_readLineChangedFlag(o, lineIndex))
@@ -154,10 +152,9 @@ void PageFormatter_updateDisplay
             _formatLineForDisplay(o, lineMap, lineOffset);
             lineBuf.size = lineMap->payloadLen + lineMap->restLen;
             //attr.lenAfterSelect = lineBuf.size;
-            LPM_UnicodeDisplay_writeLine(o->modules->display, &lineBuf, &attr);
+            LPM_UnicodeDisplay_writeLine(o->modules->display, lineIndex, &lineBuf, &curs);
         }
         lineOffset += lineMap->fullLen;
-        attr.index++;
     }
 }
 
@@ -282,7 +279,14 @@ void _buildPageFromCurrBase(Obj * o)
     for( ; lineMap != end; lineMap++)
     {
         _loadLine(o, o->currPageBase + lineOffset);
-        lineOffset += _buildLineMap(o, lineMap, 255, 255);
+        LPM_TextLineMap lm;
+        const unicode_t * begin = o->modules->lineBuffer.data;
+        if(LPM_TextOperator_analizeLine(o->modules->textOperator, begin, CHAR_AMOUNT, &lm))
+            o->lastPageReached = true;
+        lineMap->fullLen    = (uint8_t)(lm.nextLine - begin);
+        lineMap->payloadLen = (uint8_t)(lm.printBorder - begin);
+        lineMap->restLen    = CHAR_AMOUNT - lm.lenInChr;
+        lineOffset += lineMap->fullLen;
     }
 }
 

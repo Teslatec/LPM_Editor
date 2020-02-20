@@ -43,30 +43,28 @@ QString TestDisplayHtmlConvertor::convert( const QStringList & src,
     return convertTextWithMultiLineHighlighted(src, cursorBegin, cursorEnd);
 }
 
-QString TestDisplayHtmlConvertor::convertLine(const QString & line, int bs, int s, int as)
+QString TestDisplayHtmlConvertor::convertLine(const QString & line, const QPoint & curs)
 {
-    if((bs != 0) && (s != 0) && (as != 0))
-        return makeMidHighlightedLine(line, bs, s);
+    int cursPos = curs.x();
+    int cursLen = curs.y();
+    int lineLen = line.size();
 
-    if((bs == 0) && (s != 0) && (as != 0))
-        return makeLeftHighlightedLine(line, s);
+    qDebug() << "lineSize:" << lineLen << "cursPos:" << cursPos << "cursLen:" << cursLen;
 
-    if((bs != 0) && (s != 0) && (as == 0))
-        return makeRightHighlightedLine(line, bs);
-
-    if((bs == 0) && (s != 0) && (as == 0))
-        return makeFullHighlightedLine(line);
-
-    if((bs != 0) && (s == 0) && (as != 0))
-        return makeCursoredLine(line, bs);
-
-    if((bs == 0) && (s == 0) && (as != 0))
+    if(cursPos >= lineLen)
         return makeLineWithoutCursor(line);
 
-    if((bs != 0) && (s == 0) && (as == 0))
-        return makeLineWithoutCursor(line);
+    if(cursLen == 0)
+        return makeCursoredLine(line, cursPos);
 
-    return QString();
+    if(cursPos == 0)
+        return cursLen < lineLen ?
+                    makeLeftHighlightedLine(line, cursLen) :
+                    makeFullHighlightedLine(line);
+
+    return (cursPos + cursLen) < lineLen ?
+                makeMidHighlightedLine(line, cursPos, cursPos + cursLen) :
+                makeRightHighlightedLine(line, cursPos);
 }
 
 QString convertTextWithoutHighlighting( const QStringList & src,
@@ -164,8 +162,8 @@ QString makeLineWithHighlightingEnd(const QString & line, int x)
 QString makeMidHighlightedLine(const QString & line, int highlightingBegin, int highlightingEnd)
 {
     return line.mid(0, highlightingBegin) + htmlHighlightingBegin +
-            line.mid(highlightingBegin, highlightingEnd) + htmlHighlightingEnd +
-            line.mid(highlightingBegin+highlightingEnd) + htmlLineFeed;
+            line.mid(highlightingBegin, highlightingEnd-highlightingBegin) + htmlHighlightingEnd +
+            line.mid(highlightingEnd) + htmlLineFeed;
 }
 
 QString makeLeftHighlightedLine(const QString & line, int highlightingBorder)

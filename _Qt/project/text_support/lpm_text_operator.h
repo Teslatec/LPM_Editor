@@ -10,6 +10,13 @@ typedef struct LPM_TextOperator
     struct LPM_Lang * lang;
 } LPM_TextOperator;
 
+typedef struct LPM_TextLineMap
+{
+    const unicode_t * nextLine;
+    const unicode_t * printBorder;
+    size_t lenInChr;
+} LPM_TextLineMap;
+
 inline void LPM_TextOperator_init
     (LPM_TextOperator * o, struct LPM_Lang * lang) { o->lang = lang; }
 
@@ -25,6 +32,12 @@ const unicode_t * LPM_TextOperator_nextChar
 const unicode_t * LPM_TextOperator_prevChar
     ( LPM_TextOperator * o,
       const unicode_t * pchr );
+
+bool LPM_TextOperator_analizeLine(
+          LPM_TextOperator * o,
+          const unicode_t  * pchr,
+          size_t maxLenInChrs,
+          LPM_TextLineMap * lineMap );
 
 bool LPM_TextOperator_atEndOfText(LPM_TextOperator * o, const unicode_t * pchr);
 bool LPM_TextOperator_atEndOfLine(LPM_TextOperator * o, const unicode_t * pchr);

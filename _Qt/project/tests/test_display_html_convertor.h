@@ -11,7 +11,7 @@ public:
                             QPoint cursorBegin,
                             QPoint cursorEnd );
 
-    static QString convertLine( const QString & line, int bs, int s, int as);
+    static QString convertLine(const QString & line, const QPoint & curs);
 };
 
 #endif // TEST_DISPLAY_HTML_CONVERTOR_H
