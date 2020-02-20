@@ -27,6 +27,7 @@ protected:
 private:
     Ui::MainWindow * ui;
     TestTextEditor * testTextEditor;
+    QTimer * lineUpdateResetTimer;
 
 private slots:
     void onLineUpdated(int lineIndex);

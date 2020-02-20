@@ -79,6 +79,7 @@ void Core_exec(Core * o)
             break;
         else if(cmd < __EDITOR_NO_CMD)
             (*(cmdHandlerTable[cmd]))(o);
+        _printLineMap(o);
     }
 }
 
@@ -89,12 +90,6 @@ void _prepare(Obj * o)
     o->textCursor.len = 0;
     PageFormatter_startWithPageAtTextPosition(o->modules->pageFormatter, &o->textCursor);
     PageFormatter_updateDisplay(o->modules->pageFormatter);
-
-    unicode_t buf[20];
-    Unicode_Buf ub = { buf, 20};
-    LPM_TextStorage_read(o->modules->textStorage, 0, &ub);
-    LPM_Lang lg;
-    LPM_Lang_init(&lg, LPM_LANG_RUS_ENG);
 }
 
 void _initArea(Obj * o, SlcCurs * cursor)
@@ -105,9 +100,9 @@ void _initArea(Obj * o, SlcCurs * cursor)
 
 void _printLineMap(Core * o)
 {
-    test_print_page_map(  o->modules->pageFormatter->currPageBase,
-                         &o->modules->pageFormatter->prevPageLastLineMap,
-                          o->modules->pageFormatter->lineMap );
+    test_print_page_map(  o->modules->pageFormatter->pageStruct.base,
+                         &o->modules->pageFormatter->pageStruct.prevLastLine,
+                          o->modules->pageFormatter->pageStruct.lineMapTable );
 }
 
 void _printCursor(Core * o)
@@ -141,7 +136,7 @@ void _cursorChangedCmdHandler(Core * o)
                     o->textCursor.pos -= 1000;
             }
 
-            PageFormatter_updatePageByTextChanging(o->modules->pageFormatter, NULL, &o->textCursor);
+            PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
             PageFormatter_updateDisplay(o->modules->pageFormatter);
         }
     }
@@ -214,7 +209,7 @@ void _textChangedCmdHandler(Core * o)
         LPM_TextStorage_replace(o->modules->textStorage, &area, NULL);
     }
 
-    PageFormatter_updatePageByTextChanging(o->modules->pageFormatter, &area, &o->textCursor);
+    PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
     PageFormatter_updateDisplay(o->modules->pageFormatter);
     //_printLineMap(o);
 }
@@ -226,7 +221,7 @@ void _deleteCmdHandler(Core * o)
     SlcCurs area = { o->textCursor.pos-1, 1 };
     LPM_TextStorage_replace(o->modules->textStorage, &area, NULL);
     o->textCursor.pos--;
-    PageFormatter_updatePageByTextChanging(o->modules->pageFormatter, &area, &o->textCursor);
+    PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
     PageFormatter_updateDisplay(o->modules->pageFormatter);
 }
 

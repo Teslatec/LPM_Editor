@@ -12,23 +12,36 @@
 
 typedef struct LineMap
 {
+    uint16_t crc;
     uint8_t fullLen;
     uint8_t payloadLen;
     uint8_t restLen;
 } LineMap;
 
+typedef struct PageNavigation
+{
+    size_t groupBaseTable[PAGE_GROUP_AMOUNT];
+    size_t currGroupIndex;
+    size_t currPageIndex;
+} PageNavigation;
+
+typedef struct PageStruct
+{
+    LineMap prevLastLine;
+    LineMap lineMapTable[PAGE_LINE_AMOUNT];
+    size_t base;
+    bool lastPageReached;
+} PageStruct;
+
+
 typedef struct PageFormatter
 {
     const Modules * modules;
-    size_t groupBaseTable[PAGE_GROUP_AMOUNT];
-    size_t currPageBase;
-    size_t currGroupIndex;
-    size_t currPageIndex;
-    LineMap lineMap[PAGE_LINE_AMOUNT];
-    LineMap prevPageLastLineMap;
+    PageNavigation pageNavi;
+    PageStruct pageStruct;
     uint32_t lineChangedFlags;
-    bool lastPageReached;
     LPM_DisplayCursor displayCursor;
+    LPM_DisplayCursor lineMapCursor;
 } PageFormatter;
 
 void PageFormatter_init
@@ -37,17 +50,15 @@ void PageFormatter_init
 
 void PageFormatter_startWithPageAtTextPosition
         ( PageFormatter * o,
-          LPM_SelectionCursor * curs );
+          const LPM_SelectionCursor * curs );
 
-void PageFormatter_updatePageByTextChanging
+void PageFormatter_updatePageWhenTextChanged
         ( PageFormatter * o,
-          const LPM_SelectionCursor * changedTextArea,
-          const LPM_SelectionCursor * newTextCursor );
+          const LPM_SelectionCursor * curs );
 
-void PageFormatter_updatePageByDisplayCursorChanging
+void PageFormatter_updatePageWhenCursorMoved
         ( PageFormatter * o,
-          LPM_SelectionCursor * textArea,
-          uint32_t flags );
+          uint32_t moveFlags );
 
 void PageFormatter_updateDisplay(PageFormatter * o);
 

@@ -49,8 +49,6 @@ QString TestDisplayHtmlConvertor::convertLine(const QString & line, const QPoint
     int cursLen = curs.y();
     int lineLen = line.size();
 
-    qDebug() << "lineSize:" << lineLen << "cursPos:" << cursPos << "cursLen:" << cursLen;
-
     if(cursPos >= lineLen)
         return makeLineWithoutCursor(line);
 
