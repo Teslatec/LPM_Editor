@@ -69,6 +69,7 @@ const unicode_t * LPM_TextOperator_prevChar
     ( LPM_TextOperator * o,
       const unicode_t * pchr )
 {
+    --pchr;
     if(_atEndOfLine(*pchr))
         return _prevCharWhenEndOfLine(pchr);
 
@@ -170,8 +171,6 @@ const unicode_t * _nextCharWhenEndOfLine(const unicode_t * pchr)
 const unicode_t * _prevCharWhenEndOfLine(const unicode_t * pchr)
 {
     if(*pchr == chrLf)
-        --pchr;
-    if(*pchr == chrCr)
         --pchr;
     return pchr;
 }

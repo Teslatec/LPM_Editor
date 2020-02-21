@@ -180,7 +180,7 @@ Cmd _processAsWithCtrlAndConvertToCmd(Obj * obj, const UBuf * buf)
                     CURSOR_FLAG_LINE;
             break;
 
-        case UNICODE_HOME:
+        case UNICODE_LEFT: //UNICODE_HOME:
             cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
                     CURSOR_FLAG_MOVE |
@@ -188,7 +188,7 @@ Cmd _processAsWithCtrlAndConvertToCmd(Obj * obj, const UBuf * buf)
                     CURSOR_FLAG_BEGIN ;
             break;
 
-        case UNICODE_END:
+        case UNICODE_RIGHT://UNICODE_END:
             cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
                     CURSOR_FLAG_MOVE |
@@ -211,7 +211,7 @@ Cmd _processAsWithAltAndConvertToCmd(Obj * obj, const UBuf * buf)
 
     switch(firstChar)
     {
-        case UNICODE_HOME:
+        case UNICODE_LEFT: //UNICODE_HOME:
             cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
                     CURSOR_FLAG_MOVE |
@@ -219,7 +219,7 @@ Cmd _processAsWithAltAndConvertToCmd(Obj * obj, const UBuf * buf)
                     CURSOR_FLAG_BEGIN;
             break;
 
-        case UNICODE_END:
+        case UNICODE_RIGHT: //UNICODE_END:
             cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
                     CURSOR_FLAG_MOVE |
@@ -227,7 +227,7 @@ Cmd _processAsWithAltAndConvertToCmd(Obj * obj, const UBuf * buf)
                     CURSOR_FLAG_END;
             break;
 
-        case UNICODE_PGUP:
+        case UNICODE_UP: //UNICODE_PGUP:
             cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
                     CURSOR_FLAG_MOVE |
@@ -235,7 +235,7 @@ Cmd _processAsWithAltAndConvertToCmd(Obj * obj, const UBuf * buf)
                     CURSOR_FLAG_PREV;
             break;
 
-        case UNICODE_PGDN:
+        case UNICODE_DOWN: //UNICODE_PGDN:
             cmd = EDITOR_CMD_CURSOR_CHANGED;
             obj->flags =
                     CURSOR_FLAG_MOVE |

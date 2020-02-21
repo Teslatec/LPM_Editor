@@ -66,7 +66,6 @@ const unicode_t * LPM_LangRusEng_nextChar(const unicode_t * pchr)
 
 const unicode_t * LPM_LangRusEng_prevChar(const unicode_t * pchr)
 {
-    --pchr;
     if((*pchr == chrCratca) || (*pchr == chrUmlaut) )
         --pchr;
     return pchr;

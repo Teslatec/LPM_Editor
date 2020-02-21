@@ -26,11 +26,15 @@ typedef enum CursorFlag
     CURSOR_FLAG_LEFT    = 2 << 3,
     CURSOR_FLAG_RIGHT   = 3 << 3,
 
-    CURSOR_FLAG_BEGIN   = 0 << 3,
-    CURSOR_FLAG_END     = 1 << 3,
-
-    CURSOR_FLAG_PREV    = 0 << 3,
-    CURSOR_FLAG_NEXT    = 1 << 3,
+    CURSOR_FLAG_BEGIN   = 0 << 5,
+    CURSOR_FLAG_END     = 1 << 5,
+    CURSOR_FLAG_PREV    = 2 << 5,
+    CURSOR_FLAG_NEXT    = 3 << 5,
 } CursorFlag;
+
+#define CURSOR_TYPE_FIELD       0x01
+#define CURSOR_GOAL_FIELD       0x06
+#define CURSOR_DIRECTION_FIELD  0x18
+#define CURSOR_BORDER_FIELD     0x60
 
 #endif // EDITOR_FLAGS_H

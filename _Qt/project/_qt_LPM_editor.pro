@@ -75,7 +75,8 @@ HEADERS += \
     editor/modules.h \
     editor/page_formatter.h \
     editor/action_storage.h \
-    text_support/lpm_text_operator.h
+    text_support/lpm_text_operator.h \
+    editor/crc16_table.h
 
 FORMS += \
         mainwindow.ui

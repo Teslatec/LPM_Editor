@@ -19,7 +19,8 @@ static const unicode_t chrLf = 0x000A;
 static const unicode_t chrEndOfText = 0x0000;
 static const unicode_t chrSpace = 0x0020;
 
-void test_print_cursor(size_t bx, size_t by, size_t ex, size_t ey);
+void test_print_display_cursor(size_t bx, size_t by, size_t ex, size_t ey);
+void test_print_text_cursor(size_t pos, size_t len);
 void test_print_page_map(size_t base, const LineMap * prev, const LineMap * table);
 
 static void _prepare(Obj * o);
@@ -39,7 +40,7 @@ static void _outlineStateHandler(Core * o);
 static void _timeoutCmdHandler(Core * o);
 
 static void _printLineMap(Core * o);
-static void _printCursor(Core * o);
+static void _printDisplayCursor(Core * o);
 
 static const CmdHandler cmdHandlerTable[] =
 {
@@ -68,7 +69,6 @@ extern Unicode_Buf testTextBuf;
 void Core_exec(Core * o)
 {
     _prepare(o);
-    _printLineMap(o);
 
     for(;;)
     {
@@ -79,14 +79,14 @@ void Core_exec(Core * o)
             break;
         else if(cmd < __EDITOR_NO_CMD)
             (*(cmdHandlerTable[cmd]))(o);
-        _printLineMap(o);
+        _printTextCursor(o);
     }
 }
 
 void _prepare(Obj * o)
 {
     size_t endOfText = LPM_TextStorage_endOfText(o->modules->textStorage);
-    o->textCursor.pos = 0;
+    o->textCursor.pos = 10;//endOfText;
     o->textCursor.len = 0;
     PageFormatter_startWithPageAtTextPosition(o->modules->pageFormatter, &o->textCursor);
     PageFormatter_updateDisplay(o->modules->pageFormatter);
@@ -105,42 +105,49 @@ void _printLineMap(Core * o)
                           o->modules->pageFormatter->pageStruct.lineMapTable );
 }
 
-void _printCursor(Core * o)
+void _printDisplayCursor(Core * o)
 {
-    test_print_cursor( o->modules->pageFormatter->displayCursor.begin.x,
-                       o->modules->pageFormatter->displayCursor.begin.y,
-                       o->modules->pageFormatter->displayCursor.end.x,
-                       o->modules->pageFormatter->displayCursor.end.y );
+    test_print_display_cursor( o->modules->pageFormatter->displayCursor.begin.x,
+                               o->modules->pageFormatter->displayCursor.begin.y,
+                               o->modules->pageFormatter->displayCursor.end.x,
+                               o->modules->pageFormatter->displayCursor.end.y );
+}
+
+void _printTextCursor(Core * o)
+{
+    test_print_text_cursor(o->textCursor.pos, o->textCursor.len);
 }
 
 
 void _cursorChangedCmdHandler(Core * o)
 {
-    size_t endOfText = LPM_TextStorage_endOfText(o->modules->textStorage);
+    //size_t endOfText = LPM_TextStorage_endOfText(o->modules->textStorage);
     uint16_t flags = CmdReader_getFlags(o->modules->cmdReader);
-    if((flags & CURSOR_FLAG_MOVE) == CURSOR_FLAG_MOVE)
-    {
-        if((flags & CURSOR_FLAG_CHAR) == CURSOR_FLAG_CHAR)
-        {
-            if((flags & (3<<3)) == CURSOR_FLAG_DOWN)
-            {
-                o->textCursor.pos += 1000;
-                if(o->textCursor.pos > endOfText)
-                    o->textCursor.pos = endOfText;
-            }
-            if((flags & (3<<3)) == CURSOR_FLAG_UP)
-            {
-                if(o->textCursor.pos < 1000)
-                    o->textCursor.pos = 0;
-                else
-                    o->textCursor.pos -= 1000;
-            }
+    PageFormatter_updatePageWhenCursorMoved(o->modules->pageFormatter, flags, &o->textCursor);
+    PageFormatter_updateDisplay(o->modules->pageFormatter);
+//    if((flags & CURSOR_FLAG_MOVE) == CURSOR_FLAG_MOVE)
+//    {
+//        if((flags & CURSOR_FLAG_CHAR) == CURSOR_FLAG_CHAR)
+//        {
+//            if((flags & (3<<3)) == CURSOR_FLAG_DOWN)
+//            {
+//                o->textCursor.pos += 1000;
+//                if(o->textCursor.pos > endOfText)
+//                    o->textCursor.pos = endOfText;
+//            }
+//            if((flags & (3<<3)) == CURSOR_FLAG_UP)
+//            {
+//                if(o->textCursor.pos < 1000)
+//                    o->textCursor.pos = 0;
+//                else
+//                    o->textCursor.pos -= 1000;
+//            }
 
-            PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
-            PageFormatter_updateDisplay(o->modules->pageFormatter);
-        }
-    }
-    _printLineMap(o);
+//            PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
+//            PageFormatter_updateDisplay(o->modules->pageFormatter);
+//        }
+//    }
+    //_printLineMap(o);
 }
 
 void _textChangedCmdHandler(Core * o)

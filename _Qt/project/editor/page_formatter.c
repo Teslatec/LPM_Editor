@@ -1,8 +1,12 @@
 #include "page_formatter.h"
 #include "lpm_text_storage.h"
 #include "lpm_text_operator.h"
+#include "crc16_table.h"
+#include "editor_flags.h"
 
 #include <string.h>
+
+// TODO: разобратья с граничным условием: глюки при редактировнии последней страницы!!!!
 
 #define LINE_AMOUNT PAGE_LINE_AMOUNT
 #define CHAR_AMOUNT PAGE_CHAR_AMOUNT
@@ -24,14 +28,17 @@ static const unicode_t chrLf = 0x000A;
 static const unicode_t chrEndOfText = 0x0000;
 static const unicode_t chrSpace = 0x0020;
 
+static void _updatePageByTextCursor(Obj * o, const SlcCurs * curs);
+
 static void _setFirstPageInGroup(Obj * o, size_t groupIndex);
 static void _setNextPage(Obj * o);
-static void _changePageIfNotOnCurrTextPosition(Obj * o, const SlcCurs * pos);
+static bool _changePageIfNotOnCurrTextPosition(Obj * o, const SlcCurs * pos);
 
 static void _switchToFirstPageInGroup(Obj * o, size_t groupIndex);
 static void _switchToNextPage(Obj * o);
 static size_t _calcNextPageBase(Obj * o);
 static size_t _calcCurrPageLen(Obj * o);
+static size_t _calcCurrPageFirstLineBase(Obj * o);
 static bool _incPageIndex(Obj * o);
 static size_t _findGroupWithNearestOffset(Obj * o, size_t pos);
 
@@ -43,9 +50,12 @@ static bool _isCurrPageLast(Obj * o);
 
 static size_t _updateLineMap(Obj * o, LineMap * lineMap, size_t lineBase);
 
+static void _copyLineMap(LineMap * dst, const LineMap * src);
+static bool _lineChanged(const LineMap * before, const LineMap * after);
+static uint16_t _calcLineCrc(Obj * o, LineMap * lineMap);
 static void _makePrevLineMapForFirstPage(LineMap * lineMap);
 
-static unicode_t * _loadLine(Obj * o, size_t loadPos);
+static unicode_t * _loadLine(Obj * o, size_t loadPos, size_t loadSize);
 
 static void _setAllLineChangedFlags(Obj * o);
 static void _resetAllLineChangedFlags(Obj * o);
@@ -63,9 +73,26 @@ static bool _areaIntersect( size_t firstBegin,
 
 static bool _posWithinRange(size_t pos, size_t rangeBegin, size_t rangeEnd);
 
-static void _calcLinesCursorWhenTextChanged(Obj * o, const SlcCurs * curs, DspCurs * newLineCurs);
-static void _calcLinesCursorWhenCursorMoved(Obj * o, uint32_t moveFlags, DspCurs * newLineCurs);
-static void _updateLineChangedFlagsWhenLineCursorChanged(Obj * o, DspCurs const * newLineCurs);
+static void _textCursorToDisplayCursor(Obj * o, const SlcCurs * curs, DspCurs * dspCurs);
+static void _displayCursorToLineCursor(Obj * o, size_t lineIndex, size_t lineSize, SlcCurs * lineCursor);
+
+static bool _moveFlagsToTextCursor(Obj * o, uint32_t moveFlags, SlcCurs * textCurs);
+static void _moveCursorToLineBorder(Obj * o, uint32_t borderFlag, SlcCurs * textCurs);
+static bool _moveCursorToPageBorder(Obj * o, uint32_t borderFlag, SlcCurs * textCurs);
+static void _moveCursorAtChar(Obj * o, uint32_t dirFlags, SlcCurs * textCurs);
+
+static void _selectAllPage(Obj * o, SlcCurs * textCurs);
+static void _selectAllLine(Obj * o, SlcCurs * textCurs);
+static void _changeSelectionAtChar(Obj * o, uint32_t dirFlags, SlcCurs * textCurs);
+
+static uint32_t _getTypeFlagValue(uint32_t flags);
+static uint32_t _getGoalFlagValue(uint32_t flags);
+static uint32_t _getDirectionFlagValue(uint32_t flags);
+static uint32_t _getBorderFlagValue(uint32_t flags);
+
+static void _saveDisplayCursor(Obj * o, const DspCurs * dspCurs);
+static void _updateLineChangedFlagsWhenDisplayCursorChanged(Obj * o, DspCurs const * newLineCurs);
+
 
 static void _formatLineForDisplay(Obj * o, const LineMap * lineMap, size_t lineOffset);
 
@@ -81,71 +108,77 @@ void PageFormatter_startWithPageAtTextPosition
         ( PageFormatter * o,
           const LPM_SelectionCursor * curs )
 {
+    DspCurs dspCurs;
     _setFirstPageInGroup(o, 0);
     _changePageIfNotOnCurrTextPosition(o, curs);
+    _textCursorToDisplayCursor(o, curs, &dspCurs);
+    _saveDisplayCursor(o, &dspCurs);
 }
 
 void PageFormatter_updatePageWhenTextChanged
         ( PageFormatter * o,
-          const LPM_SelectionCursor * curs  )
+          const LPM_SelectionCursor * curs )
 {
+    _resetAllLineChangedFlags(o);
     _updateLinesMap(o);
-    _changePageIfNotOnCurrTextPosition(o, curs);
-    DspCurs newLineCurs;
-    _calcLinesCursorWhenTextChanged(o, curs, &newLineCurs);
-    _updateLineChangedFlagsWhenLineCursorChanged(o, &newLineCurs);
+    _updatePageByTextCursor(o, curs);
 }
 
 
 void PageFormatter_updatePageWhenCursorMoved
     ( PageFormatter * o,
-      uint32_t moveFlags )
+      uint32_t moveFlags,
+      LPM_SelectionCursor * textCurs )
 {
-    DspCurs newLineCurs;
-    _calcLinesCursorWhenCursorMoved(o, moveFlags, &newLineCurs);
-    _updateLineChangedFlagsWhenLineCursorChanged(o, &newLineCurs);
+    //_resetAllLineChangedFlags(o);
+    _setAllLineChangedFlags(o);
+    if(!_moveFlagsToTextCursor(o, moveFlags, textCurs))
+        _updatePageByTextCursor(o, textCurs);
 }
 
 void PageFormatter_updateDisplay
         ( PageFormatter * o )
 {
-    LPM_Point pos = { .x = 0, .y = 0 };
-    Unicode_Buf lineBuf = { .data = o->modules->lineBuffer.data, .size = 0 };
-    LPM_SelectionCursor curs;
-
-    //LPM_UnicodeDisplay_setCursor(o->modules->display, &o->displayCursor);
+    Unicode_Buf lineBuf = { o->modules->lineBuffer.data, 0 };
+    LPM_SelectionCursor lineCursor;
 
     const LineMap * lineMap = o->pageStruct.lineMapTable;
-    const LineMap * end     = o->pageStruct.lineMapTable + LINE_AMOUNT;
-    size_t lineOffset = o->pageStruct.base +
-            (_isCurrPageFirst(o) ? 0 : o->pageStruct.prevLastLine.fullLen);
+    const LineMap * end     = lineMap + LINE_AMOUNT;
+    size_t lineBase = _calcCurrPageFirstLineBase(o);
     size_t lineIndex  = 0;
-    for( ; lineMap != end; lineMap++, lineIndex++, pos.y++)
+    for( ; lineMap != end; lineMap++, lineIndex++)
     {
-        if(lineIndex == 0)
-        {
-            curs.pos = 10;
-            curs.len = 12;
-        }
-        else
-        {
-            curs.pos = lineBuf.size;
-            curs.len = 0;
-        }
 
         if(_readLineChangedFlag(o, lineIndex))
         {
-            _formatLineForDisplay(o, lineMap, lineOffset);
             lineBuf.size = lineMap->payloadLen + lineMap->restLen;
-            //attr.lenAfterSelect = lineBuf.size;
-            LPM_UnicodeDisplay_writeLine(o->modules->display, lineIndex, &lineBuf, &curs);
+            _displayCursorToLineCursor(o, lineIndex, lineBuf.size, &lineCursor);
+            _formatLineForDisplay(o, lineMap, lineBase);
+            LPM_UnicodeDisplay_writeLine( o->modules->display,
+                                          lineIndex,
+                                          &lineBuf,
+                                          &lineCursor);
         }
-        lineOffset += lineMap->fullLen;
+        lineBase += lineMap->fullLen;
     }
 }
 
 
 
+void _updatePageByTextCursor(Obj * o, const SlcCurs * curs)
+{
+    DspCurs dspCurs;
+    if(!_changePageIfNotOnCurrTextPosition(o, curs))
+    {
+        _textCursorToDisplayCursor(o, curs, &dspCurs);
+        _updateLineChangedFlagsWhenDisplayCursorChanged(o, &dspCurs);
+    }
+    else
+    {
+        _textCursorToDisplayCursor(o, curs, &dspCurs);
+    }
+    _saveDisplayCursor(o, &dspCurs);
+}
 
 void _setFirstPageInGroup(Obj * o, size_t groupIndex)
 {
@@ -166,14 +199,12 @@ void _setNextPage(Obj * o)
     _updateLinesMap(o);
 }
 
-void _changePageIfNotOnCurrTextPosition(Obj * o, const SlcCurs * pos)
+bool _changePageIfNotOnCurrTextPosition(Obj * o, const SlcCurs * pos)
 {
     TextPos tp = _checkTextPos(o, pos->pos);
 
     if(tp == TEXT_POS_ON_CURRENT_PAGE)
-    {
-        return;
-    }
+        return false;
 
     if(tp == TEXT_POS_AFTER_CURRENT_PAGE)
     {
@@ -187,6 +218,7 @@ void _changePageIfNotOnCurrTextPosition(Obj * o, const SlcCurs * pos)
 
     while(_checkTextPos(o, pos->pos) != TEXT_POS_ON_CURRENT_PAGE)
         _setNextPage(o);
+    return true;
 }
 
 
@@ -207,7 +239,7 @@ void _switchToNextPage(Obj * o)
 
 size_t _calcNextPageBase(Obj * o)
 {
-    size_t base = o->pageStruct.base + o->pageStruct.prevLastLine.fullLen;
+    size_t base = _calcCurrPageFirstLineBase(o);
     const LineMap * lineMap   = o->pageStruct.lineMapTable;
     const LineMap * const end = o->pageStruct.lineMapTable+LINE_AMOUNT-1;
     for( ; lineMap != end; lineMap++)
@@ -223,6 +255,11 @@ size_t _calcCurrPageLen(Obj * o)
     for( ; lineMap != end; lineMap++)
         len += lineMap->fullLen;
     return len;
+}
+
+size_t _calcCurrPageFirstLineBase(Obj * o)
+{
+    return o->pageStruct.base + o->pageStruct.prevLastLine.fullLen;
 }
 
 bool _incPageIndex(Obj * o)
@@ -265,8 +302,15 @@ void _updateLinesMap(Obj * o)
 
     LineMap * lineMap   = o->pageStruct.lineMapTable;
     LineMap * const end = o->pageStruct.lineMapTable + LINE_AMOUNT;
-    for( ; lineMap != end; lineMap++)
+    LineMap copy;
+    size_t lineIndex = 0;
+    for( ; lineMap != end; lineMap++, lineIndex++)
+    {
+        _copyLineMap(&copy, lineMap);
         lineBase += _updateLineMap(o, lineMap, lineBase);
+        if(_lineChanged(lineMap, &copy))
+            _setLineChangedFlag(o, lineIndex);
+    }
 
 //    printf("flags: %x\n", o->lineChangedFlags);
 }
@@ -282,12 +326,12 @@ TextPos _checkTextPos(Obj * o, size_t pos)
 
     if(_isCurrPageLast(o))
     {
-        return pos >= o->pageStruct.base+ o->pageStruct.prevLastLine.fullLen ?
+        return pos >= _calcCurrPageFirstLineBase(o) ?
                     TEXT_POS_ON_CURRENT_PAGE :
                     TEXT_POS_BEFORE_CURRENT_PAGE;
     }
 
-    size_t currPageBegin = o->pageStruct.base + o->pageStruct.prevLastLine.fullLen;
+    size_t currPageBegin = _calcCurrPageFirstLineBase(o);
     size_t currPageEnd   = currPageBegin + _calcCurrPageLen(o);
 
     if(pos < currPageBegin)
@@ -313,7 +357,8 @@ bool _isCurrPageLast(Obj * o)
 
 static size_t _updateLineMap(Obj * o, LineMap * lineMap, size_t lineBase)
 {
-    const unicode_t * const begin = _loadLine(o, lineBase);
+    const unicode_t * const begin =
+            _loadLine(o, lineBase, o->modules->lineBuffer.size);
 
     LPM_TextLineMap textLineMap;
     if(LPM_TextOperator_analizeLine( o->modules->textOperator,
@@ -325,10 +370,30 @@ static size_t _updateLineMap(Obj * o, LineMap * lineMap, size_t lineBase)
     lineMap->fullLen    = (uint8_t)(textLineMap.nextLine    - begin);
     lineMap->payloadLen = (uint8_t)(textLineMap.printBorder - begin);
     lineMap->restLen    = CHAR_AMOUNT - textLineMap.lenInChr;
-    // TODO: считать CRC и сравнивать с предыдущим
-    //lineMap->crc = _calcCrc();
-
+    lineMap->crc        = _calcLineCrc(o, lineMap);
     return lineMap->fullLen;
+}
+
+void _copyLineMap(LineMap * dst, const LineMap * src)
+{
+    memcpy(dst, src, sizeof(LineMap));
+}
+
+bool _lineChanged(const LineMap * before, const LineMap * after)
+{
+    if(before->restLen == after->restLen)
+        if(before->fullLen == after->fullLen)
+            if(before->restLen == after->restLen)
+                if(before->crc == after->crc)
+                    return false;
+    return true;
+}
+
+uint16_t _calcLineCrc(Obj * o, LineMap * lineMap)
+{
+    return crc16_table_calc_for_array(
+                (uint8_t*)(o->modules->lineBuffer.data),
+                lineMap->payloadLen * sizeof(unicode_t) );
 }
 
 void _makePrevLineMapForFirstPage(LineMap * lineMap)
@@ -336,14 +401,16 @@ void _makePrevLineMapForFirstPage(LineMap * lineMap)
     memset(lineMap, 0, sizeof(LineMap));
 }
 
-unicode_t * _loadLine(Obj * o, size_t loadPos)
+unicode_t * _loadLine(Obj * o, size_t loadPos, size_t loadSize)
 {
     Unicode_Buf buf =
     {
         o->modules->lineBuffer.data,
-        o->modules->lineBuffer.size
+        //o->modules->lineBuffer.size
+        loadSize
     };
-    size_t fullSize = o->modules->lineBuffer.size;
+    //size_t fullSize = o->modules->lineBuffer.size;
+    size_t fullSize = loadSize;
     LPM_TextStorage_read(o->modules->textStorage, loadPos, &buf);
     memset(buf.data + buf.size, 0, (fullSize - buf.size)*sizeof(unicode_t));
     return o->modules->lineBuffer.data;
@@ -404,21 +471,282 @@ bool _posWithinRange(size_t pos, size_t rangeBegin, size_t rangeEnd)
     return (pos >= rangeBegin) && (pos < rangeEnd);
 }
 
-void _calcLinesCursorWhenTextChanged(Obj * o, const SlcCurs * curs, DspCurs * newLineCurs)
+void _textCursorToDisplayCursor(Obj * o, const SlcCurs * curs, DspCurs * dspCurs)
 {
-    // TODO: расчет курсора строк по курсору текста
+    dspCurs->begin.y = LINE_AMOUNT;
+    dspCurs->end.y   = LINE_AMOUNT;
+    size_t findPos = curs->pos;
+    LPM_Point * findPoint = &dspCurs->begin;
+
+    const LineMap * lineMap = o->pageStruct.lineMapTable;
+    const LineMap * const end = lineMap + LINE_AMOUNT;
+    size_t lineIndex = 0;
+    size_t lineBase = _calcCurrPageFirstLineBase(o);
+    for( ; lineMap != end; lineIndex++, lineMap++)
+    {
+        lineBase += lineMap->fullLen;
+
+        if(lineMap->fullLen == 0)
+        {
+            if(lineMap == o->pageStruct.lineMapTable)
+            {
+                dspCurs->begin.x = 0;
+                dspCurs->begin.y = 0;
+                dspCurs->end.x = 0;
+                dspCurs->end.y = 0;
+            }
+            else
+            {
+                --lineMap;
+                --lineIndex;
+                dspCurs->begin.x = lineMap->fullLen;
+                dspCurs->begin.y = lineIndex;
+                dspCurs->end.x = lineMap->fullLen;
+                dspCurs->end.y = lineIndex;
+            }
+            break;
+        }
+
+        if(findPos < lineBase)
+        {
+            findPoint->y = lineIndex;
+            findPoint->x = findPos - lineBase + lineMap->fullLen;
+            if(findPoint == &dspCurs->begin)
+            {
+                findPoint = &dspCurs->end;
+                findPos += curs->len;
+                if(findPos <= lineBase)
+                {
+                    findPoint->y = lineIndex;
+                    findPoint->x = findPos - lineBase + lineMap->fullLen;
+                    break;
+                }
+            }
+            else
+                break;
+        }
+    }
 }
 
-void _calcLinesCursorWhenCursorMoved(Obj * o, uint32_t moveFlags, DspCurs * newLineCurs)
+void _displayCursorToLineCursor(Obj * o, size_t lineIndex, size_t lineSize, SlcCurs * lineCursor)
 {
-    // TODO: расчет курсора строк по курсору дисплея, флагам и курсору строк в предыдущий момент
+    const size_t beginLine = o->displayCursor.begin.y;
+    const size_t endLine = o->displayCursor.end.y;
+    const size_t beginPos = o->displayCursor.begin.x;
+    const size_t endPos = o->displayCursor.end.x;
+    if(lineIndex > beginLine)
+    {
+        if(lineIndex > endLine)
+        {
+            lineCursor->pos = lineSize;
+            lineCursor->len = 0;
+        }
+        else if(lineIndex == endLine)
+        {
+            lineCursor->pos = 0;
+            lineCursor->len = endPos;
+        }
+        else
+        {
+            lineCursor->pos = 0;
+            lineCursor->len = lineSize;
+        }
+    }
+    else if(lineIndex == beginLine)
+    {
+        if(lineIndex == endLine)
+        {
+            lineCursor->pos = beginPos;
+            lineCursor->len = endPos - beginPos;
+        }
+        else
+        {
+            lineCursor->pos = beginPos;
+            lineCursor->len = lineSize;
+        }
+    }
+    else
+    {
+        lineCursor->pos = lineSize;
+        lineCursor->len = 0;
+    }
 }
 
-void _updateLineChangedFlagsWhenLineCursorChanged(Obj * o, DspCurs const * newLineCurs)
+bool _moveFlagsToTextCursor(Obj * o, uint32_t moveFlags, SlcCurs * textCurs)
 {
-    // TODO: вычислить симметрическую разницу
-    // обновить флаги
+    bool pageChaged = false;
+    uint32_t goal = _getGoalFlagValue(moveFlags);
+
+    if(_getTypeFlagValue(moveFlags) == CURSOR_FLAG_MOVE)
+    {
+        textCurs->len = 0;
+
+        if(goal == CURSOR_FLAG_PAGE)
+             pageChaged = _moveCursorToPageBorder(o, _getBorderFlagValue(moveFlags), textCurs);
+
+        else if(goal == CURSOR_FLAG_LINE)
+            _moveCursorToLineBorder(o, _getBorderFlagValue(moveFlags), textCurs);
+
+        else // if(goal == CURSOR_FLAG_CHAR)
+            _moveCursorAtChar(o, _getDirectionFlagValue(moveFlags), textCurs);
+    }
+
+    else // CURSOR_FLAG_SELECT
+    {
+        if(goal == CURSOR_FLAG_PAGE)
+            _selectAllPage(o, textCurs);
+
+        else if(goal == CURSOR_FLAG_LINE)
+            _selectAllLine(o, textCurs);
+
+        else // CURSOR_FLAG_CHAR
+            _changeSelectionAtChar(o, _getDirectionFlagValue(moveFlags), textCurs);
+    }
+    return pageChaged;
 }
+
+void _moveCursorToLineBorder(Obj * o, uint32_t borderFlag, SlcCurs * textCurs)
+{
+    const LineMap * lineMap = o->pageStruct.lineMapTable;
+    const LineMap * const end = lineMap + LINE_AMOUNT;
+    size_t lineBase = _calcCurrPageFirstLineBase(o);
+    for( ; lineMap != end; lineBase += lineMap->fullLen, lineMap++)
+        if(_posWithinRange(textCurs->pos, lineBase, lineBase + lineMap->fullLen))
+            break;
+
+    if(lineMap != end)
+    {
+        if(borderFlag == CURSOR_FLAG_BEGIN)
+            textCurs->pos = lineBase;
+        else    // CURSOR_FLAG_END
+            textCurs->pos = lineBase + lineMap->payloadLen;
+    }
+}
+
+bool _moveCursorToPageBorder(Obj * o, uint32_t borderFlag, SlcCurs * textCurs)
+{
+    if(borderFlag == CURSOR_FLAG_BEGIN)
+    {
+        textCurs->pos = _calcCurrPageFirstLineBase(o);
+        return false;
+    }
+
+    if(borderFlag == CURSOR_FLAG_END)
+    {
+        textCurs->pos = _calcNextPageBase(o) +
+                o->pageStruct.lineMapTable[LINE_AMOUNT-1].payloadLen;
+        return false;
+    }
+
+    if(borderFlag == CURSOR_FLAG_NEXT)
+    {
+        if(_isCurrPageLast(o))
+            return false;
+        textCurs->pos = _calcNextPageBase(o)+
+                o->pageStruct.lineMapTable[LINE_AMOUNT-1].fullLen;
+        _changePageIfNotOnCurrTextPosition(o, textCurs);
+    }
+    else // CURSOR_FLAG_PREV
+    {
+        if(_isCurrPageFirst(o))
+            return false;
+        textCurs->pos = o->pageStruct.base;
+        _changePageIfNotOnCurrTextPosition(o, textCurs);
+        textCurs->pos = _calcCurrPageFirstLineBase(o);
+    }
+
+    DspCurs dspCurs;
+    _textCursorToDisplayCursor(o, textCurs, &dspCurs);
+    _saveDisplayCursor(o, &dspCurs);
+
+    return true;
+}
+
+void _moveCursorAtChar(Obj * o, uint32_t dirFlags, SlcCurs * textCurs)
+{
+    if(dirFlags == CURSOR_FLAG_LEFT)
+    {
+        if(textCurs->pos > 0)
+        {
+            size_t loadLen = textCurs->pos < 10 ? textCurs->pos : 10;
+            unicode_t * pchr = _loadLine(o, textCurs->pos-loadLen, loadLen) + loadLen;
+            textCurs->pos -= pchr - LPM_TextOperator_prevChar(o->modules->textOperator, pchr);
+        }
+    }
+    else if(dirFlags == CURSOR_FLAG_RIGHT)
+    {
+        unicode_t * pchr = _loadLine(o, textCurs->pos, 10);
+        textCurs->pos += LPM_TextOperator_nextChar(o->modules->textOperator, pchr) - pchr;
+    }
+    else if(dirFlags == CURSOR_FLAG_UP)
+    {
+        // TODO: сделать перемещение на строку вверх
+    }
+    else //if(dirFlags == CURSOR_FLAG_DOWN)
+    {
+        // TODO: сделать перемещение на строку вниз
+    }
+}
+
+void _selectAllPage(Obj * o, SlcCurs * textCurs)
+{
+    textCurs->pos = _calcCurrPageFirstLineBase(o);
+    textCurs->len = _calcCurrPageLen(o);
+}
+
+void _selectAllLine(Obj * o, SlcCurs * textCurs)
+{
+    const LineMap * lineMap = o->pageStruct.lineMapTable;
+    const LineMap * const end = lineMap + LINE_AMOUNT;
+    size_t lineBase = _calcCurrPageFirstLineBase(o);
+    for( ; lineMap != end; lineBase += lineMap->fullLen, lineMap++)
+        if(_posWithinRange(textCurs->pos, lineBase, lineBase + lineMap->fullLen))
+            break;
+
+    if(lineMap != end)
+    {
+        textCurs->pos = lineBase;
+        textCurs->len = lineMap->fullLen;
+    }
+}
+
+void _changeSelectionAtChar(Obj * o, uint32_t dirFlags, SlcCurs * textCurs)
+{
+    // TODO: сделать изменение выделения на символ и строку
+}
+
+uint32_t _getTypeFlagValue(uint32_t flags)
+{
+    return flags & CURSOR_TYPE_FIELD;
+}
+
+uint32_t _getGoalFlagValue(uint32_t flags)
+{
+    return flags & CURSOR_GOAL_FIELD;
+}
+
+uint32_t _getDirectionFlagValue(uint32_t flags)
+{
+    return flags & CURSOR_DIRECTION_FIELD;
+}
+
+uint32_t _getBorderFlagValue(uint32_t flags)
+{
+    return flags & CURSOR_BORDER_FIELD;
+}
+
+void _saveDisplayCursor(Obj * o, const DspCurs * dspCurs)
+{
+    memcpy(&o->displayCursor, dspCurs, sizeof(DspCurs));
+}
+
+void _updateLineChangedFlagsWhenDisplayCursorChanged(Obj * o, DspCurs const * newLineCurs)
+{
+    // TODO: обновление флагов изменения строк при обновлении курсора дисплея
+    // - вычислить симметрическую разницу
+    // - обновить флаги
+}
+
 
 void _formatLineForDisplay(Obj * o, const LineMap * lineMap, size_t lineOffset)
 {
@@ -434,72 +762,3 @@ void _formatLineForDisplay(Obj * o, const LineMap * lineMap, size_t lineOffset)
     for( ; pchr != end; pchr++)
         *pchr = chrSpace;
 }
-
-#if 0
-
-size_t _buildLineMap(Obj * o, LineMap * map, uint8_t bTxtSlc, uint8_t eTxtSlc)
-{
-    const size_t maxPlaceCntValue = CHAR_AMOUNT;
-    const size_t wordDividersNotFoundValue = o->modules->lineBuffer.size;
-
-    size_t currPos = 0;
-    size_t placeCnt = 0;
-    size_t lastWordDivPos = wordDividersNotFoundValue;
-    size_t placeCntAtLastWordDiv = 0;
-    size_t lastNoDiacriticPos = 0;
-
-    const unicode_t * pchr = o->modules->lineBuffer.data;
-    const unicode_t * pend = pchr + o->modules->lineBuffer.size;
-    for( ; pchr != pend; pchr++, currPos++ )
-    {
-        if(_checkForEndOfText(*pchr))
-        {
-            o->lastPageReached = true;
-            return _buildLineMapWithEndOfText(map, currPos, placeCnt);
-        }
-
-        if(_checkForEndLine(*pchr))
-            return _buildLineMapWithEndLine(map, pchr, currPos, placeCnt);
-
-        if(placeCnt == maxPlaceCntValue)
-            break;
-
-        if(_checkForDiacritic(*pchr))
-            continue;
-
-        if(_checkForWordDivider(*pchr))
-        {
-            // Запоминаем позицию символа-разделителя слов, а так же значения
-            //  счетчика занятых знакомест в этот момент
-            lastWordDivPos = currPos;
-            placeCntAtLastWordDiv = placeCnt;
-        }
-
-        // Здесь добавить сравнение с положением курсора текста, переданного в
-        //  функцию, и если нужно, обновить курсор дисплея и курсор знакомест
-
-        if(lastNoDiacriticPos == bTxtSlc)
-        {
-            o->displayCursor.begin.x   = placeCnt;
-            o->displayCursor.begin.y   = map - o->lineMap;
-        }
-        if(lastNoDiacriticPos == eTxtSlc)
-        {
-            o->displayCursor.end.x   = placeCnt;
-            o->displayCursor.end.y   = map - o->lineMap;
-        }
-
-        placeCnt++;
-        lastNoDiacriticPos = currPos;
-    }
-
-    if(_checkForWordDivider(*pchr))
-        return _buildLineMapWithWordDividerAtLineEnd(map, pchr, currPos);
-
-    if(lastWordDivPos == wordDividersNotFoundValue)
-        return _buildLineMapWithVeryLongWord(map, pchr, currPos);
-
-    return _buildLineMapWithWordWrap(map, lastWordDivPos, placeCntAtLastWordDiv);
-}
-
-#endif

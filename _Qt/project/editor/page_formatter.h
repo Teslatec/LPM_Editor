@@ -41,7 +41,6 @@ typedef struct PageFormatter
     PageStruct pageStruct;
     uint32_t lineChangedFlags;
     LPM_DisplayCursor displayCursor;
-    LPM_DisplayCursor lineMapCursor;
 } PageFormatter;
 
 void PageFormatter_init
@@ -58,7 +57,8 @@ void PageFormatter_updatePageWhenTextChanged
 
 void PageFormatter_updatePageWhenCursorMoved
         ( PageFormatter * o,
-          uint32_t moveFlags );
+          uint32_t moveFlags ,
+          LPM_SelectionCursor * textCurs );
 
 void PageFormatter_updateDisplay(PageFormatter * o);
 

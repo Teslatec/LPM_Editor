@@ -46,9 +46,14 @@ extern "C" void test_beep(size_t num, size_t num1)
     qDebug() << "BEEP!" << num << num1;
 }
 
-extern "C" void test_print_cursor(size_t bx, size_t by, size_t ex, size_t ey)
+extern "C" void test_print_display_cursor(size_t bx, size_t by, size_t ex, size_t ey)
 {
-    qDebug() << "Cursor: begin(" << bx << "," << by << "), end(" << ex << ", " << ey << ")";
+    qDebug() << "Display cursor: begin(" << bx << "," << by << "), end(" << ex << ", " << ey << ")";
+}
+
+extern "C" void test_print_text_cursor(size_t pos, size_t len)
+{
+    qDebug() << "Text cursor: pos: " << pos << "len:" << len;
 }
 
 #include "page_formatter.h"
