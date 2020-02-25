@@ -86,7 +86,7 @@ void Core_exec(Core * o)
 void _prepare(Obj * o)
 {
     size_t endOfText = LPM_TextStorage_endOfText(o->modules->textStorage);
-    o->textCursor.pos = 10;//endOfText;
+    o->textCursor.pos = 3437;//endOfText;
     o->textCursor.len = 0;
     PageFormatter_startWithPageAtTextPosition(o->modules->pageFormatter, &o->textCursor);
     PageFormatter_updateDisplay(o->modules->pageFormatter);

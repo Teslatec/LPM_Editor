@@ -85,6 +85,9 @@ static void _selectAllPage(Obj * o, SlcCurs * textCurs);
 static void _selectAllLine(Obj * o, SlcCurs * textCurs);
 static void _changeSelectionAtChar(Obj * o, uint32_t dirFlags, SlcCurs * textCurs);
 
+static size_t _movePosLeftAtChar(Obj * o, size_t pos);
+static size_t _movePosRightAtChar(Obj * o, size_t pos);
+
 static uint32_t _getTypeFlagValue(uint32_t flags);
 static uint32_t _getGoalFlagValue(uint32_t flags);
 static uint32_t _getDirectionFlagValue(uint32_t flags);
@@ -148,7 +151,6 @@ void PageFormatter_updateDisplay
     size_t lineIndex  = 0;
     for( ; lineMap != end; lineMap++, lineIndex++)
     {
-
         if(_readLineChangedFlag(o, lineIndex))
         {
             lineBuf.size = lineMap->payloadLen + lineMap->restLen;
@@ -217,7 +219,9 @@ bool _changePageIfNotOnCurrTextPosition(Obj * o, const SlcCurs * pos)
     }
 
     while(_checkTextPos(o, pos->pos) != TEXT_POS_ON_CURRENT_PAGE)
+    {
         _setNextPage(o);
+    }
     return true;
 }
 
@@ -283,8 +287,12 @@ size_t _findGroupWithNearestOffset(Obj * o, size_t pos)
     size_t * const pend = o->pageNavi.groupBaseTable;
     size_t groupIndex = o->pageNavi.currGroupIndex;
     for( ; poffs != pend; poffs--, groupIndex--)
-        if(*poffs < pos)
+    {
+        LineMap lastLine;
+        _updateLineMap(o, &lastLine, *poffs);
+        if(*poffs + lastLine.fullLen < pos)
             break;
+    }
     return groupIndex;
 }
 
@@ -666,25 +674,72 @@ void _moveCursorAtChar(Obj * o, uint32_t dirFlags, SlcCurs * textCurs)
 {
     if(dirFlags == CURSOR_FLAG_LEFT)
     {
-        if(textCurs->pos > 0)
-        {
-            size_t loadLen = textCurs->pos < 10 ? textCurs->pos : 10;
-            unicode_t * pchr = _loadLine(o, textCurs->pos-loadLen, loadLen) + loadLen;
-            textCurs->pos -= pchr - LPM_TextOperator_prevChar(o->modules->textOperator, pchr);
-        }
+        textCurs->pos = _movePosLeftAtChar(o, textCurs->pos);
     }
     else if(dirFlags == CURSOR_FLAG_RIGHT)
     {
-        unicode_t * pchr = _loadLine(o, textCurs->pos, 10);
-        textCurs->pos += LPM_TextOperator_nextChar(o->modules->textOperator, pchr) - pchr;
+        textCurs->pos = _movePosRightAtChar(o, textCurs->pos);
     }
     else if(dirFlags == CURSOR_FLAG_UP)
     {
-        // TODO: сделать перемещение на строку вверх
+        size_t lineIndex = o->displayCursor.begin.y;
+        size_t currLineX = o->displayCursor.begin.x;
+        if(lineIndex > 0 || !_isCurrPageFirst(o))
+        {
+            const LineMap * prevLine = lineIndex == 0 ?
+                        &o->pageStruct.prevLastLine :
+                        o->pageStruct.lineMapTable+lineIndex-1;
+            if(currLineX > prevLine->payloadLen)
+            {
+                textCurs->pos -= currLineX;
+                textCurs->pos -= prevLine->fullLen;
+                textCurs->pos += prevLine->payloadLen;
+            }
+            else
+            {
+                textCurs->pos -= currLineX;
+                const unicode_t * pchr = _loadLine(o, textCurs->pos, o->modules->lineBuffer.size);
+                size_t chrAmount = LPM_TextOperator_calcChrAmount(o->modules->textOperator, pchr, pchr+currLineX);
+                textCurs->pos -= prevLine->fullLen;
+                pchr = _loadLine(o, textCurs->pos, o->modules->lineBuffer.size);
+                textCurs->pos += LPM_TextOperator_nextNChar(o->modules->textOperator, pchr, chrAmount) - pchr;
+            }
+        }
     }
     else //if(dirFlags == CURSOR_FLAG_DOWN)
     {
-        // TODO: сделать перемещение на строку вниз
+        size_t lineIndex = o->displayCursor.begin.y;
+        size_t currLineX = o->displayCursor.begin.x;
+
+        LineMap nextLine;
+        const LineMap * currLine = o->pageStruct.lineMapTable+lineIndex;
+
+        if(lineIndex == LINE_AMOUNT-1)
+        {
+            size_t nextLineBase = _calcNextPageBase(o) + currLine->fullLen;
+            _updateLineMap(o, &nextLine, nextLineBase);
+        }
+        else
+        {
+            _copyLineMap(&nextLine, o->pageStruct.lineMapTable+lineIndex+1);
+        }
+
+        //const LineMap * nextLine = currLine+1;
+        if(currLineX > nextLine.payloadLen)
+        {
+            textCurs->pos -= currLineX;
+            textCurs->pos += currLine->fullLen;
+            textCurs->pos += nextLine.payloadLen;
+        }
+        else
+        {
+            textCurs->pos -= currLineX;
+            const unicode_t * pchr = _loadLine(o, textCurs->pos, o->modules->lineBuffer.size);
+            size_t chrAmount = LPM_TextOperator_calcChrAmount(o->modules->textOperator, pchr, pchr + currLineX);
+            textCurs->pos += currLine->fullLen;
+            pchr = _loadLine(o, textCurs->pos, o->modules->lineBuffer.size);
+            textCurs->pos += LPM_TextOperator_nextNChar(o->modules->textOperator, pchr, chrAmount) - pchr;
+        }
     }
 }
 
@@ -712,7 +767,45 @@ void _selectAllLine(Obj * o, SlcCurs * textCurs)
 
 void _changeSelectionAtChar(Obj * o, uint32_t dirFlags, SlcCurs * textCurs)
 {
+    size_t pos = textCurs->pos + textCurs->len;
+
+    if(dirFlags == CURSOR_FLAG_LEFT)
+    {
+        pos = _movePosLeftAtChar(o, pos);
+    }
+    else if(dirFlags == CURSOR_FLAG_RIGHT)
+    {
+        pos = _movePosRightAtChar(o, pos);
+    }
+
+    if(pos < textCurs->pos)
+    {
+        textCurs->len = textCurs->pos - pos;
+        textCurs->pos = pos;
+    }
+    else
+    {
+        textCurs->len = pos - textCurs->pos;
+    }
     // TODO: сделать изменение выделения на символ и строку
+}
+
+size_t _movePosLeftAtChar(Obj * o, size_t pos)
+{
+    if(pos > 0)
+    {
+        size_t loadLen = pos < 10 ? pos : 10;
+        unicode_t * pchr = _loadLine(o, pos-loadLen, loadLen) + loadLen;
+        pos -= pchr - LPM_TextOperator_prevChar(o->modules->textOperator, pchr);
+    }
+    return pos;
+}
+
+size_t _movePosRightAtChar(Obj * o, size_t pos)
+{
+    unicode_t * pchr = _loadLine(o, pos, 10);
+    pos += LPM_TextOperator_nextChar(o->modules->textOperator, pchr) - pchr;
+    return pos;
 }
 
 uint32_t _getTypeFlagValue(uint32_t flags)

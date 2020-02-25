@@ -39,6 +39,16 @@ bool LPM_TextOperator_analizeLine(
           size_t maxLenInChrs,
           LPM_TextLineMap * lineMap );
 
+const unicode_t * LPM_TextOperator_nextNChar
+    ( LPM_TextOperator * o,
+      const unicode_t * pchr,
+      size_t chrAmount );
+
+size_t LPM_TextOperator_calcChrAmount
+    ( LPM_TextOperator * o,
+      const unicode_t * begin,
+      const unicode_t * end );
+
 bool LPM_TextOperator_atEndOfText(LPM_TextOperator * o, const unicode_t * pchr);
 bool LPM_TextOperator_atEndOfLine(LPM_TextOperator * o, const unicode_t * pchr);
 bool LPM_TextOperator_atSpace(LPM_TextOperator * o, const unicode_t * pchr);

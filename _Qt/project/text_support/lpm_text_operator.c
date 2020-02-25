@@ -14,6 +14,9 @@ static bool _atSpace(unicode_t chr);
 static const unicode_t * _nextCharWhenEndOfLine(const unicode_t * pchr);
 static const unicode_t * _prevCharWhenEndOfLine(const unicode_t * pchr);
 
+static size_t _calcChrAmountForward(LPM_TextOperator * o, const unicode_t * begin, const unicode_t * end);
+static size_t _calcChrAmountBackward(LPM_TextOperator * o, const unicode_t * begin, const unicode_t * end);
+
 static void _fillLineMapWhenAtEndOfText
         ( const unicode_t * pchr,
           size_t chrCnt,
@@ -119,6 +122,38 @@ bool LPM_TextOperator_analizeLine
         _fillLineMapWhenWordWrapped(pWordDiv, wordDivCnt, lineMap);
 
     return endOfTextReached;
+}
+
+const unicode_t * LPM_TextOperator_nextNChar
+    ( LPM_TextOperator * o,
+      const unicode_t * pchr,
+      size_t chrAmount )
+{
+    for(size_t i = 0; i < chrAmount; i++)
+    {
+        if(_atEndOfText(*pchr))
+            break;
+
+        if(_atEndOfLine(*pchr))
+            pchr = _nextCharWhenEndOfLine(pchr);
+        else
+            pchr = LPM_Lang_nextChar(o->lang, pchr);
+    }
+    return pchr;
+}
+
+size_t LPM_TextOperator_calcChrAmount
+    ( LPM_TextOperator * o,
+      const unicode_t * begin,
+      const unicode_t * end )
+{
+    if(begin == end)
+        return 0;
+
+    if(begin > end)
+        return _calcChrAmountBackward(o, begin, end);
+
+    return _calcChrAmountForward(o, begin, end);
 }
 
 bool LPM_TextOperator_atEndOfText(LPM_TextOperator * o, const unicode_t * pchr)
@@ -230,4 +265,42 @@ void _fillLineMapWhenWordWrapped
     lineMap->printBorder = pdiv;
     lineMap->lenInChr    = divCnt;
     lineMap->nextLine    = pdiv+1;
+}
+
+size_t _calcChrAmountForward
+    ( LPM_TextOperator * o,
+      const unicode_t * begin,
+      const unicode_t * end )
+{
+    size_t chrAmount = 0;
+    while(begin < end)
+    {
+        if(_atEndOfText(*begin))
+            break;
+
+        if(_atEndOfLine(*begin))
+            begin = _nextCharWhenEndOfLine(begin);
+        else
+            begin = LPM_Lang_nextChar(o->lang, begin);
+        chrAmount++;
+    }
+    return chrAmount;
+}
+
+size_t _calcChrAmountBackward
+    ( LPM_TextOperator * o,
+      const unicode_t * begin,
+      const unicode_t * end )
+{
+    size_t chrAmount = 0;
+    while(begin > end)
+    {
+        --begin;
+        if(_atEndOfLine(*begin))
+            begin = _prevCharWhenEndOfLine(begin);
+        else
+            begin = LPM_Lang_prevChar(o->lang, begin);
+        chrAmount++;
+    }
+    return chrAmount;
 }

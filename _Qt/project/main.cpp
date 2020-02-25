@@ -41,9 +41,9 @@ int main(int argc, char *argv[])
 #include <QDebug>
 #include "command_reader.h"
 
-extern "C" void test_beep(size_t num, size_t num1)
+extern "C" void test_beep(const char * str, size_t num, size_t num1)
 {
-    qDebug() << "BEEP!" << num << num1;
+    qDebug() << str << num << num1;
 }
 
 extern "C" void test_print_display_cursor(size_t bx, size_t by, size_t ex, size_t ey)
