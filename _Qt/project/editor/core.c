@@ -80,15 +80,13 @@ void Core_exec(Core * o)
             break;
         else if(cmd < __EDITOR_NO_CMD)
             (*(cmdHandlerTable[cmd]))(o);
-        _printTextCursor(o);
-        _printDisplayCursor(o);
     }
 }
 
 void _prepare(Obj * o)
 {
     size_t endOfText = LPM_TextStorage_endOfText(o->modules->textStorage);
-    o->textCursor.pos = endOfText;//10463;
+    o->textCursor.pos = endOfText;
     o->textCursor.len = 0;
     PageFormatter_startWithPageAtTextPosition(o->modules->pageFormatter, &o->textCursor);
     PageFormatter_updateDisplay(o->modules->pageFormatter);

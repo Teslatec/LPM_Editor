@@ -6,8 +6,6 @@
 
 #include <string.h>
 
-// TODO: разобратья с граничным условием: глюки при редактировнии последней страницы!!!!
-
 #define LINE_AMOUNT PAGE_LINE_AMOUNT
 #define CHAR_AMOUNT PAGE_CHAR_AMOUNT
 #define LAST_GROUP  (PAGE_GROUP_AMOUNT-1)
@@ -82,6 +80,12 @@ static bool _areaIntersect( size_t firstBegin,
 static bool _posWithinRange(size_t pos, size_t rangeBegin, size_t rangeEnd);
 
 static void _textCursorToDisplayCursor(Obj * o, const SlcCurs * curs, DspCurs * dspCurs);
+static size_t _calcDisplayCursorByLineMapAnalizing(Obj * o, const SlcCurs * txtCurs, DspCurs * dspCurs);
+static void _setDisplayCursorValueForEmptyPage(DspCurs * curs);
+static void _setDisplayCursorInvalidValue(DspCurs * curs);
+static bool _isDisplayCursorPointInvalid(const LPM_Point * point);
+static void _validateDisplayCursorPointIfInvalid(Obj * o, size_t lineIndex, LPM_Point * point);
+
 static void _displayCursorToLineCursor(Obj * o, size_t lineIndex, size_t lineSize, SlcCurs * lineCursor);
 
 static bool _moveFlagsToTextCursor(Obj * o, uint32_t moveFlags, SlcCurs * textCurs);
@@ -388,8 +392,6 @@ void _updateLinesMap(Obj * o)
 {    
     o->pageStruct.lastPageReached = false;
 
-//    printf("build\n");
-
     size_t lineBase = o->pageStruct.base;
     if(!_isCurrPageFirst(o))
     {
@@ -412,8 +414,6 @@ void _updateLinesMap(Obj * o)
         if(_lineChanged(lineMap, &copy))
             _setLineChangedFlag(o, lineIndex);
     }
-
-//    printf("flags: %x\n", o->lineChangedFlags);
 }
 
 bool _isCurrPageFirst(Obj * o)
@@ -553,144 +553,116 @@ bool _posWithinRange(size_t pos, size_t rangeBegin, size_t rangeEnd)
     return (pos >= rangeBegin) && (pos < rangeEnd);
 }
 
+
 void _textCursorToDisplayCursor(Obj * o, const SlcCurs * curs, DspCurs * dspCurs)
 {
-    if(!_isCurrPageLast(o))
+    // Т.к. все остальные подфункции предполагают, что на странице должна быть
+    //  хотя бы одна строка с ненулевой длиной, то полностью пустая страница
+    //  является исключительным случаем - для нее своя ветка
+    if(_isCurrPageEmpty(o))
     {
-        dspCurs->begin.x = 0;
-        dspCurs->begin.y = LINE_AMOUNT;
-        dspCurs->end.x = 0;
-        dspCurs->end.y = LINE_AMOUNT;
-        size_t findPos = curs->pos;
-        LPM_Point * findPoint = &dspCurs->begin;
-
-        const LineMap * lineMap = o->pageStruct.lineMapTable;
-        const LineMap * const end = lineMap + LINE_AMOUNT;
-        size_t lineIndex = 0;
-        size_t lineBase = _calcCurrPageFirstLineBase(o);
-        for( ; lineMap != end; lineIndex++, lineMap++)
-        {
-            lineBase += lineMap->fullLen;
-
-            if(lineMap->fullLen == 0)
-                break;
-
-            if(findPos < lineBase)
-            {
-                findPoint->y = lineIndex;
-                findPoint->x = findPos - lineBase + lineMap->fullLen;
-                if(findPoint == &dspCurs->begin)
-                {
-                    findPoint = &dspCurs->end;
-                    findPos += curs->len;
-                    if(findPos <= lineBase)
-                    {
-                        findPoint->y = lineIndex;
-                        findPoint->x = findPos - lineBase + lineMap->fullLen;
-                        break;
-                    }
-                }
-                else
-                    break;
-            }
-        }
+        _setDisplayCursorValueForEmptyPage(dspCurs);
     }
-
     else
     {
-        if(_isCurrPageEmpty(o))
+        _setDisplayCursorInvalidValue(dspCurs);
+        size_t lastNotEmptyLineIndex = _calcDisplayCursorByLineMapAnalizing(o, curs, dspCurs);
+
+        if(_isCurrPageLast(o))
         {
-            dspCurs->begin.x = 0;
-            dspCurs->begin.y = 0;
-            dspCurs->end.x = 0;
-            dspCurs->end.y = 0;
-            return;
+            _validateDisplayCursorPointIfInvalid(o, lastNotEmptyLineIndex, &dspCurs->begin);
+            _validateDisplayCursorPointIfInvalid(o, lastNotEmptyLineIndex, &dspCurs->end);
         }
+    }
+}
 
-        dspCurs->begin.x = 0;
-        dspCurs->begin.y = LINE_AMOUNT;
-        dspCurs->end.x = 0;
-        dspCurs->end.y = LINE_AMOUNT;
-        size_t findPos = curs->pos;
-        LPM_Point * findPoint = &dspCurs->begin;
+size_t _calcDisplayCursorByLineMapAnalizing(Obj * o, const SlcCurs * txtCurs, DspCurs * dspCurs)
+{
+    size_t findPos = txtCurs->pos;
+    LPM_Point * findPoint = &dspCurs->begin;
 
-        const LineMap * lineMap = o->pageStruct.lineMapTable;
-        const LineMap * const end = lineMap + LINE_AMOUNT;
-        size_t lineIndex = 0;
-        size_t lineBase = _calcCurrPageFirstLineBase(o);
-        for( ; lineMap != end; lineIndex++, lineMap++)
+    const LineMap * lineMap = o->pageStruct.lineMapTable;
+    const LineMap * const end = lineMap + LINE_AMOUNT;
+    size_t lineIndex = 0;
+    size_t lineBegin = _calcCurrPageFirstLineBase(o);
+    for( ; lineMap != end; lineIndex++, lineMap++)
+    {
+        size_t lineEnd = lineBegin + lineMap->fullLen;
+
+        if(lineMap->fullLen == 0)
+            break;
+
+        if(findPos < lineEnd)
         {
-            lineBase += lineMap->fullLen;
-
-            if(lineMap->fullLen == 0)
-                break;
-
-            if(findPos < lineBase)
+            findPoint->y = lineIndex;
+            findPoint->x = findPos - lineBegin;
+            if(findPoint == &dspCurs->begin)
             {
-                findPoint->y = lineIndex;
-                findPoint->x = findPos - lineBase + lineMap->fullLen;
-
-                if(findPoint == &dspCurs->begin)
+                findPoint = &dspCurs->end;
+                findPos += txtCurs->len;
+                if(findPos <= lineEnd)
                 {
-                    findPoint = &dspCurs->end;
-                    findPos += curs->len;
-                    if(findPos <= lineBase)
-                    {
-                        findPoint->y = lineIndex;
-                        findPoint->x = findPos - lineBase + lineMap->fullLen;
-                        break;
-                    }
-                }
-                else
+                    findPoint->y = lineIndex;
+                    findPoint->x = findPos - lineBegin;
                     break;
+                }
             }
+            else
+                break;
         }
+        lineBegin = lineEnd;
+    }
 
-        --lineMap;
-        --lineIndex;
+    // Т.к. при выходе из цикла lineIndex соответствует первой строке с нулевой
+    //  длиной (т.е. текста дальше нет) или же lineIndex равен размеру таблицы
+    //  строк (т.е. не было ни одной пустой строки), то индекс на единицу
+    //  меньше соответствует последней непустой строке, что и должна вернуть
+    //  функция
+    return --lineIndex;
+}
 
-        if(dspCurs->begin.y == LINE_AMOUNT)
+void _setDisplayCursorValueForEmptyPage(DspCurs * curs)
+{
+    curs->begin.x = 0;
+    curs->begin.y = 0;
+    curs->end.x = 0;
+    curs->end.y = 0;
+}
+
+void _setDisplayCursorInvalidValue(DspCurs * curs)
+{
+    curs->begin.x = 0;
+    curs->begin.y = LINE_AMOUNT;
+    curs->end.x = 0;
+    curs->end.y = LINE_AMOUNT;
+}
+
+bool _isDisplayCursorPointInvalid(const LPM_Point * point)
+{
+    return point->y == LINE_AMOUNT;
+}
+
+void _validateDisplayCursorPointIfInvalid(Obj * o, size_t lineIndex, LPM_Point * point)
+{
+    if(_isDisplayCursorPointInvalid(point))
+    {
+        const LineMap * lineMap = o->pageStruct.lineMapTable + lineIndex;
+        if(lineIndex == LINE_AMOUNT-1)
         {
-            test_print("!!", 7,7);
-            if(lineMap == o->pageStruct.lineMapTable + LINE_AMOUNT-1)
+            point->y = lineIndex;
+            point->x = lineMap->payloadLen;
+        }
+        else
+        {
+            if(lineMap->endsWithEndl)
             {
-                dspCurs->begin.y = LINE_AMOUNT-1;
-                dspCurs->begin.x = lineMap->payloadLen;
+                point->y = lineIndex+1;
+                point->x = 0;
             }
             else
             {
-                if(lineMap->endsWithEndl)
-                {
-                    dspCurs->begin.y = lineIndex+1;
-                    dspCurs->begin.x = 0;
-                }
-                else
-                {
-                    dspCurs->begin.y = lineIndex;
-                    dspCurs->begin.x = lineMap->fullLen;
-                }
-            }
-        }
-
-        if(dspCurs->end.y == LINE_AMOUNT)
-        {
-            if(lineMap == o->pageStruct.lineMapTable + LINE_AMOUNT-1)
-            {
-                dspCurs->end.y = LINE_AMOUNT-1;
-                dspCurs->end.x = lineMap->payloadLen;
-            }
-            else
-            {
-                if(lineMap->endsWithEndl)
-                {
-                    dspCurs->end.y = lineIndex+1;
-                    dspCurs->end.x = 0;
-                }
-                else
-                {
-                    dspCurs->end.y = lineIndex;
-                    dspCurs->end.x = lineMap->fullLen;
-                }
+                point->y = lineIndex;
+                point->x = lineMap->fullLen;
             }
         }
     }
