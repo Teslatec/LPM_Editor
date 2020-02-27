@@ -86,6 +86,8 @@ bool LPM_TextOperator_analizeLine
           LPM_TextLineMap * lineMap )
 {
     bool endOfTextReached = false;
+    lineMap->endsWithEndl = false;
+
     const unicode_t * pWordDiv = pchr + maxLenInChrs;
     size_t wordDivCnt = maxLenInChrs;
     size_t chrCnt;
@@ -238,12 +240,14 @@ void _fillLineMapWhenAtEndOfLine
     if(*pchr == chrCr)
     {
         lineMap->nextLine++;
+        lineMap->endsWithEndl = true;
         ++pchr;
     }
 
     if(*pchr == chrLf)
     {
         lineMap->nextLine++;
+        lineMap->endsWithEndl = true;
     }
 }
 

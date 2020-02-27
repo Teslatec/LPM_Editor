@@ -16,12 +16,13 @@ typedef PageFormatter Obj;
 typedef LPM_DisplayCursor DspCurs;
 typedef LPM_SelectionCursor SlcCurs;
 
-typedef enum TextPos
+typedef struct PageAttr
 {
-    TEXT_POS_BEFORE_CURRENT_PAGE = 0,
-    TEXT_POS_ON_CURRENT_PAGE,
-    TEXT_POS_AFTER_CURRENT_PAGE
-} TextPos;
+    size_t begin;
+    size_t end;
+    bool isFirst;
+    bool isLast;
+} PageAttr;
 
 static const unicode_t chrCr = 0x000D;
 static const unicode_t chrLf = 0x000A;
@@ -32,7 +33,13 @@ static void _updatePageByTextCursor(Obj * o, const SlcCurs * curs);
 
 static void _setFirstPageInGroup(Obj * o, size_t groupIndex);
 static void _setNextPage(Obj * o);
+static void _setFirstPageInNearestGroup(Obj * o, size_t pos);
 static bool _changePageIfNotOnCurrTextPosition(Obj * o, size_t pos);
+
+static void _fillCurrPageAttr(Obj * o, PageAttr * attr);
+static bool _changePageIfNotOnCurrTextPositionWhenPageFirst(Obj * o, size_t pos, const PageAttr * attr);
+static bool _changePageIfNotOnCurrTextPositionWhenPageLast(Obj * o, size_t pos, const PageAttr * attr);
+static bool _changePageIfNotOnCurrTextPositionWhenPageCommon(Obj * o, size_t pos, const PageAttr * attr);
 
 static void _switchToFirstPageInGroup(Obj * o, size_t groupIndex);
 static void _switchToNextPage(Obj * o);
@@ -44,12 +51,10 @@ static size_t _findGroupWithNearestOffset(Obj * o, size_t pos);
 
 static void _updateLinesMap(Obj * o);
 
-static TextPos _checkTextPos(Obj * o, size_t pos);
 static bool _isCurrPageFirst(Obj * o);
 static bool _isCurrPageLast(Obj * o);
 static bool _isCurrPageEmpty(Obj * o);
 static bool _isPrevLastLineWithEndLine(Obj * o);
-static bool _isLastLineWithEndLine(Obj * o);
 
 static size_t _updateLineMap(Obj * o, LineMap * lineMap, size_t lineBase);
 
@@ -103,6 +108,8 @@ static void _updateLineChangedFlagsWhenDisplayCursorChanged(Obj * o, DspCurs con
 
 
 static void _formatLineForDisplay(Obj * o, const LineMap * lineMap, size_t lineOffset);
+
+void test_beep();
 
 void PageFormatter_init
         ( PageFormatter * o,
@@ -207,133 +214,105 @@ void _setNextPage(Obj * o)
     _updateLinesMap(o);
 }
 
-bool _changePageIfNotOnCurrTextPosition(Obj * o, size_t pos)
+void _setFirstPageInNearestGroup(Obj * o, size_t pos)
 {
-    bool pageChanged = false;
-    bool posIsOnCurrPage;
-    test_beep("Init cond: pos pgbase", pos, _calcCurrPageFirstLineBase(o));
-    size_t itCount = 0;
-    do
-    {
-        bool currPageIsFirst = _isCurrPageFirst(o);
-        bool currPageIsLast  = _isCurrPageLast(o);
-        size_t currPageBegin = _calcCurrPageFirstLineBase(o);
-        size_t currPageEnd   = currPageBegin + _calcCurrPageLen(o);
-        test_beep("curr page: begin end", currPageBegin, currPageEnd);
-
-        if(currPageIsFirst && currPageIsLast)
-        {
-            posIsOnCurrPage = true;
-        }
-
-        else if(currPageIsFirst)
-        {
-            if(pos < currPageEnd)
-            {
-                posIsOnCurrPage = true;
-            }
-            else
-            {
-                _setNextPage(o);
-                posIsOnCurrPage = _isCurrPageLast(o);
-            }
-        }
-
-        else if(currPageIsLast)
-        {
-            if(pos >= currPageBegin)
-            {
-                if(_isCurrPageEmpty(o) && !_isPrevLastLineWithEndLine(o))
-                {
-                    size_t groupIndex = _findGroupWithNearestOffset(o, pos);
-                    _setFirstPageInGroup(o, groupIndex);
-                    posIsOnCurrPage = false;
-                }
-                else
-                {
-                    posIsOnCurrPage = true;
-                }
-            }
-
-            else
-            {
-                size_t groupIndex = _findGroupWithNearestOffset(o, pos);
-                _setFirstPageInGroup(o, groupIndex);
-                posIsOnCurrPage = false;
-            }
-        }
-
-        else
-        {
-            if(pos < currPageBegin)
-            {
-                size_t groupIndex = _findGroupWithNearestOffset(o, pos);
-                _setFirstPageInGroup(o, groupIndex);
-                posIsOnCurrPage = false;
-            }
-            else if(pos >= currPageEnd)
-            {
-                _setNextPage(o);
-                posIsOnCurrPage = _isCurrPageLast(o);
-            }
-            else
-            {
-                posIsOnCurrPage = true;
-            }
-        }
-        itCount++;
-        if(itCount == 1024)
-        {
-            test_beep("Freeze detected!", 0, 0);
-            test_sound();
-            break;
-        }
-    }
-    while(!posIsOnCurrPage);
-    size_t pageNum = o->pageNavi.currGroupIndex * PAGES_IN_GROUP + o->pageNavi.currPageIndex;
-    test_beep("Cycle it count:", itCount, pageNum);
-
-    return pageChanged;
+    size_t groupIndex = _findGroupWithNearestOffset(o, pos);
+    _setFirstPageInGroup(o, groupIndex);
 }
 
-//bool _changePageIfNotOnCurrTextPosition(Obj * o, const SlcCurs * pos)
-//{
-//    //test_beep("ASDASAS!!@#@@!", pos->pos, _calcCurrPageFirstLineBase(o));
-//    TextPos tp = _checkTextPos(o, pos->pos);
-//    test_beep("position:", tp, pos->pos);
+bool _changePageIfNotOnCurrTextPosition(Obj * o, size_t pos)
+{
+    size_t initGroupIndex = o->pageNavi.currGroupIndex;
+    size_t initPageIndex  = o->pageNavi.currPageIndex;
 
-//    if(tp == TEXT_POS_ON_CURRENT_PAGE)
-//        return false;
+    size_t itCount;
+    for(itCount = 0; itCount < 1024; itCount++)
+    {
+        PageAttr pa;
+        _fillCurrPageAttr(o, &pa);
 
-//    if(tp == TEXT_POS_AFTER_CURRENT_PAGE)
-//    {
-//        test_beep("ASDASAS!!@#@@!", 12, 12);
-//        _setNextPage(o);
-//        test_beep("page last?", o->pageStruct.lastPageReached, _calcCurrPageFirstLineBase(o));
-//        if(_isCurrPageEmpty(o))
-//        {
-//            tp = TEXT_POS_ON_CURRENT_PAGE;
-//            return true;
-//        }
-//        test_beep("page last?", o->pageStruct.lastPageReached, _calcCurrPageFirstLineBase(o));
-//    }
-//    else
-//    {
-//        size_t groupIndex = _findGroupWithNearestOffset(o, pos->pos);
-//        test_beep("page last?", o->pageStruct.lastPageReached, _calcCurrPageFirstLineBase(o));
-//        test_beep("page:", o->pageNavi.currGroupIndex, o->pageNavi.currPageIndex);
-//        _setFirstPageInGroup(o, groupIndex);
-//        test_beep("page:", o->pageNavi.currGroupIndex, o->pageNavi.currPageIndex);
-//        test_beep("page last?", o->pageStruct.lastPageReached, _calcCurrPageFirstLineBase(o));
-//    }
+        bool textPosIsOnCurrPage;
 
-//    while(_checkTextPos(o, pos->pos) != TEXT_POS_ON_CURRENT_PAGE)
-//    {
-//        _setNextPage(o);
-//    }
-//    return true;
-//}
+        if(pa.isFirst && pa.isLast)
+            textPosIsOnCurrPage = true;
+        else if(pa.isFirst)
+            textPosIsOnCurrPage = _changePageIfNotOnCurrTextPositionWhenPageFirst(o, pos, &pa);
+        else if(pa.isLast)
+            textPosIsOnCurrPage = _changePageIfNotOnCurrTextPositionWhenPageLast(o, pos, &pa);
+        else
+            textPosIsOnCurrPage = _changePageIfNotOnCurrTextPositionWhenPageCommon(o, pos, &pa);
 
+        if(textPosIsOnCurrPage)
+            break;
+    }
+
+    if(itCount == 1024)
+        test_beep();
+
+    return initGroupIndex != o->pageNavi.currGroupIndex ||
+            initPageIndex != o->pageNavi.currPageIndex;
+}
+
+void _fillCurrPageAttr(Obj * o, PageAttr * attr)
+{
+    attr->begin   = _calcCurrPageFirstLineBase(o);
+    attr->end     = attr->begin + _calcCurrPageLen(o);
+    attr->isFirst = _isCurrPageFirst(o);
+    attr->isLast  = _isCurrPageLast(o);
+}
+
+bool _changePageIfNotOnCurrTextPositionWhenPageFirst(Obj * o, size_t pos, const PageAttr * attr)
+{
+    if(pos < attr->end)
+        return true;
+
+    // Защита от зацикливания: если достигли последней страницы, то нет смысла
+    //  продолжать переключаться на следующую страницу
+    _setNextPage(o);
+    return _isCurrPageLast(o);
+}
+
+bool _changePageIfNotOnCurrTextPositionWhenPageLast(Obj * o, size_t pos, const PageAttr * attr)
+{
+    if(pos >= attr->begin)
+    {
+        // Особый случай: если последняя страница пустая, то ее конец совпадает
+        //  с началом, поэтому курсор текста будет всегда ВНЕ пустой страницы.
+        //  Значит, по обычным правилам - страницу нужно ВСЕГДА переключать на
+        //  предыдущую. А в том случае, если предыдущая страница оканчивалась
+        //  символом перевода строки, нам нужно ОСТАТЬСЯ на последней странице.
+        //  Соответственно - нужно этот случай учесть и переключать страницу
+        //  только тогда, когда нет перевода строки.
+        if(_isCurrPageEmpty(o) && !_isPrevLastLineWithEndLine(o))
+        {
+            _setFirstPageInNearestGroup(o, pos);
+            return false;
+        }
+        return true;
+    }
+
+    _setFirstPageInNearestGroup(o, pos);
+    return false;
+}
+
+bool _changePageIfNotOnCurrTextPositionWhenPageCommon(Obj * o, size_t pos, const PageAttr * attr)
+{
+    if(pos < attr->begin)
+    {
+        _setFirstPageInNearestGroup(o, pos);
+        return false;
+    }
+
+    if(pos >= attr->end)
+    {
+        // Защита от зацикливания: если достигли последней страницы, то нет смысла
+        //  продолжать переключаться на следующую страницу
+        _setNextPage(o);
+        return _isCurrPageLast(o);
+    }
+
+    return true;
+}
 
 void _switchToFirstPageInGroup(Obj * o, size_t groupIndex)
 {
@@ -437,38 +416,6 @@ void _updateLinesMap(Obj * o)
 //    printf("flags: %x\n", o->lineChangedFlags);
 }
 
-TextPos _checkTextPos(Obj * o, size_t pos)
-{
-
-    if(_isCurrPageLast(o))
-    {
-        if(_isCurrPageEmpty(o) && !_isCurrPageFirst(o))
-            return TEXT_POS_BEFORE_CURRENT_PAGE;
-
-        return pos >= _calcCurrPageFirstLineBase(o) ?
-                    TEXT_POS_ON_CURRENT_PAGE :
-                    TEXT_POS_BEFORE_CURRENT_PAGE;
-    }
-
-    if(_isCurrPageFirst(o))
-    {
-        return pos < _calcCurrPageLen(o) ?
-                    TEXT_POS_ON_CURRENT_PAGE :
-                    TEXT_POS_AFTER_CURRENT_PAGE;
-    }
-
-    size_t currPageBegin = _calcCurrPageFirstLineBase(o);
-    size_t currPageEnd   = currPageBegin + _calcCurrPageLen(o);
-
-    if(pos < currPageBegin)
-        return TEXT_POS_BEFORE_CURRENT_PAGE;
-
-    if(pos >= currPageEnd)
-        return TEXT_POS_AFTER_CURRENT_PAGE;
-
-    return TEXT_POS_ON_CURRENT_PAGE;
-}
-
 bool _isCurrPageFirst(Obj * o)
 {
     return (o->pageNavi.currPageIndex == 0) &&
@@ -487,17 +434,10 @@ bool _isCurrPageEmpty(Obj * o)
 
 bool _isPrevLastLineWithEndLine(Obj * o)
 {
-    const unicode_t * pchr = _loadLine(o, o->pageStruct.base + o->pageStruct.prevLastLine.payloadLen, 1);
-    return *pchr == chrCr || *pchr == chrLf /*|| *pchr == chrSpace*/;
+    return o->pageStruct.prevLastLine.endsWithEndl;
 }
 
-bool _isLastLineWithEndLine(Obj * o)
-{
-    const unicode_t * pchr = _loadLine(o, _calcNextPageBase(o) + o->pageStruct.lineMapTable[LINE_AMOUNT-1].payloadLen, 1);
-    return *pchr == chrCr || *pchr == chrLf /*|| *pchr == chrSpace*/;
-}
-
-static size_t _updateLineMap(Obj * o, LineMap * lineMap, size_t lineBase)
+size_t _updateLineMap(Obj * o, LineMap * lineMap, size_t lineBase)
 {
     bool endOfTextFind = false;
     const unicode_t * const begin =
@@ -514,6 +454,7 @@ static size_t _updateLineMap(Obj * o, LineMap * lineMap, size_t lineBase)
     lineMap->payloadLen = (uint8_t)(textLineMap.printBorder - begin);
     lineMap->restLen    = CHAR_AMOUNT - textLineMap.lenInChr;
     lineMap->crc        = _calcLineCrc(o, lineMap);
+    lineMap->endsWithEndl = textLineMap.endsWithEndl;
     return endOfTextFind;
 }
 
@@ -549,10 +490,8 @@ unicode_t * _loadLine(Obj * o, size_t loadPos, size_t loadSize)
     Unicode_Buf buf =
     {
         o->modules->lineBuffer.data,
-        //o->modules->lineBuffer.size
         loadSize
     };
-    //size_t fullSize = o->modules->lineBuffer.size;
     size_t fullSize = loadSize;
     LPM_TextStorage_read(o->modules->textStorage, loadPos, &buf);
     memset(buf.data + buf.size, 0, (fullSize - buf.size)*sizeof(unicode_t));
@@ -616,56 +555,144 @@ bool _posWithinRange(size_t pos, size_t rangeBegin, size_t rangeEnd)
 
 void _textCursorToDisplayCursor(Obj * o, const SlcCurs * curs, DspCurs * dspCurs)
 {
-    if(_isCurrPageEmpty(o))
+    if(!_isCurrPageLast(o))
     {
         dspCurs->begin.x = 0;
-        dspCurs->begin.y = 0;
+        dspCurs->begin.y = LINE_AMOUNT;
         dspCurs->end.x = 0;
-        dspCurs->end.y = 0;
-        return;
-    }
+        dspCurs->end.y = LINE_AMOUNT;
+        size_t findPos = curs->pos;
+        LPM_Point * findPoint = &dspCurs->begin;
 
-    dspCurs->begin.x = 0;
-    dspCurs->begin.y = LINE_AMOUNT;
-    dspCurs->end.x = 0;
-    dspCurs->end.y = LINE_AMOUNT;
-
-    size_t findPos = curs->pos;
-    LPM_Point * findPoint = &dspCurs->begin;
-
-    const LineMap * lineMap = o->pageStruct.lineMapTable;
-    const LineMap * const end = lineMap + LINE_AMOUNT;
-    size_t lineIndex = 0;
-    size_t lineBase = _calcCurrPageFirstLineBase(o);
-    for( ; lineMap != end; lineIndex++, lineMap++)
-    {
-        lineBase += lineMap->fullLen;
-
-        if(lineMap->fullLen == 0)
-            break;
-
-        if(findPos < lineBase)
+        const LineMap * lineMap = o->pageStruct.lineMapTable;
+        const LineMap * const end = lineMap + LINE_AMOUNT;
+        size_t lineIndex = 0;
+        size_t lineBase = _calcCurrPageFirstLineBase(o);
+        for( ; lineMap != end; lineIndex++, lineMap++)
         {
-            findPoint->y = lineIndex;
-            findPoint->x = findPos - lineBase + lineMap->fullLen;
-            if(findPoint == &dspCurs->begin)
-            {
-                findPoint = &dspCurs->end;
-                findPos += curs->len;
-                if(findPos <= lineBase)
-                {
-                    findPoint->y = lineIndex;
-                    findPoint->x = findPos - lineBase + lineMap->fullLen;
-                    break;
-                }
-            }
-            else
+            lineBase += lineMap->fullLen;
+
+            if(lineMap->fullLen == 0)
                 break;
+
+            if(findPos < lineBase)
+            {
+                findPoint->y = lineIndex;
+                findPoint->x = findPos - lineBase + lineMap->fullLen;
+                if(findPoint == &dspCurs->begin)
+                {
+                    findPoint = &dspCurs->end;
+                    findPos += curs->len;
+                    if(findPos <= lineBase)
+                    {
+                        findPoint->y = lineIndex;
+                        findPoint->x = findPos - lineBase + lineMap->fullLen;
+                        break;
+                    }
+                }
+                else
+                    break;
+            }
         }
     }
 
-    if(_isCurrPageLast(o))
+    else
     {
+        if(_isCurrPageEmpty(o))
+        {
+            dspCurs->begin.x = 0;
+            dspCurs->begin.y = 0;
+            dspCurs->end.x = 0;
+            dspCurs->end.y = 0;
+            return;
+        }
+
+        dspCurs->begin.x = 0;
+        dspCurs->begin.y = LINE_AMOUNT;
+        dspCurs->end.x = 0;
+        dspCurs->end.y = LINE_AMOUNT;
+        size_t findPos = curs->pos;
+        LPM_Point * findPoint = &dspCurs->begin;
+
+        const LineMap * lineMap = o->pageStruct.lineMapTable;
+        const LineMap * const end = lineMap + LINE_AMOUNT;
+        size_t lineIndex = 0;
+        size_t lineBase = _calcCurrPageFirstLineBase(o);
+        for( ; lineMap != end; lineIndex++, lineMap++)
+        {
+            lineBase += lineMap->fullLen;
+
+            if(lineMap->fullLen == 0)
+                break;
+
+            if(findPos < lineBase)
+            {
+                findPoint->y = lineIndex;
+                findPoint->x = findPos - lineBase + lineMap->fullLen;
+
+                if(findPoint == &dspCurs->begin)
+                {
+                    findPoint = &dspCurs->end;
+                    findPos += curs->len;
+                    if(findPos <= lineBase)
+                    {
+                        findPoint->y = lineIndex;
+                        findPoint->x = findPos - lineBase + lineMap->fullLen;
+                        break;
+                    }
+                }
+                else
+                    break;
+            }
+        }
+
+        --lineMap;
+        --lineIndex;
+
+        if(dspCurs->begin.y == LINE_AMOUNT)
+        {
+            test_print("!!", 7,7);
+            if(lineMap == o->pageStruct.lineMapTable + LINE_AMOUNT-1)
+            {
+                dspCurs->begin.y = LINE_AMOUNT-1;
+                dspCurs->begin.x = lineMap->payloadLen;
+            }
+            else
+            {
+                if(lineMap->endsWithEndl)
+                {
+                    dspCurs->begin.y = lineIndex+1;
+                    dspCurs->begin.x = 0;
+                }
+                else
+                {
+                    dspCurs->begin.y = lineIndex;
+                    dspCurs->begin.x = lineMap->fullLen;
+                }
+            }
+        }
+
+        if(dspCurs->end.y == LINE_AMOUNT)
+        {
+            if(lineMap == o->pageStruct.lineMapTable + LINE_AMOUNT-1)
+            {
+                dspCurs->end.y = LINE_AMOUNT-1;
+                dspCurs->end.x = lineMap->payloadLen;
+            }
+            else
+            {
+                if(lineMap->endsWithEndl)
+                {
+                    dspCurs->end.y = lineIndex+1;
+                    dspCurs->end.x = 0;
+                }
+                else
+                {
+                    dspCurs->end.y = lineIndex;
+                    dspCurs->end.x = lineMap->fullLen;
+                }
+            }
+        }
     }
 }
 

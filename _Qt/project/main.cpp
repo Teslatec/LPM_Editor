@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 #include <QDebug>
 #include "command_reader.h"
 
-extern "C" void test_beep(const char * str, size_t num, size_t num1)
+extern "C" void test_print(const char * str, size_t num, size_t num1)
 {
     qDebug() << str << num << num1;
 }
@@ -62,7 +62,7 @@ extern "C" void test_print_page_map(size_t base, const LineMap * prev, const Lin
 {
     auto printLine = [](int index, const LineMap * line)
     {
-        qDebug() << index << line->fullLen << line->payloadLen << line->restLen;
+        qDebug() << index << line->fullLen << line->payloadLen << line->restLen << line->endsWithEndl;
     };
     qDebug() << "Page map from base:" << base;
     printLine(-1, prev);
@@ -75,7 +75,7 @@ extern "C" void test_print_page_map(size_t base, const LineMap * prev, const Lin
     qDebug() << "Page Len:" << len;
 }
 
-extern "C" void test_sound()
+extern "C" void test_beep()
 {
     QApplication::beep();
 }

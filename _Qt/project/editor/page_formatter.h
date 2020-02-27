@@ -16,6 +16,7 @@ typedef struct LineMap
     uint8_t fullLen;
     uint8_t payloadLen;
     uint8_t restLen;
+    bool endsWithEndl;
 } LineMap;
 
 typedef struct PageNavigation

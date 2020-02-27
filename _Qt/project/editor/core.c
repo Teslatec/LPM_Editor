@@ -80,9 +80,8 @@ void Core_exec(Core * o)
             break;
         else if(cmd < __EDITOR_NO_CMD)
             (*(cmdHandlerTable[cmd]))(o);
-//        _printTextCursor(o);
-//        _printLineMap(o);
-//        _printDisplayCursor(o);
+        _printTextCursor(o);
+        _printDisplayCursor(o);
     }
 }
 

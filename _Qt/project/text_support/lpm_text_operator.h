@@ -15,6 +15,7 @@ typedef struct LPM_TextLineMap
     const unicode_t * nextLine;
     const unicode_t * printBorder;
     size_t lenInChr;
+    bool endsWithEndl;
 } LPM_TextLineMap;
 
 inline void LPM_TextOperator_init
