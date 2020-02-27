@@ -32,7 +32,7 @@ static void _updatePageByTextCursor(Obj * o, const SlcCurs * curs);
 
 static void _setFirstPageInGroup(Obj * o, size_t groupIndex);
 static void _setNextPage(Obj * o);
-static bool _changePageIfNotOnCurrTextPosition(Obj * o, const SlcCurs * pos);
+static bool _changePageIfNotOnCurrTextPosition(Obj * o, size_t pos);
 
 static void _switchToFirstPageInGroup(Obj * o, size_t groupIndex);
 static void _switchToNextPage(Obj * o);
@@ -47,6 +47,9 @@ static void _updateLinesMap(Obj * o);
 static TextPos _checkTextPos(Obj * o, size_t pos);
 static bool _isCurrPageFirst(Obj * o);
 static bool _isCurrPageLast(Obj * o);
+static bool _isCurrPageEmpty(Obj * o);
+static bool _isPrevLastLineWithEndLine(Obj * o);
+static bool _isLastLineWithEndLine(Obj * o);
 
 static size_t _updateLineMap(Obj * o, LineMap * lineMap, size_t lineBase);
 
@@ -115,7 +118,7 @@ void PageFormatter_startWithPageAtTextPosition
 {
     DspCurs dspCurs;
     _setFirstPageInGroup(o, 0);
-    _changePageIfNotOnCurrTextPosition(o, curs);
+    _changePageIfNotOnCurrTextPosition(o, curs->pos);
     _textCursorToDisplayCursor(o, curs, &dspCurs);
     _saveDisplayCursor(o, &dspCurs);
 }
@@ -124,7 +127,8 @@ void PageFormatter_updatePageWhenTextChanged
         ( PageFormatter * o,
           const LPM_SelectionCursor * curs )
 {
-    _resetAllLineChangedFlags(o);
+    //_resetAllLineChangedFlags(o);
+    _setAllLineChangedFlags(o);
     _updateLinesMap(o);
     _updatePageByTextCursor(o, curs);
 }
@@ -172,7 +176,7 @@ void PageFormatter_updateDisplay
 void _updatePageByTextCursor(Obj * o, const SlcCurs * curs)
 {
     DspCurs dspCurs;
-    if(!_changePageIfNotOnCurrTextPosition(o, curs))
+    if(!_changePageIfNotOnCurrTextPosition(o, curs->pos))
     {
         _textCursorToDisplayCursor(o, curs, &dspCurs);
         _updateLineChangedFlagsWhenDisplayCursorChanged(o, &dspCurs);
@@ -203,29 +207,132 @@ void _setNextPage(Obj * o)
     _updateLinesMap(o);
 }
 
-bool _changePageIfNotOnCurrTextPosition(Obj * o, const SlcCurs * pos)
+bool _changePageIfNotOnCurrTextPosition(Obj * o, size_t pos)
 {
-    TextPos tp = _checkTextPos(o, pos->pos);
-
-    if(tp == TEXT_POS_ON_CURRENT_PAGE)
-        return false;
-
-    if(tp == TEXT_POS_AFTER_CURRENT_PAGE)
+    bool pageChanged = false;
+    bool posIsOnCurrPage;
+    test_beep("Init cond: pos pgbase", pos, _calcCurrPageFirstLineBase(o));
+    size_t itCount = 0;
+    do
     {
-        _setNextPage(o);
-    }
-    else
-    {
-        size_t groupIndex = _findGroupWithNearestOffset(o, pos->pos);
-        _setFirstPageInGroup(o, groupIndex);
-    }
+        bool currPageIsFirst = _isCurrPageFirst(o);
+        bool currPageIsLast  = _isCurrPageLast(o);
+        size_t currPageBegin = _calcCurrPageFirstLineBase(o);
+        size_t currPageEnd   = currPageBegin + _calcCurrPageLen(o);
+        test_beep("curr page: begin end", currPageBegin, currPageEnd);
 
-    while(_checkTextPos(o, pos->pos) != TEXT_POS_ON_CURRENT_PAGE)
-    {
-        _setNextPage(o);
+        if(currPageIsFirst && currPageIsLast)
+        {
+            posIsOnCurrPage = true;
+        }
+
+        else if(currPageIsFirst)
+        {
+            if(pos < currPageEnd)
+            {
+                posIsOnCurrPage = true;
+            }
+            else
+            {
+                _setNextPage(o);
+                posIsOnCurrPage = _isCurrPageLast(o);
+            }
+        }
+
+        else if(currPageIsLast)
+        {
+            if(pos >= currPageBegin)
+            {
+                if(_isCurrPageEmpty(o) && !_isPrevLastLineWithEndLine(o))
+                {
+                    size_t groupIndex = _findGroupWithNearestOffset(o, pos);
+                    _setFirstPageInGroup(o, groupIndex);
+                    posIsOnCurrPage = false;
+                }
+                else
+                {
+                    posIsOnCurrPage = true;
+                }
+            }
+
+            else
+            {
+                size_t groupIndex = _findGroupWithNearestOffset(o, pos);
+                _setFirstPageInGroup(o, groupIndex);
+                posIsOnCurrPage = false;
+            }
+        }
+
+        else
+        {
+            if(pos < currPageBegin)
+            {
+                size_t groupIndex = _findGroupWithNearestOffset(o, pos);
+                _setFirstPageInGroup(o, groupIndex);
+                posIsOnCurrPage = false;
+            }
+            else if(pos >= currPageEnd)
+            {
+                _setNextPage(o);
+                posIsOnCurrPage = _isCurrPageLast(o);
+            }
+            else
+            {
+                posIsOnCurrPage = true;
+            }
+        }
+        itCount++;
+        if(itCount == 1024)
+        {
+            test_beep("Freeze detected!", 0, 0);
+            test_sound();
+            break;
+        }
     }
-    return true;
+    while(!posIsOnCurrPage);
+    size_t pageNum = o->pageNavi.currGroupIndex * PAGES_IN_GROUP + o->pageNavi.currPageIndex;
+    test_beep("Cycle it count:", itCount, pageNum);
+
+    return pageChanged;
 }
+
+//bool _changePageIfNotOnCurrTextPosition(Obj * o, const SlcCurs * pos)
+//{
+//    //test_beep("ASDASAS!!@#@@!", pos->pos, _calcCurrPageFirstLineBase(o));
+//    TextPos tp = _checkTextPos(o, pos->pos);
+//    test_beep("position:", tp, pos->pos);
+
+//    if(tp == TEXT_POS_ON_CURRENT_PAGE)
+//        return false;
+
+//    if(tp == TEXT_POS_AFTER_CURRENT_PAGE)
+//    {
+//        test_beep("ASDASAS!!@#@@!", 12, 12);
+//        _setNextPage(o);
+//        test_beep("page last?", o->pageStruct.lastPageReached, _calcCurrPageFirstLineBase(o));
+//        if(_isCurrPageEmpty(o))
+//        {
+//            tp = TEXT_POS_ON_CURRENT_PAGE;
+//            return true;
+//        }
+//        test_beep("page last?", o->pageStruct.lastPageReached, _calcCurrPageFirstLineBase(o));
+//    }
+//    else
+//    {
+//        size_t groupIndex = _findGroupWithNearestOffset(o, pos->pos);
+//        test_beep("page last?", o->pageStruct.lastPageReached, _calcCurrPageFirstLineBase(o));
+//        test_beep("page:", o->pageNavi.currGroupIndex, o->pageNavi.currPageIndex);
+//        _setFirstPageInGroup(o, groupIndex);
+//        test_beep("page:", o->pageNavi.currGroupIndex, o->pageNavi.currPageIndex);
+//        test_beep("page last?", o->pageStruct.lastPageReached, _calcCurrPageFirstLineBase(o));
+//    }
+
+//    while(_checkTextPos(o, pos->pos) != TEXT_POS_ON_CURRENT_PAGE)
+//    {
+//        _setNextPage(o);
+//    }
+//    return true;
+//}
 
 
 void _switchToFirstPageInGroup(Obj * o, size_t groupIndex)
@@ -299,14 +406,17 @@ size_t _findGroupWithNearestOffset(Obj * o, size_t pos)
 }
 
 void _updateLinesMap(Obj * o)
-{
+{    
     o->pageStruct.lastPageReached = false;
 
 //    printf("build\n");
 
     size_t lineBase = o->pageStruct.base;
     if(!_isCurrPageFirst(o))
-        lineBase += _updateLineMap(o, &o->pageStruct.prevLastLine, lineBase);
+    {
+        _updateLineMap(o, &o->pageStruct.prevLastLine, lineBase);
+        lineBase += o->pageStruct.prevLastLine.fullLen;
+    }
     else
         _makePrevLineMapForFirstPage(&o->pageStruct.prevLastLine);
 
@@ -317,7 +427,9 @@ void _updateLinesMap(Obj * o)
     for( ; lineMap != end; lineMap++, lineIndex++)
     {
         _copyLineMap(&copy, lineMap);
-        lineBase += _updateLineMap(o, lineMap, lineBase);
+        if(_updateLineMap(o, lineMap, lineBase))
+            o->pageStruct.lastPageReached = true;
+        lineBase += lineMap->fullLen;
         if(_lineChanged(lineMap, &copy))
             _setLineChangedFlag(o, lineIndex);
     }
@@ -327,18 +439,22 @@ void _updateLinesMap(Obj * o)
 
 TextPos _checkTextPos(Obj * o, size_t pos)
 {
+
+    if(_isCurrPageLast(o))
+    {
+        if(_isCurrPageEmpty(o) && !_isCurrPageFirst(o))
+            return TEXT_POS_BEFORE_CURRENT_PAGE;
+
+        return pos >= _calcCurrPageFirstLineBase(o) ?
+                    TEXT_POS_ON_CURRENT_PAGE :
+                    TEXT_POS_BEFORE_CURRENT_PAGE;
+    }
+
     if(_isCurrPageFirst(o))
     {
         return pos < _calcCurrPageLen(o) ?
                     TEXT_POS_ON_CURRENT_PAGE :
                     TEXT_POS_AFTER_CURRENT_PAGE;
-    }
-
-    if(_isCurrPageLast(o))
-    {
-        return pos >= _calcCurrPageFirstLineBase(o) ?
-                    TEXT_POS_ON_CURRENT_PAGE :
-                    TEXT_POS_BEFORE_CURRENT_PAGE;
     }
 
     size_t currPageBegin = _calcCurrPageFirstLineBase(o);
@@ -364,9 +480,26 @@ bool _isCurrPageLast(Obj * o)
     return o->pageStruct.lastPageReached;
 }
 
+bool _isCurrPageEmpty(Obj * o)
+{
+    return o->pageStruct.lineMapTable[0].fullLen == 0;
+}
+
+bool _isPrevLastLineWithEndLine(Obj * o)
+{
+    const unicode_t * pchr = _loadLine(o, o->pageStruct.base + o->pageStruct.prevLastLine.payloadLen, 1);
+    return *pchr == chrCr || *pchr == chrLf /*|| *pchr == chrSpace*/;
+}
+
+bool _isLastLineWithEndLine(Obj * o)
+{
+    const unicode_t * pchr = _loadLine(o, _calcNextPageBase(o) + o->pageStruct.lineMapTable[LINE_AMOUNT-1].payloadLen, 1);
+    return *pchr == chrCr || *pchr == chrLf /*|| *pchr == chrSpace*/;
+}
 
 static size_t _updateLineMap(Obj * o, LineMap * lineMap, size_t lineBase)
 {
+    bool endOfTextFind = false;
     const unicode_t * const begin =
             _loadLine(o, lineBase, o->modules->lineBuffer.size);
 
@@ -375,13 +508,13 @@ static size_t _updateLineMap(Obj * o, LineMap * lineMap, size_t lineBase)
                                      begin,
                                      CHAR_AMOUNT,
                                      &textLineMap) )
-        o->pageStruct.lastPageReached = true;
+        endOfTextFind = true;
 
     lineMap->fullLen    = (uint8_t)(textLineMap.nextLine    - begin);
     lineMap->payloadLen = (uint8_t)(textLineMap.printBorder - begin);
     lineMap->restLen    = CHAR_AMOUNT - textLineMap.lenInChr;
     lineMap->crc        = _calcLineCrc(o, lineMap);
-    return lineMap->fullLen;
+    return endOfTextFind;
 }
 
 void _copyLineMap(LineMap * dst, const LineMap * src)
@@ -483,8 +616,20 @@ bool _posWithinRange(size_t pos, size_t rangeBegin, size_t rangeEnd)
 
 void _textCursorToDisplayCursor(Obj * o, const SlcCurs * curs, DspCurs * dspCurs)
 {
+    if(_isCurrPageEmpty(o))
+    {
+        dspCurs->begin.x = 0;
+        dspCurs->begin.y = 0;
+        dspCurs->end.x = 0;
+        dspCurs->end.y = 0;
+        return;
+    }
+
+    dspCurs->begin.x = 0;
     dspCurs->begin.y = LINE_AMOUNT;
-    dspCurs->end.y   = LINE_AMOUNT;
+    dspCurs->end.x = 0;
+    dspCurs->end.y = LINE_AMOUNT;
+
     size_t findPos = curs->pos;
     LPM_Point * findPoint = &dspCurs->begin;
 
@@ -497,25 +642,7 @@ void _textCursorToDisplayCursor(Obj * o, const SlcCurs * curs, DspCurs * dspCurs
         lineBase += lineMap->fullLen;
 
         if(lineMap->fullLen == 0)
-        {
-            if(lineMap == o->pageStruct.lineMapTable)
-            {
-                dspCurs->begin.x = 0;
-                dspCurs->begin.y = 0;
-                dspCurs->end.x = 0;
-                dspCurs->end.y = 0;
-            }
-            else
-            {
-                --lineMap;
-                --lineIndex;
-                dspCurs->begin.x = lineMap->fullLen;
-                dspCurs->begin.y = lineIndex;
-                dspCurs->end.x = lineMap->fullLen;
-                dspCurs->end.y = lineIndex;
-            }
             break;
-        }
 
         if(findPos < lineBase)
         {
@@ -535,6 +662,10 @@ void _textCursorToDisplayCursor(Obj * o, const SlcCurs * curs, DspCurs * dspCurs
             else
                 break;
         }
+    }
+
+    if(_isCurrPageLast(o))
+    {
     }
 }
 
@@ -590,7 +721,7 @@ bool _moveFlagsToTextCursor(Obj * o, uint32_t moveFlags, SlcCurs * textCurs)
     if(_getTypeFlagValue(moveFlags) == CURSOR_FLAG_MOVE)
     {
         if(goal == CURSOR_FLAG_PAGE)
-             pageChaged = _moveCursorToPageBorder(o, _getBorderFlagValue(moveFlags), textCurs);
+            pageChaged = _moveCursorToPageBorder(o, _getBorderFlagValue(moveFlags), textCurs);
 
         else if(goal == CURSOR_FLAG_LINE)
             _moveCursorToLineBorder(o, _getBorderFlagValue(moveFlags), textCurs);
@@ -654,14 +785,14 @@ bool _moveCursorToPageBorder(Obj * o, uint32_t borderFlag, SlcCurs * textCurs)
             return false;
         textCurs->pos = _calcNextPageBase(o)+
                 o->pageStruct.lineMapTable[LINE_AMOUNT-1].fullLen;
-        _changePageIfNotOnCurrTextPosition(o, textCurs);
+        _changePageIfNotOnCurrTextPosition(o, textCurs->pos);
     }
     else // CURSOR_FLAG_PREV
     {
         if(_isCurrPageFirst(o))
             return false;
         textCurs->pos = o->pageStruct.base;
-        _changePageIfNotOnCurrTextPosition(o, textCurs);
+        _changePageIfNotOnCurrTextPosition(o, textCurs->pos);
         textCurs->pos = _calcCurrPageFirstLineBase(o);
     }
 
@@ -696,7 +827,9 @@ void _moveCursorAtChar(Obj * o, uint32_t dirFlags, SlcCurs * textCurs)
         if(textCurs->len > 0)
             textCurs->len = 0;
         else
+        {
             textCurs->pos = _movePosUpAtChar(o, textCurs->pos, &o->displayCursor.begin);
+        }
     }
     else //if(dirFlags == CURSOR_FLAG_DOWN)
     {
@@ -706,7 +839,9 @@ void _moveCursorAtChar(Obj * o, uint32_t dirFlags, SlcCurs * textCurs)
             textCurs->len = 0;
         }
         else
+        {
             textCurs->pos = _movePosDownAtChar(o, textCurs->pos, &o->displayCursor.begin);
+        }
     }
 }
 

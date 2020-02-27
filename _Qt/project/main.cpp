@@ -75,6 +75,11 @@ extern "C" void test_print_page_map(size_t base, const LineMap * prev, const Lin
     qDebug() << "Page Len:" << len;
 }
 
+extern "C" void test_sound()
+{
+    QApplication::beep();
+}
+
 
 QStringList testList
 {

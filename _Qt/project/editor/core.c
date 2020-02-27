@@ -41,6 +41,7 @@ static void _timeoutCmdHandler(Core * o);
 
 static void _printLineMap(Core * o);
 static void _printDisplayCursor(Core * o);
+static void _printTextCursor(Core * o);
 
 static const CmdHandler cmdHandlerTable[] =
 {
@@ -79,14 +80,16 @@ void Core_exec(Core * o)
             break;
         else if(cmd < __EDITOR_NO_CMD)
             (*(cmdHandlerTable[cmd]))(o);
-        _printTextCursor(o);
+//        _printTextCursor(o);
+//        _printLineMap(o);
+//        _printDisplayCursor(o);
     }
 }
 
 void _prepare(Obj * o)
 {
     size_t endOfText = LPM_TextStorage_endOfText(o->modules->textStorage);
-    o->textCursor.pos = 3437;//endOfText;
+    o->textCursor.pos = endOfText;//10463;
     o->textCursor.len = 0;
     PageFormatter_startWithPageAtTextPosition(o->modules->pageFormatter, &o->textCursor);
     PageFormatter_updateDisplay(o->modules->pageFormatter);
