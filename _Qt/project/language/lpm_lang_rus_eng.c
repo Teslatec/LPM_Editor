@@ -42,8 +42,16 @@ bool LPM_LangRusEng_isCharBelongsToLang(const unicode_t * pchr)
 bool LPM_LangRusEng_checkInputChar(unicode_t inputChr, const unicode_t * pchr)
 {
     if(_isDiacritic(inputChr))
+    {
+        --pchr;
         if(_isDiacritic(*pchr))
             return false;
+        if(inputChr == chrCratca)
+            return (*pchr == chrIBig) || (*pchr == chrISmall);
+        if(inputChr == chrUmlaut)
+            return (*pchr == chrEBig) || (*pchr == chrESmall);
+        return false;
+    }
     return true;
 }
 

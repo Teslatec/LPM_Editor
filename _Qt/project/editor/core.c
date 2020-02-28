@@ -2,6 +2,7 @@
 #include "command_reader.h"
 #include "lpm_text_storage.h"
 #include "page_formatter.h"
+#include "lpm_text_operator.h"
 #include "lpm_lang.h"
 
 #include <string.h>
@@ -24,7 +25,7 @@ void test_print_text_cursor(size_t pos, size_t len);
 void test_print_page_map(size_t base, const LineMap * prev, const LineMap * table);
 
 static void _prepare(Obj * o);
-static void _initArea(Obj * o, SlcCurs * cursor);
+static void _copyTextCursor(const SlcCurs * src, SlcCurs * dst);
 
 static void _cursorChangedCmdHandler(Core * o);
 static void _textChangedCmdHandler(Core * o);
@@ -38,6 +39,10 @@ static void _undoHandler(Core * o);
 static void _outlineHelpCmdHandler(Core * o);
 static void _outlineStateHandler(Core * o);
 static void _timeoutCmdHandler(Core * o);
+
+static void _processEnteredChar(Core * o);
+
+static bool _checkInputText(Core * o, Unicode_Buf * text);
 
 static void _printLineMap(Core * o);
 static void _printDisplayCursor(Core * o);
@@ -92,10 +97,10 @@ void _prepare(Obj * o)
     PageFormatter_updateDisplay(o->modules->pageFormatter);
 }
 
-void _initArea(Obj * o, SlcCurs * cursor)
+void _copyTextCursor(const SlcCurs * src, SlcCurs * dst)
 {
-    cursor->pos = o->textCursor.pos;
-    cursor->len = o->textCursor.len;
+    dst->pos = src->pos;
+    dst->len = src->len;
 }
 
 void _printLineMap(Core * o)
@@ -128,73 +133,93 @@ void _cursorChangedCmdHandler(Core * o)
 
 void _textChangedCmdHandler(Core * o)
 {
-    Unicode_Buf text;
-    SlcCurs area;
-    uint16_t flags = CmdReader_getFlags(o->modules->cmdReader);
-    bool isReplaceMode = CmdReader_isReplacementMode(o->modules->cmdReader);
-
-    if(flags == TEXT_FLAG_TEXT)
-    {
-        CmdReader_getText(o->modules->cmdReader, &text);
-        _initArea(o, &area);
-        LPM_TextStorage_replace(o->modules->textStorage, &area, &text);
-        area.len = text.size;
-        o->textCursor.pos += text.size;
-    }
-
-    if(flags == TEXT_FLAG_TAB)
-    {
-        unicode_t   crlf[5] = { chrSpace, chrSpace, chrSpace, chrSpace, chrSpace };
-        text.data = crlf;
-        text.size = 5;
-        area.pos = o->textCursor.pos;
-        area.len = o->textCursor.len;
-
-        LPM_TextStorage_replace(o->modules->textStorage, &area, &text);
-
-        area.pos = o->textCursor.pos;
-        area.len = 5;
-        o->textCursor.pos += 5;
-        o->textCursor.len  = 0;
-    }
-
-    if(flags == TEXT_FLAG_NEW_LINE)
-    {
-        unicode_t   crlf[2] = { chrCr, chrLf };
-        text.data = crlf;
-        text.size = 2;
-        area.pos = o->textCursor.pos;
-        area.len = o->textCursor.len;
-
-        LPM_TextStorage_replace(o->modules->textStorage, &area, &text);
-
-        area.pos = o->textCursor.pos;
-        area.len = 2;
-        o->textCursor.pos += 2;
-        o->textCursor.len  = 0;
-    }
-
-    if(flags == TEXT_FLAG_REMOVE_PREV_CHAR)
-    {
-        if(o->textCursor.pos == 0)
-            return;
-        area.pos = o->textCursor.pos-1;
-        area.len = 1;
-        LPM_TextStorage_replace(o->modules->textStorage, &area, NULL);
-        o->textCursor.pos--;
-    }
-
-    if(flags == TEXT_FLAG_REMOVE_NEXT_CHAR)
-    {
-        if(o->textCursor.pos == 0)
-            return;
-        area.pos = o->textCursor.pos;
-        area.len = 1;
-        LPM_TextStorage_replace(o->modules->textStorage, &area, NULL);
-    }
+    uint16_t flag = CmdReader_getFlags(o->modules->cmdReader);
+    if(flag == TEXT_FLAG_TEXT)
+        _processEnteredChar(o);
 
     PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
     PageFormatter_updateDisplay(o->modules->pageFormatter);
+
+//    Unicode_Buf text;
+//    SlcCurs removingArea;
+//    _copyTextCursor(&o->textCursor, &removingArea);
+//    uint16_t flags = CmdReader_getFlags(o->modules->cmdReader);
+//    bool isReplaceMode = CmdReader_isReplacementMode(o->modules->cmdReader);
+
+//    if(flags == TEXT_FLAG_TEXT)
+//    {
+//        if(removingArea.len > 0)
+//        {
+//            LPM_TextStorage_replace(o->modules->textStorage, &removingArea, NULL);
+//            removingArea.len = 0;
+//            CmdReader_getText(o->modules->cmdReader, &text);
+//            LPM_TextStorage_replace(o->modules->textStorage, &removingArea, &text);
+//            o->textCursor.pos += text.size;
+//            o->textCursor.len = 0;
+//        }
+
+//        CmdReader_getText(o->modules->cmdReader, &text);
+//        if(isReplaceMode)
+//            if(removingArea.len == 0)
+//                removingArea.len = 1;
+//        LPM_TextStorage_replace(o->modules->textStorage, &removingArea, &text);
+//        o->textCursor.pos += text.size;
+//        o->textCursor.len = 0;
+//    }
+
+//    if(flags == TEXT_FLAG_TAB)
+//    {
+//        unicode_t   crlf[5] = { chrSpace, chrSpace, chrSpace, chrSpace, chrSpace };
+//        text.data = crlf;
+//        text.size = 5;
+//        removingArea.pos = o->textCursor.pos;
+//        removingArea.len = o->textCursor.len;
+
+//        LPM_TextStorage_replace(o->modules->textStorage, &removingArea, &text);
+
+//        removingArea.pos = o->textCursor.pos;
+//        removingArea.len = 5;
+//        o->textCursor.pos += 5;
+//        o->textCursor.len  = 0;
+//    }
+
+//    if(flags == TEXT_FLAG_NEW_LINE)
+//    {
+//        unicode_t   crlf[2] = { chrCr, chrLf };
+//        text.data = crlf;
+//        text.size = 2;
+//        removingArea.pos = o->textCursor.pos;
+//        removingArea.len = o->textCursor.len;
+
+//        LPM_TextStorage_replace(o->modules->textStorage, &removingArea, &text);
+
+//        removingArea.pos = o->textCursor.pos;
+//        removingArea.len = 2;
+//        o->textCursor.pos += 2;
+//        o->textCursor.len  = 0;
+//    }
+
+//    if(flags == TEXT_FLAG_REMOVE_PREV_CHAR)
+//    {
+//        if(o->textCursor.pos == 0)
+//            return;
+//        removingArea.pos = o->textCursor.pos-1;
+//        removingArea.len = 1;
+//        LPM_TextStorage_replace(o->modules->textStorage, &removingArea, NULL);
+//        o->textCursor.pos--;
+//    }
+
+//    if(flags == TEXT_FLAG_REMOVE_NEXT_CHAR)
+//    {
+//        if(o->textCursor.pos == 0)
+//            return;
+//        removingArea.pos = o->textCursor.pos;
+//        removingArea.len = 1;
+//        LPM_TextStorage_replace(o->modules->textStorage, &removingArea, NULL);
+//    }
+
+//    PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
+//    PageFormatter_updateDisplay(o->modules->pageFormatter);
     //_printLineMap(o);
 }
 
@@ -217,3 +242,70 @@ void _undoHandler(Core * o) { (void)o; }
 void _outlineHelpCmdHandler(Core * o) { (void)o; }
 void _outlineStateHandler(Core * o) { (void)o; }
 void _timeoutCmdHandler(Core * o) { (void)o; }
+
+void _processEnteredChar(Core * o)
+{
+    Unicode_Buf text;
+    CmdReader_getText(o->modules->cmdReader, &text);
+    if(_checkInputText(o, &text))
+    {
+        LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
+        o->textCursor.pos += text.size;
+        if(o->textCursor.len > 0)
+        {
+            o->textCursor.len = 0;
+//            if(CmdReader_isReplacementMode(o->modules->cmdReader))
+//                ; // Удалить следующий символ
+        }
+    }
+}
+
+bool _checkInputText(Core * o, Unicode_Buf * text)
+{
+    // Проверка символа:
+    // 1. Загрузить в буфер строки N предыдущих символов
+    // 2. В цикле:
+    //  2.1. Вызвать функцию проверки модуля LPM_TextOperator
+    //  2.2. Если прошел проверку, записать из буфера текста в буфер строки
+    // 3. Записать указатель на новый текст (который лежит в буфере строки),
+    //    а также его размер, в структуру text
+
+    const size_t chrAmount = 10;
+    Unicode_Buf buf =
+    {
+        o->modules->lineBuffer.data,
+        o->textCursor.pos < chrAmount ? o->textCursor.pos : chrAmount
+    };
+    test_print("!", buf.data, 42);
+    LPM_TextStorage_read(o->modules->textStorage, o->textCursor.pos-buf.size, &buf);
+    test_print("!", buf.data[0], 42);
+    unicode_t * pchr = o->modules->lineBuffer.data+buf.size;//_loadPrevChars(o, chrAmount);
+    unicode_t * newchr = pchr;
+    size_t i;
+    for(i = 0; i < text->size; i++, newchr++)
+        if(LPM_TextOperator_checkInputChar(o->modules->textOperator, text->data[i], newchr))
+            *newchr++ = text->data[i];
+        else
+            break;
+    text->data = pchr;
+    text->size = i;
+    return i != 0;
+
+//    const size_t chrAmount = 10;
+//    unicode_t * pchr = _loadPrevChars(o, chrAmount);
+//    unicode_t * const base = pchr + chrAmount;
+//    while()
+
+//    if(o->textCursor.pos > 0)
+//    {
+
+//        if(pos > 0)
+//        {
+//            size_t loadLen = pos < 10 ? pos : 10;
+//            unicode_t * pchr = _loadLine(o, pos-loadLen, loadLen) + loadLen;
+//            pos -= pchr - LPM_TextOperator_prevChar(o->modules->textOperator, pchr);
+//        }
+//    }
+//    LPM_TextOperator_checkInputChar(o->modules->textOperator, c, pchr);
+//    return true;
+}

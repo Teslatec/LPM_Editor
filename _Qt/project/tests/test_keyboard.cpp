@@ -4,8 +4,8 @@
 #include <QEventLoop>
 #include <QDebug>
 
-const int SPEC_SYM_D1  = 0x0301;
-const int SPEC_SYM_D2  = 0x0302;
+const int SPEC_SYM_D1  = 0x0308;
+const int SPEC_SYM_D2  = 0x0306;
 const int SPEC_SYM_D12 = 0x0303;
 
 static void read( LPM_UnicodeKeyboard * i,
@@ -44,8 +44,8 @@ void read( LPM_UnicodeKeyboard * i,
 
     if(kc->code == SPEC_SYM_D12)
     {
-        buf->data[0] = SPEC_SYM_D1;
-        buf->data[1] = SPEC_SYM_D2;
+        buf->data[0] = 0x435;
+        buf->data[1] = 0x308;
         buf->size    = 2;
     }
     else
