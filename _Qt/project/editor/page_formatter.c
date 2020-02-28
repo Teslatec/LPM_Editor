@@ -79,7 +79,7 @@ static bool _areaIntersect( size_t firstBegin,
 
 static bool _posWithinRange(size_t pos, size_t rangeBegin, size_t rangeEnd);
 
-static void _textCursorToDisplayCursor(Obj * o, const SlcCurs * curs, DspCurs * dspCurs);
+static void _updateDisplayCursorByTextCursor(Obj * o, const SlcCurs * curs);
 static size_t _calcDisplayCursorByLineMapAnalizing(Obj * o, const SlcCurs * txtCurs, DspCurs * dspCurs);
 static void _setDisplayCursorValueForEmptyPage(DspCurs * curs);
 static void _setDisplayCursorInvalidValue(DspCurs * curs);
@@ -107,8 +107,16 @@ static uint32_t _getGoalFlagValue(uint32_t flags);
 static uint32_t _getDirectionFlagValue(uint32_t flags);
 static uint32_t _getBorderFlagValue(uint32_t flags);
 
-static void _saveDisplayCursor(Obj * o, const DspCurs * dspCurs);
-static void _updateLineChangedFlagsWhenDisplayCursorChanged(Obj * o, DspCurs const * newLineCurs);
+static void _saveTextCursor(Obj * o, const SlcCurs * textCurs);
+static void _updateLineChangedFlagsWhenTextCursorChanged(Obj * o, const SlcCurs * newTextCursor);
+static void _calcSymmetricDifference
+        ( const SlcCurs * src1,
+          const SlcCurs * src2,
+          SlcCurs * dst1,
+          SlcCurs * dst2 );
+static void _normalizeTextCursorAndFillBeginEnd(const SlcCurs * curs, size_t * begin, size_t * end);
+static void _updateLineChangedFlagsByTextCursorChanging
+        (Obj * o, const SlcCurs * symDiff1, const SlcCurs * symmDiff2);
 
 
 static void _formatLineForDisplay(Obj * o, const LineMap * lineMap, size_t lineOffset);
@@ -127,19 +135,18 @@ void PageFormatter_startWithPageAtTextPosition
         ( PageFormatter * o,
           const LPM_SelectionCursor * curs )
 {
-    DspCurs dspCurs;
     _setFirstPageInGroup(o, 0);
     _changePageIfNotOnCurrTextPosition(o, curs->pos);
-    _textCursorToDisplayCursor(o, curs, &dspCurs);
-    _saveDisplayCursor(o, &dspCurs);
+    _updateDisplayCursorByTextCursor(o, curs);
+    _saveTextCursor(o, curs);
 }
 
 void PageFormatter_updatePageWhenTextChanged
         ( PageFormatter * o,
           const LPM_SelectionCursor * curs )
 {
-    //_resetAllLineChangedFlags(o);
-    _setAllLineChangedFlags(o);
+    _resetAllLineChangedFlags(o);
+    //_setAllLineChangedFlags(o);
     _updateLinesMap(o);
     _updatePageByTextCursor(o, curs);
 }
@@ -150,8 +157,8 @@ void PageFormatter_updatePageWhenCursorMoved
       uint32_t moveFlags,
       LPM_SelectionCursor * textCurs )
 {
-    //_resetAllLineChangedFlags(o);
-    _setAllLineChangedFlags(o);
+    _resetAllLineChangedFlags(o);
+    //_setAllLineChangedFlags(o);
     if(!_moveFlagsToTextCursor(o, moveFlags, textCurs))
         _updatePageByTextCursor(o, textCurs);
 }
@@ -186,17 +193,16 @@ void PageFormatter_updateDisplay
 
 void _updatePageByTextCursor(Obj * o, const SlcCurs * curs)
 {
-    DspCurs dspCurs;
     if(!_changePageIfNotOnCurrTextPosition(o, curs->pos))
     {
-        _textCursorToDisplayCursor(o, curs, &dspCurs);
-        _updateLineChangedFlagsWhenDisplayCursorChanged(o, &dspCurs);
+        _updateDisplayCursorByTextCursor(o, curs);
+        _updateLineChangedFlagsWhenTextCursorChanged(o, curs);
     }
     else
     {
-        _textCursorToDisplayCursor(o, curs, &dspCurs);
+        _updateDisplayCursorByTextCursor(o, curs);
     }
-    _saveDisplayCursor(o, &dspCurs);
+    _saveTextCursor(o, curs);
 }
 
 void _setFirstPageInGroup(Obj * o, size_t groupIndex)
@@ -539,7 +545,7 @@ bool _areaIntersect( size_t firstBegin,
     if(secondBegin == secondEnd)
         return false;
 
-    if(secondBegin >= firstEnd)
+    if(secondBegin > firstEnd)
         return false;
 
     if(secondEnd <= firstBegin)
@@ -554,24 +560,24 @@ bool _posWithinRange(size_t pos, size_t rangeBegin, size_t rangeEnd)
 }
 
 
-void _textCursorToDisplayCursor(Obj * o, const SlcCurs * curs, DspCurs * dspCurs)
+void _updateDisplayCursorByTextCursor(Obj * o, const SlcCurs * curs)
 {
     // Т.к. все остальные подфункции предполагают, что на странице должна быть
     //  хотя бы одна строка с ненулевой длиной, то полностью пустая страница
     //  является исключительным случаем - для нее своя ветка
     if(_isCurrPageEmpty(o))
     {
-        _setDisplayCursorValueForEmptyPage(dspCurs);
+        _setDisplayCursorValueForEmptyPage(&o->displayCursor);
     }
     else
     {
-        _setDisplayCursorInvalidValue(dspCurs);
-        size_t lastNotEmptyLineIndex = _calcDisplayCursorByLineMapAnalizing(o, curs, dspCurs);
+        _setDisplayCursorInvalidValue(&o->displayCursor);
+        size_t lastNotEmptyLineIndex = _calcDisplayCursorByLineMapAnalizing(o, curs, &o->displayCursor);
 
         if(_isCurrPageLast(o))
         {
-            _validateDisplayCursorPointIfInvalid(o, lastNotEmptyLineIndex, &dspCurs->begin);
-            _validateDisplayCursorPointIfInvalid(o, lastNotEmptyLineIndex, &dspCurs->end);
+            _validateDisplayCursorPointIfInvalid(o, lastNotEmptyLineIndex, &o->displayCursor.begin);
+            _validateDisplayCursorPointIfInvalid(o, lastNotEmptyLineIndex, &o->displayCursor.end);
         }
     }
 }
@@ -795,10 +801,7 @@ bool _moveCursorToPageBorder(Obj * o, uint32_t borderFlag, SlcCurs * textCurs)
         textCurs->pos = _calcCurrPageFirstLineBase(o);
     }
 
-    DspCurs dspCurs;
-    _textCursorToDisplayCursor(o, textCurs, &dspCurs);
-    _saveDisplayCursor(o, &dspCurs);
-
+    _updateDisplayCursorByTextCursor(o, textCurs);
     return true;
 }
 
@@ -1042,18 +1045,121 @@ uint32_t _getBorderFlagValue(uint32_t flags)
     return flags & CURSOR_BORDER_FIELD;
 }
 
-void _saveDisplayCursor(Obj * o, const DspCurs * dspCurs)
+void _saveTextCursor(Obj * o, const SlcCurs * textCurs)
 {
-    memcpy(&o->displayCursor, dspCurs, sizeof(DspCurs));
+    memcpy(&o->textCursor, textCurs, sizeof(SlcCurs));
 }
 
-void _updateLineChangedFlagsWhenDisplayCursorChanged(Obj * o, DspCurs const * newLineCurs)
+void _updateLineChangedFlagsWhenTextCursorChanged(Obj * o, const SlcCurs * newTextCursor)
 {
-    // TODO: обновление флагов изменения строк при обновлении курсора дисплея
-    // - вычислить симметрическую разницу
-    // - обновить флаги
+    // Симметрическая разность - области двух множеств, которые принадлежат
+    //  только какому-то одному из них. Т.е. это объединение минус пересечение.
+    SlcCurs symDiff1;
+    SlcCurs symDiff2;
+    _calcSymmetricDifference(&o->textCursor, newTextCursor, &symDiff1, &symDiff2);
+    _updateLineChangedFlagsByTextCursorChanging(o, &symDiff1, &symDiff2);
 }
 
+void _calcSymmetricDifference (const SlcCurs * src1, const SlcCurs * src2, SlcCurs * dst1, SlcCurs * dst2)
+{
+    // Чтобы расчитать симметрическую разность, нужно отсортировать абсолютные
+    //  значения позиций начала и конца каждого интервала, первые два из них
+    //  будут в первом результирующем интервале, остальные - во втором:
+    //   Интервал 1:  ||||||||||||
+    //   Интервал 2:        ||||||||||||
+    //   Разность:    ||||||      ||||||
+
+    // Сортируем так:
+    //  1. Сначала определяем, какой интервал левее
+    //  2. Далее, если конец левого <= начала правого, то позиции уже
+    //     отсортированы
+    //  3. Иначе начало второго лежит до конца первого. Теперь проверяем, что
+    //     конец правого < конца левого и ставим интервалы.
+
+    // Еще до начала сортировки: если длина интервала равна 0, то нужно ее
+    //  принудительно установить в 1. Это потому что 0 соответствует нулевой
+    //  длине области выделения (т.е. простому курсорву ввода). Однако на
+    //  экране курсор все-таки одно знакоместо занимает, а значит и область
+    //  нужно увеличить на 1
+
+    size_t leftBegin;
+    size_t leftEnd;
+    size_t rightBegin;
+    size_t rightEnd;
+
+    // 1й: |||||||
+    // 2й:     |||||||
+    if(src1->pos <= src2->pos)
+    {
+        _normalizeTextCursorAndFillBeginEnd(src1, &leftBegin, &leftEnd);
+        _normalizeTextCursorAndFillBeginEnd(src2, &rightBegin, &rightEnd);
+    }
+    // 1й:     |||||||
+    // 2й: |||||||
+    else
+    {
+        _normalizeTextCursorAndFillBeginEnd(src2, &leftBegin, &leftEnd);
+        _normalizeTextCursorAndFillBeginEnd(src1, &rightBegin, &rightEnd);
+    }
+
+    // левый:  ||||||
+    // правый:         ||||||
+    // итог:   ||||||  ||||||
+    if(leftEnd <= rightBegin)
+    {
+        dst1->pos = leftBegin;
+        dst1->len = leftEnd - leftBegin;
+        dst2->pos = rightBegin;
+        dst2->len = rightEnd - rightBegin;
+    }
+    // левый:  ||||||||||||||
+    // правый:     ||||||
+    // итог:   ||||      ||||
+    else if(rightEnd < leftEnd)
+    {
+        dst1->pos = leftBegin;
+        dst1->len = rightBegin - leftBegin;
+        dst2->pos = rightEnd;
+        dst2->len = leftEnd - rightEnd;
+    }
+    // левый:  ||||||||
+    // правый:     ||||||||||
+    // итог:   ||||    ||||||
+    else
+    {
+        dst1->pos = leftBegin;
+        dst1->len = rightBegin - leftBegin;
+        dst2->pos = leftEnd;
+        dst2->len = rightEnd - leftEnd;
+    }
+}
+
+void _normalizeTextCursorAndFillBeginEnd(const SlcCurs * curs, size_t * begin, size_t * end)
+{
+    *begin = curs->pos;
+    *end   = curs->pos + (curs->len > 0 ? curs->len : 1);
+}
+
+void _updateLineChangedFlagsByTextCursorChanging(Obj * o, const SlcCurs * symDiff1, const SlcCurs * symmDiff2)
+{
+    const LineMap * lineMap = o->pageStruct.lineMapTable;
+    const LineMap * const end = lineMap + LINE_AMOUNT;
+    size_t lineBase = _calcCurrPageFirstLineBase(o);
+    size_t lineIndex = 0;
+    for( ; lineMap != end; lineBase += lineMap->fullLen, lineMap++, lineIndex++)
+    {
+        if(lineMap->fullLen == 0)
+        {
+            _setLineChangedFlag(o, lineIndex);
+            _setLineChangedFlag(o, lineIndex+1);
+            break;
+        }
+        if(_changedTextCrossesLine(symDiff1, lineBase, lineMap->fullLen))
+            _setLineChangedFlag(o, lineIndex);
+        if(_changedTextCrossesLine(symmDiff2, lineBase, lineMap->fullLen))
+            _setLineChangedFlag(o, lineIndex);
+    }
+}
 
 void _formatLineForDisplay(Obj * o, const LineMap * lineMap, size_t lineOffset)
 {

@@ -42,6 +42,7 @@ typedef struct PageFormatter
     PageStruct pageStruct;
     uint32_t lineChangedFlags;
     LPM_DisplayCursor displayCursor;
+    LPM_SelectionCursor textCursor;
     bool selectBackward;
 } PageFormatter;
 
