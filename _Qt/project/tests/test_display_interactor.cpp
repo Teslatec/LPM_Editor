@@ -30,10 +30,12 @@ Q_DECLARE_METATYPE(TestDisplayViewModel)
 TestDisplayInteractor::TestDisplayInteractor( int symbolAmount,
                                               int lineAmount,
                                               bool latencyEnabled_,
+                                              bool selectAreaUnderlined_,
                                               QObject * parent )
     : QObject(parent)
     , vm(symbolAmount, lineAmount)
     , latencyEnabled(latencyEnabled_)
+    , selectAreaUnderlined(selectAreaUnderlined_)
     , html()
 {
     qRegisterMetaType<TestDisplayViewModel>();
@@ -67,18 +69,21 @@ void TestDisplayInteractor::write(QString data, QPoint point)
 
 void TestDisplayInteractor::writeLine(int index, QString line, QPoint curs)
 {
-
-    html[index] = TestDisplayHtmlConvertor::convertLine(line, curs);
-    for(auto & sym : html[index])
-        if(sym == QChar(' '))
-            sym = QChar(0x2591);
+    html[index] = TestDisplayHtmlConvertor::convertLine(line, curs, selectAreaUnderlined);
+//    for(auto & sym : html[index])
+//    {
+//        if(sym == QChar(' '))
+//            sym = QChar(0x2593);
+//        else if(sym == QChar(0x2591))
+//            sym = QChar(0x2592);
+//    }
 
     if(latencyEnabled)
         QThread::msleep(12);
-    //waitForGuiRepaint();
-    QString text;
+    QString text = "<PRE><span style=\" color:#FABD05;\">"; //#FFC90E
     for(const auto & line : html)
         text += line;
+    text += "</span></PRE>";
     emit _htmlTextChanged(text);
     emit _lineUpdated(index);
 }
@@ -91,6 +96,11 @@ QString TestDisplayInteractor::toString() const
 void TestDisplayInteractor::onSetDisplayLatencyEnabled(bool state)
 {
     latencyEnabled = state;
+}
+
+void TestDisplayInteractor::onSetDisplaySelectAreaUnderlined(bool state)
+{
+    selectAreaUnderlined = state;
 }
 
 void TestDisplayInteractor::waitForGuiRepaint()

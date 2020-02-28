@@ -12,6 +12,7 @@ public:
     explicit TestDisplayInteractor( int symbolAmount,
                                     int lineAmount,
                                     bool latencyEnabled_,
+                                    bool selectAreaUnderlined_,
                                     QObject * parent = nullptr );
     void clear();
     void write(QString data, QPoint point);
@@ -21,6 +22,7 @@ public:
 
 public slots:
     void onSetDisplayLatencyEnabled(bool state);
+    void onSetDisplaySelectAreaUnderlined(bool state);
 
 signals:
     void _htmlTextChanged(QString html);
@@ -31,6 +33,7 @@ signals:
 private:
     TestDisplayViewModel vm;
     bool latencyEnabled;
+    bool selectAreaUnderlined;
     QStringList html;
 
     void waitForGuiRepaint();    

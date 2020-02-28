@@ -21,14 +21,19 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     QSettings s;
+    //ui->textEdit->setStyleSheet("border-image: url(test.png)");
+    ui->textEdit->setStyleSheet("background-image: url(test.png)");
+    //qDebug() << ui->textEdit->geometry().width() << ui->textEdit->geometry().height();
     ui->ckbxLatency->setChecked(s.value("LATENCY_ENABLED", false).toBool());
+    ui->ckbxSelectionAreaByUnderlying->setChecked(s.value("SELECT_UNDERLINE", false).toBool());
 
     connect(ui->pbLaunchEditor, &QPushButton::clicked, [this]()
     {
-        testTextEditor->start(ui->textEdit, ui->ckbxLatency->isChecked());
+        testTextEditor->start(ui->textEdit, ui->ckbxLatency->isChecked(), ui->ckbxSelectionAreaByUnderlying->isChecked());
     });
 
     ui->pbLaunchEditor->click();
+
 
     connect( testTextEditor, &TestTextEditor::_lineUpdated,
              this, &MainWindow::onLineUpdated );
@@ -36,6 +41,8 @@ MainWindow::MainWindow(QWidget *parent)
              this, &MainWindow::onResetLinesUpdating );
     connect( ui->ckbxLatency, &QCheckBox::clicked,
              testTextEditor, &TestTextEditor::gui_set_display_latency_enabled );
+    connect( ui->ckbxSelectionAreaByUnderlying, &QCheckBox::clicked,
+             testTextEditor, &TestTextEditor::gui_set_display_outline_select_area_underlined );
 
     lineUpdateResetTimer->setInterval(LINE_UPDATE_RESET_TIMER_VALUE);
     lineUpdateResetTimer->setSingleShot(true);
@@ -49,6 +56,7 @@ MainWindow::~MainWindow()
     keyPressEvent(&evt);
     QSettings s;
     s.setValue("LATENCY_ENABLED", ui->ckbxLatency->isChecked());
+    s.setValue("SELECT_UNDERLINE", ui->ckbxSelectionAreaByUnderlying->isChecked());
     delete ui;
 }
 

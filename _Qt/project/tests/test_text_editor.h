@@ -19,11 +19,13 @@ signals:
     void _lineUpdated(int lineIndex);
     void _resetLinesUpdating();
     void _setDisplayLatencyEnabled(bool state);
+    void _setDisplaySelectAreaUnderlined(bool state);
 
 public slots:
-    void start(QTextEdit * textEdit, bool displayLatencyEnabled);
+    void start(QTextEdit * textEdit, bool displayLatencyEnabled, bool selectAreaUnderlined);
     void gui_key_event(QKeyEvent * evt);
     void gui_set_display_latency_enabled(bool state);
+    void gui_set_display_outline_select_area_underlined(bool state);
 };
 
 #endif // TEST_TEXT_EDITOR_H

@@ -121,33 +121,9 @@ void _printTextCursor(Core * o)
 
 void _cursorChangedCmdHandler(Core * o)
 {
-    //size_t endOfText = LPM_TextStorage_endOfText(o->modules->textStorage);
     uint16_t flags = CmdReader_getFlags(o->modules->cmdReader);
     PageFormatter_updatePageWhenCursorMoved(o->modules->pageFormatter, flags, &o->textCursor);
     PageFormatter_updateDisplay(o->modules->pageFormatter);
-//    if((flags & CURSOR_FLAG_MOVE) == CURSOR_FLAG_MOVE)
-//    {
-//        if((flags & CURSOR_FLAG_CHAR) == CURSOR_FLAG_CHAR)
-//        {
-//            if((flags & (3<<3)) == CURSOR_FLAG_DOWN)
-//            {
-//                o->textCursor.pos += 1000;
-//                if(o->textCursor.pos > endOfText)
-//                    o->textCursor.pos = endOfText;
-//            }
-//            if((flags & (3<<3)) == CURSOR_FLAG_UP)
-//            {
-//                if(o->textCursor.pos < 1000)
-//                    o->textCursor.pos = 0;
-//                else
-//                    o->textCursor.pos -= 1000;
-//            }
-
-//            PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
-//            PageFormatter_updateDisplay(o->modules->pageFormatter);
-//        }
-//    }
-    //_printLineMap(o);
 }
 
 void _textChangedCmdHandler(Core * o)
@@ -155,6 +131,7 @@ void _textChangedCmdHandler(Core * o)
     Unicode_Buf text;
     SlcCurs area;
     uint16_t flags = CmdReader_getFlags(o->modules->cmdReader);
+    bool isReplaceMode = CmdReader_isReplacementMode(o->modules->cmdReader);
 
     if(flags == TEXT_FLAG_TEXT)
     {
@@ -221,24 +198,22 @@ void _textChangedCmdHandler(Core * o)
     //_printLineMap(o);
 }
 
-void _deleteCmdHandler(Core * o)
+void _changeModeCmdHandler(Core * o)
 {
-    if(o->textCursor.pos == 0)
-        return;
-    SlcCurs area = { o->textCursor.pos-1, 1 };
-    LPM_TextStorage_replace(o->modules->textStorage, &area, NULL);
-    o->textCursor.pos--;
     PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
     PageFormatter_updateDisplay(o->modules->pageFormatter);
 }
 
-void _changeModeCmdHandler(Core * o) { (void)o; }
 void _copyCmdHandler(Core * o) { (void)o; }
 void _pastCmdHandler(Core * o) { (void)o; }
 void _cutCmdHandler(Core * o) { (void)o; }
-void _saveCmdHandler(Core * o) { (void)o; }
+
 void _clearClipboardCmdHandler(Core * o) { (void)o; }
+
+void _saveCmdHandler(Core * o) { (void)o; }
+
 void _undoHandler(Core * o) { (void)o; }
+
 void _outlineHelpCmdHandler(Core * o) { (void)o; }
 void _outlineStateHandler(Core * o) { (void)o; }
 void _timeoutCmdHandler(Core * o) { (void)o; }

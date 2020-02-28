@@ -23,10 +23,10 @@ QString makeLineWithHighlighting(const QString & line, int xBegin, int xEnd);
 QString makeLineWithHighlightingBegin(const QString & line, int x);
 QString makeLineWithHighlightingEnd(const QString & line, int x);
 
-QString makeMidHighlightedLine(const QString & line, int highlightingBegin, int highlightingEnd);
-QString makeLeftHighlightedLine(const QString & line, int highlightingBorder);
-QString makeRightHighlightedLine(const QString & line, int highlightingBorder);
-QString makeFullHighlightedLine(const QString & line);
+QString makeMidHighlightedLine(const QString & line, int highlightingBegin, int highlightingEnd, bool underlined);
+QString makeLeftHighlightedLine(const QString & line, int highlightingBorder, bool underlined);
+QString makeRightHighlightedLine(const QString & line, int highlightingBorder, bool underlined);
+QString makeFullHighlightedLine(const QString & line, bool underlined);
 QString makeLineWithoutCursor(const QString & line);
 QString makeCursoredLine(const QString & line, int cursorPosition);
 
@@ -43,7 +43,7 @@ QString TestDisplayHtmlConvertor::convert( const QStringList & src,
     return convertTextWithMultiLineHighlighted(src, cursorBegin, cursorEnd);
 }
 
-QString TestDisplayHtmlConvertor::convertLine(const QString & line, const QPoint & curs)
+QString TestDisplayHtmlConvertor::convertLine(const QString & line, const QPoint & curs, bool selectAreaUnderlined)
 {
     int cursPos = curs.x();
     int cursLen = curs.y();
@@ -57,12 +57,12 @@ QString TestDisplayHtmlConvertor::convertLine(const QString & line, const QPoint
 
     if(cursPos == 0)
         return cursLen < lineLen ?
-                    makeLeftHighlightedLine(line, cursLen) :
-                    makeFullHighlightedLine(line);
+                    makeLeftHighlightedLine(line, cursLen, selectAreaUnderlined) :
+                    makeFullHighlightedLine(line, selectAreaUnderlined);
 
     return (cursPos + cursLen) < lineLen ?
-                makeMidHighlightedLine(line, cursPos, cursPos + cursLen) :
-                makeRightHighlightedLine(line, cursPos);
+                makeMidHighlightedLine(line, cursPos, cursPos + cursLen, selectAreaUnderlined) :
+                makeRightHighlightedLine(line, cursPos, selectAreaUnderlined);
 }
 
 QString convertTextWithoutHighlighting( const QStringList & src,
@@ -157,28 +157,40 @@ QString makeLineWithHighlightingEnd(const QString & line, int x)
     return html;
 }
 
-QString makeMidHighlightedLine(const QString & line, int highlightingBegin, int highlightingEnd)
+QString makeMidHighlightedLine(const QString & line, int highlightingBegin, int highlightingEnd, bool underlined)
 {
-    return line.mid(0, highlightingBegin) + htmlHighlightingBegin +
-            line.mid(highlightingBegin, highlightingEnd-highlightingBegin) + htmlHighlightingEnd +
+    QString hbegin = underlined ? htmlCursorBegin : htmlHighlightingBegin;
+    QString hend = underlined ? htmlCursorEnd : htmlHighlightingEnd;
+
+    return line.mid(0, highlightingBegin) + hbegin +
+            line.mid(highlightingBegin, highlightingEnd-highlightingBegin) + hend +
             line.mid(highlightingEnd) + htmlLineFeed;
 }
 
-QString makeLeftHighlightedLine(const QString & line, int highlightingBorder)
+QString makeLeftHighlightedLine(const QString & line, int highlightingBorder, bool underlined)
 {
-    return htmlHighlightingBegin + line.mid(0, highlightingBorder) +
-            htmlHighlightingEnd + line.mid(highlightingBorder) + htmlLineFeed;
+    QString hbegin = underlined ? htmlCursorBegin : htmlHighlightingBegin;
+    QString hend = underlined ? htmlCursorEnd : htmlHighlightingEnd;
+
+    return hbegin + line.mid(0, highlightingBorder) +
+            hend + line.mid(highlightingBorder) + htmlLineFeed;
 }
 
-QString makeRightHighlightedLine(const QString & line, int highlightingBorder)
+QString makeRightHighlightedLine(const QString & line, int highlightingBorder, bool underlined)
 {
-    return line.mid(0, highlightingBorder) + htmlHighlightingBegin +
-            line.mid(highlightingBorder) + htmlHighlightingEnd + htmlLineFeed;
+    QString hbegin = underlined ? htmlCursorBegin : htmlHighlightingBegin;
+    QString hend = underlined ? htmlCursorEnd : htmlHighlightingEnd;
+
+    return line.mid(0, highlightingBorder) + hbegin +
+            line.mid(highlightingBorder) + hend + htmlLineFeed;
 }
 
-QString makeFullHighlightedLine(const QString & line)
+QString makeFullHighlightedLine(const QString & line, bool underlined)
 {
-    return htmlHighlightingBegin + line + htmlHighlightingEnd + htmlLineFeed;
+    QString hbegin = underlined ? htmlCursorBegin : htmlHighlightingBegin;
+    QString hend = underlined ? htmlCursorEnd : htmlHighlightingEnd;
+
+    return hbegin + line + hend + htmlLineFeed;
 }
 
 QString makeLineWithoutCursor(const QString & line)

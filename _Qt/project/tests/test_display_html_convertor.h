@@ -11,7 +11,7 @@ public:
                             QPoint cursorBegin,
                             QPoint cursorEnd );
 
-    static QString convertLine(const QString & line, const QPoint & curs);
+    static QString convertLine(const QString & line, const QPoint & curs, bool selectAreaUnderlined);
 };
 
 #endif // TEST_DISPLAY_HTML_CONVERTOR_H

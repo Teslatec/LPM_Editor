@@ -146,7 +146,6 @@ void PageFormatter_updatePageWhenTextChanged
           const LPM_SelectionCursor * curs )
 {
     _resetAllLineChangedFlags(o);
-    //_setAllLineChangedFlags(o);
     _updateLinesMap(o);
     _updatePageByTextCursor(o, curs);
 }
@@ -158,7 +157,6 @@ void PageFormatter_updatePageWhenCursorMoved
       LPM_SelectionCursor * textCurs )
 {
     _resetAllLineChangedFlags(o);
-    //_setAllLineChangedFlags(o);
     if(!_moveFlagsToTextCursor(o, moveFlags, textCurs))
         _updatePageByTextCursor(o, textCurs);
 }
@@ -802,6 +800,7 @@ bool _moveCursorToPageBorder(Obj * o, uint32_t borderFlag, SlcCurs * textCurs)
     }
 
     _updateDisplayCursorByTextCursor(o, textCurs);
+    _saveTextCursor(o, textCurs);
     return true;
 }
 

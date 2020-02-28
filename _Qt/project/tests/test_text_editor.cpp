@@ -18,9 +18,9 @@ TestTextEditor::TestTextEditor(QObject * p)
     : QObject(p)
 {}
 
-void TestTextEditor::start(QTextEdit * textEdit, bool displayLatencyEnabled)
+void TestTextEditor::start(QTextEdit * textEdit, bool displayLatencyEnabled, bool selectAreaUnderlined)
 {
-    QtConcurrent::run([this, textEdit, displayLatencyEnabled]()
+    QtConcurrent::run([this, textEdit, displayLatencyEnabled, selectAreaUnderlined]()
     {
         TestKeyboardKeyCatcher kc;
         connect( this, &TestTextEditor::_gotKey,
@@ -29,7 +29,7 @@ void TestTextEditor::start(QTextEdit * textEdit, bool displayLatencyEnabled)
         TestKeyboard kbrd;
         TestKeyboard_init(&kbrd, &kc);
 
-        TestDisplayInteractor itc(64, 16, displayLatencyEnabled);
+        TestDisplayInteractor itc(64, 16, displayLatencyEnabled, selectAreaUnderlined);
         connect( this, &TestTextEditor::_textUpdated,
                  &itc, &TestDisplayInteractor::_htmlTextUpdated );
         connect( &itc, &TestDisplayInteractor::_htmlTextChanged, this,
@@ -44,6 +44,8 @@ void TestTextEditor::start(QTextEdit * textEdit, bool displayLatencyEnabled)
                  this, &TestTextEditor::_resetLinesUpdating );
         connect( this, &TestTextEditor::_setDisplayLatencyEnabled,
                  &itc, &TestDisplayInteractor::onSetDisplayLatencyEnabled );
+        connect( this, &TestTextEditor::_setDisplaySelectAreaUnderlined,
+                 &itc, &TestDisplayInteractor::onSetDisplaySelectAreaUnderlined );
         TestDisplay dsp;
         TestDisplay_init(&dsp, &itc);
 
@@ -72,5 +74,10 @@ void TestTextEditor::gui_key_event(QKeyEvent * evt)
 void TestTextEditor::gui_set_display_latency_enabled(bool state)
 {
     emit _setDisplayLatencyEnabled(state);
+}
+
+void TestTextEditor::gui_set_display_outline_select_area_underlined(bool state)
+{
+    emit _setDisplaySelectAreaUnderlined(state);
 }
 
