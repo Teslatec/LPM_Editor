@@ -4,6 +4,7 @@
 #include "page_formatter.h"
 #include "lpm_text_operator.h"
 #include "lpm_lang.h"
+#include "line_buffer_support.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -13,6 +14,7 @@ typedef LPM_SelectionCursor SlcCurs;
 typedef void(*CmdHandler)(Core*);
 
 #define CMD_READER_TIMEOUT 2500
+#define CHAR_BUF_SIZE 10
 
 
 static const unicode_t chrCr = 0x000D;
@@ -43,6 +45,8 @@ static void _timeoutCmdHandler(Core * o);
 static void _processEnteredChar(Core * o);
 
 static bool _checkInputText(Core * o, Unicode_Buf * text);
+//static unicode_t * _loadPrevCharsToLineBuffer(Obj * o);
+//static unicode_t * _loadNextCharsTiLineBuffer(Obj * o);
 
 static void _printLineMap(Core * o);
 static void _printDisplayCursor(Core * o);
@@ -86,6 +90,8 @@ void Core_exec(Core * o)
         else if(cmd < __EDITOR_NO_CMD)
             (*(cmdHandlerTable[cmd]))(o);
     }
+
+    LPM_UnicodeDisplay_clearScreen(o->modules->display);
 }
 
 void _prepare(Obj * o)
@@ -262,50 +268,30 @@ void _processEnteredChar(Core * o)
 
 bool _checkInputText(Core * o, Unicode_Buf * text)
 {
-    // Проверка символа:
-    // 1. Загрузить в буфер строки N предыдущих символов
-    // 2. В цикле:
-    //  2.1. Вызвать функцию проверки модуля LPM_TextOperator
-    //  2.2. Если прошел проверку, записать из буфера текста в буфер строки
-    // 3. Записать указатель на новый текст (который лежит в буфере строки),
-    //    а также его размер, в структуру text
+    unicode_t * const inputBegin = LineBuffer_LoadTextBack(o->modules, o->textCursor.pos, CHAR_BUF_SIZE);
+    unicode_t * inputPtr = inputBegin;
+    const unicode_t * textPtr = text->data;
+    const unicode_t * const textEnd = textPtr + text->size;
 
-    const size_t chrAmount = 10;
-    Unicode_Buf buf =
-    {
-        o->modules->lineBuffer.data,
-        o->textCursor.pos < chrAmount ? o->textCursor.pos : chrAmount
-    };
-    test_print("!", buf.data, 42);
-    LPM_TextStorage_read(o->modules->textStorage, o->textCursor.pos-buf.size, &buf);
-    test_print("!", buf.data[0], 42);
-    unicode_t * pchr = o->modules->lineBuffer.data+buf.size;//_loadPrevChars(o, chrAmount);
-    unicode_t * newchr = pchr;
-    size_t i;
-    for(i = 0; i < text->size; i++, newchr++)
-        if(LPM_TextOperator_checkInputChar(o->modules->textOperator, text->data[i], newchr))
-            *newchr++ = text->data[i];
-        else
-            break;
-    text->data = pchr;
-    text->size = i;
-    return i != 0;
+    for( ; textPtr != textEnd; textPtr++)
+        if(LPM_TextOperator_checkInputChar(o->modules->textOperator, *textPtr, inputPtr))
+            *inputPtr++ = *textPtr;
 
-//    const size_t chrAmount = 10;
-//    unicode_t * pchr = _loadPrevChars(o, chrAmount);
-//    unicode_t * const base = pchr + chrAmount;
-//    while()
-
-//    if(o->textCursor.pos > 0)
-//    {
-
-//        if(pos > 0)
-//        {
-//            size_t loadLen = pos < 10 ? pos : 10;
-//            unicode_t * pchr = _loadLine(o, pos-loadLen, loadLen) + loadLen;
-//            pos -= pchr - LPM_TextOperator_prevChar(o->modules->textOperator, pchr);
-//        }
-//    }
-//    LPM_TextOperator_checkInputChar(o->modules->textOperator, c, pchr);
-//    return true;
+    text->data = inputBegin;
+    text->size = inputPtr - inputBegin;
+    return text->size != 0;
 }
+
+//unicode_t * _loadPrevCharsToLineBuffer(Obj * o)
+//{
+//    Unicode_Buf buf = { o->modules->lineBuffer.data, CHAR_BUF_SIZE };
+//    LPM_TextStorage_readBack(o->modules->textStorage, o->textCursor.pos, &buf);
+//    return buf.data + buf.size;
+//}
+
+//unicode_t * _loadNextCharsTiLineBuffer(Obj * o)
+//{
+//    Unicode_Buf buf = { o->modules->lineBuffer.data, CHAR_BUF_SIZE };
+//    LPM_TextStorage_read(o->modules->textStorage, o->textCursor.pos, &buf);
+//    return buf.data;
+//}

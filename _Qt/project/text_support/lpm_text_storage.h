@@ -19,7 +19,10 @@ void LPM_TextStorage_read
           size_t readPosition,
           Unicode_Buf * readTextBuffer );
 
-
+//void LPM_TextStorage_readBack
+//        ( LPM_TextStorage * o,
+//          size_t readPosition,
+//          Unicode_Buf * readTextBuffer );
 
 inline void LPM_TextStorage_init(LPM_TextStorage * o, Unicode_Buf * textBuffer)
 {

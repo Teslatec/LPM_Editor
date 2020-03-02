@@ -109,9 +109,9 @@ void TestDisplayInteractor::waitForGuiRepaint()
                                                       vm.cursorBegin,
                                                       vm.cursorEnd);
 
-    for(auto & sym : html)
-        if(sym == QChar(' '))
-            sym = QChar(0x2591);
+//    for(auto & sym : html)
+//        if(sym == QChar(' '))
+//            sym = QChar(0x2591);
 
 //    QEventLoop loop;
 //    connect( this, &TestDisplayInteractor::_htmlTextUpdated,

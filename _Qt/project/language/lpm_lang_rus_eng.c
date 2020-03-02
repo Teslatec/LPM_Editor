@@ -8,65 +8,41 @@ static const unicode_t chrIBig    = 0x0418;
 static const unicode_t chrISmall  = 0x0438;
 static const unicode_t chrEBig    = 0x0415;
 static const unicode_t chrESmall  = 0x0435;
+static const unicode_t chrRussianBegin = 0x0410;
+static const unicode_t chrRussianEnd   = 0x044f;
 
-static bool _withinBaseRussian(unicode_t chr);
-static bool _isDiacritic(unicode_t chr);
+static bool _belongsBaseRussian(unicode_t chr);
+static bool _isChrLetterI(unicode_t chr);
+static bool _isChrLetterE(unicode_t chr);
+static bool _isChrCratca(unicode_t chr);
+static bool _isChrUmlaut(unicode_t chr);
 
-bool LPM_LangRusEng_isCharBelongsToLang(const unicode_t * pchr)
+bool LPM_LangRusEng_checkInputChar(unicode_t inputChr, const unicode_t * pchr)
 {
-    const unicode_t chr = *pchr;
-
-    // Заглавные и строчные буквы от "А" до "я", кроме букв "Ё" и "ё"
-    if(_withinBaseRussian(chr))
+    if(_belongsBaseRussian(inputChr))
         return true;
 
-    // Буква "Ё"
-    if(chr == chrYoBig)
-        return true;
+    --pchr;
 
-    // Буква "ё"
-    if(chr == chrYoSmall)
-        return true;
+    if(_isChrCratca(inputChr))
+        return _isChrLetterI(*pchr);
 
-    // Диакритический знак "̆ " ("кратка")
-    if(chr == chrCratca)
-        return true;
-
-    // Диакритический знак "̈ " ("умлаут")
-    if(chr == chrUmlaut)
-        return true;
+    if(_isChrUmlaut(inputChr))
+        return _isChrLetterE(*pchr);
 
     return false;
 }
 
-bool LPM_LangRusEng_checkInputChar(unicode_t inputChr, const unicode_t * pchr)
-{
-    if(_isDiacritic(inputChr))
-    {
-        --pchr;
-        if(_isDiacritic(*pchr))
-            return false;
-        if(inputChr == chrCratca)
-            return (*pchr == chrIBig) || (*pchr == chrISmall);
-        if(inputChr == chrUmlaut)
-            return (*pchr == chrEBig) || (*pchr == chrESmall);
-        return false;
-    }
-    return true;
-}
-
 const unicode_t * LPM_LangRusEng_nextChar(const unicode_t * pchr)
 {
-    const unicode_t chr = *pchr;
-
-    if((chr == chrIBig) || (chr == chrISmall))
+    if(_isChrLetterI(pchr[0]))
     {
-        if(pchr[1] == chrCratca)
+        if(_isChrCratca(pchr[1]))
             ++pchr;
     }
-    else if((chr == chrEBig) || (chr == chrESmall))
+    else if(_isChrLetterE(pchr[0]))
     {
-        if(pchr[1] == chrUmlaut)
+        if(_isChrUmlaut(pchr[1]))
             ++pchr;
     }
     return ++pchr;
@@ -74,37 +50,25 @@ const unicode_t * LPM_LangRusEng_nextChar(const unicode_t * pchr)
 
 const unicode_t * LPM_LangRusEng_prevChar(const unicode_t * pchr)
 {
-    if((*pchr == chrCratca) || (*pchr == chrUmlaut) )
+    if(_isChrCratca(*pchr) || _isChrUmlaut(*pchr))
         --pchr;
     return pchr;
 }
 
-bool _withinBaseRussian(unicode_t chr)
+bool _belongsBaseRussian(unicode_t chr)
 {
-    return (chr >= 0x0410) && (chr <= 0x044f);
+    // Заглавные и строчные буквы от "А" до "я"
+    if((chr >= chrRussianBegin) && (chr <= chrRussianEnd))
+        return true;
+
+    // Буквы "Ё" и "ё" - отдельно
+    if((chr == chrYoBig) || (chr == chrYoSmall))
+        return true;
+
+    return false;
 }
 
-bool _isDiacritic(unicode_t chr)
-{
-    return (chr == chrIBig) || (chr == chrISmall);
-}
-
-//const unicode_t * LPM_LangRusEng_goToChar(const unicode_t * pchr, int32_t amount)
-//{
-//    if(amount == 0)
-//        return pchr;
-
-//    bool goForward = amount > 0;
-//    if(goForward)
-//    {
-//        for(size_t i = 0; i < amount; i++)
-//            pchr = _gotoNextChar(pchr);
-//    }
-//    else
-//    {
-//        amount = -amount;
-//        for(size_t i = 0; i < amount; i++)
-//            pchr = _gotoPrevChar(pchr);
-//    }
-//    return pchr;
-//}
+bool _isChrLetterI(unicode_t chr) { return (chr == chrIBig) || (chr == chrISmall); }
+bool _isChrLetterE(unicode_t chr) { return (chr == chrEBig) || (chr == chrESmall); }
+bool _isChrCratca(unicode_t chr)  { return chr == chrCratca; }
+bool _isChrUmlaut(unicode_t chr)  { return chr == chrUmlaut; }

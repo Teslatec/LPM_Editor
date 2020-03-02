@@ -86,6 +86,17 @@ void LPM_TextStorage_read
     TextBuffer_read(&o->storage, readPosition, readTextBuffer);
 }
 
+//void LPM_TextStorage_readBack
+//        ( LPM_TextStorage * o,
+//          size_t readPosition,
+//          Unicode_Buf * readTextBuffer )
+//{
+//    size_t requestedSize = readTextBuffer->size;
+//    size_t actualSize =
+//            readPosition < requestedSize ? readPosition : requestedSize;
+//    readTextBuffer->size = actualSize;
+//    TextBuffer_read(&o->storage, readPosition - actualSize, readTextBuffer);
+//}
 
 
 void _normalizeRemovingArea( const TextBuffer * textStorage,

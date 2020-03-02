@@ -43,14 +43,10 @@ bool LPM_TextOperator_checkInputChar
       unicode_t inputChr,
       const unicode_t * pchr )
 {
-    if(_charBelongsToBasicLatin(inputChr))
+    if( _charBelongsToBasicLatin(inputChr) ||
+            _atEndOfLine(inputChr) ||
+            _atEndOfText(inputChr))
         return true;
-
-    if(_atEndOfLine(*pchr) || _atEndOfText(*pchr))
-        return true;
-
-    if(!LPM_Lang_isCharBelongsToLang(o->lang, &inputChr))
-        return false;
 
     return LPM_Lang_checkInputChar(o->lang, inputChr, pchr);
 }
@@ -73,6 +69,10 @@ const unicode_t * LPM_TextOperator_prevChar
       const unicode_t * pchr )
 {
     --pchr;
+
+    if(_atEndOfText(*pchr))
+        return pchr;
+
     if(_atEndOfLine(*pchr))
         return _prevCharWhenEndOfLine(pchr);
 

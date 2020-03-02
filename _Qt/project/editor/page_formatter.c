@@ -3,6 +3,7 @@
 #include "lpm_text_operator.h"
 #include "crc16_table.h"
 #include "editor_flags.h"
+#include "line_buffer_support.h"
 
 #include <string.h>
 
@@ -445,7 +446,8 @@ size_t _updateLineMap(Obj * o, LineMap * lineMap, size_t lineBase)
 {
     bool endOfTextFind = false;
     const unicode_t * const begin =
-            _loadLine(o, lineBase, o->modules->lineBuffer.size);
+            LineBuffer_LoadText(o->modules, lineBase, o->modules->lineBuffer.size);
+            //_loadLine(o, lineBase, o->modules->lineBuffer.size);
 
     LPM_TextLineMap textLineMap;
     if(LPM_TextOperator_analizeLine( o->modules->textOperator,
@@ -945,8 +947,9 @@ size_t _movePosLeftAtChar(Obj * o, size_t pos)
 {
     if(pos > 0)
     {
-        size_t loadLen = pos < 10 ? pos : 10;
-        unicode_t * pchr = _loadLine(o, pos-loadLen, loadLen) + loadLen;
+        //size_t loadLen = pos < 10 ? pos : 10;
+        //unicode_t * pchr = _loadLine(o, pos-loadLen, loadLen) + loadLen;
+        unicode_t * pchr = LineBuffer_LoadTextBack(o->modules, pos, 10);
         pos -= pchr - LPM_TextOperator_prevChar(o->modules->textOperator, pchr);
     }
     return pos;
@@ -954,7 +957,8 @@ size_t _movePosLeftAtChar(Obj * o, size_t pos)
 
 size_t _movePosRightAtChar(Obj * o, size_t pos)
 {
-    unicode_t * pchr = _loadLine(o, pos, 10);
+    //unicode_t * pchr = _loadLine(o, pos, 10);
+    unicode_t * pchr = LineBuffer_LoadText(o->modules, pos, 10);
     pos += LPM_TextOperator_nextChar(o->modules->textOperator, pchr) - pchr;
     return pos;
 }
@@ -977,10 +981,12 @@ size_t _movePosUpAtChar(Obj * o, size_t textPos, const LPM_Point * dspPoint)
         else
         {
             textPos -= currLineX;
-            const unicode_t * pchr = _loadLine(o, textPos, o->modules->lineBuffer.size);
+//            const unicode_t * pchr = _loadLine(o, textPos, o->modules->lineBuffer.size);
+            const unicode_t * pchr = LineBuffer_LoadText(o->modules, textPos, o->modules->lineBuffer.size );
             size_t chrAmount = LPM_TextOperator_calcChrAmount(o->modules->textOperator, pchr, pchr+currLineX);
             textPos -= prevLine->fullLen;
-            pchr = _loadLine(o, textPos, o->modules->lineBuffer.size);
+            pchr = LineBuffer_LoadText(o->modules, textPos, o->modules->lineBuffer.size);
+//            pchr = _loadLine(o, textPos, o->modules->lineBuffer.size);
             textPos += LPM_TextOperator_nextNChar(o->modules->textOperator, pchr, chrAmount) - pchr;
         }
     }
@@ -1015,10 +1021,12 @@ size_t _movePosDownAtChar(Obj * o, size_t textPos, const LPM_Point * dspPoint)
     else
     {
         textPos -= currLineX;
-        const unicode_t * pchr = _loadLine(o, textPos, o->modules->lineBuffer.size);
+        //const unicode_t * pchr = _loadLine(o, textPos, o->modules->lineBuffer.size);
+        const unicode_t * pchr = LineBuffer_LoadText(o->modules, textPos, o->modules->lineBuffer.size );
         size_t chrAmount = LPM_TextOperator_calcChrAmount(o->modules->textOperator, pchr, pchr + currLineX);
         textPos += currLine->fullLen;
-        pchr = _loadLine(o, textPos, o->modules->lineBuffer.size);
+        //pchr = _loadLine(o, textPos, o->modules->lineBuffer.size);
+        pchr = LineBuffer_LoadText(o->modules, textPos, o->modules->lineBuffer.size);
         textPos += LPM_TextOperator_nextNChar(o->modules->textOperator, pchr, chrAmount) - pchr;
     }
     return textPos;
