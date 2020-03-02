@@ -69,7 +69,7 @@ void _createAndInit(const LPM_EditorParams * param)
     modules.textBuffer.data = (unicode_t*)param->textBuffer->data;
     modules.textBuffer.size = param->textBuffer->size / sizeof(unicode_t);
 
-    Core_init(&core, &modules);
+    Core_init(&core, &modules, LPM_END_OF_LINE_TYPE_CRLF);
     CmdReader_init(&cmdReader, param->kbd, &modules.keyboardBuffer);
     LPM_TextStorage_init(&textStorage, &modules.textBuffer);
     LPM_TextOperator_init(&textOperator, &lang);

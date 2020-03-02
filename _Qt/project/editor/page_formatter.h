@@ -65,4 +65,10 @@ void PageFormatter_updatePageWhenCursorMoved
 
 void PageFormatter_updateDisplay(PageFormatter * o);
 
+size_t PageFormatter_getCurrLinePos(PageFormatter * o);
+size_t PageFormatter_getCurrLineLen(PageFormatter * o);
+
+size_t PageFormatter_getCurrPagePos(PageFormatter * o);
+size_t PageFormatter_getCurrPageLen(PageFormatter * o);
+
 #endif // PAGE_FORMATTER_H

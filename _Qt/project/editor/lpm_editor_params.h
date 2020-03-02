@@ -5,6 +5,13 @@
 #include "lpm_unicode_display.h"
 #include "lpm_file.h"
 
+typedef enum LPM_EndOfLineType
+{
+    LPM_END_OF_LINE_TYPE_CR,
+    LPM_END_OF_LINE_TYPE_LF,
+    LPM_END_OF_LINE_TYPE_CRLF
+} LPM_EndOfLineType;
+
 typedef struct LPM_EditorParams
 {
     LPM_UnicodeKeyboard * kbd;
