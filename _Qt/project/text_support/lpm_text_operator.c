@@ -7,6 +7,7 @@ static const unicode_t chrLf = 0x000A;
 static const unicode_t chrSpace = 0x0020;
 
 static bool _charBelongsToBasicLatin(unicode_t chr);
+static bool _charBelongsToSpecChars(unicode_t chr, const Unicode_Buf * specChars);
 static bool _atEndOfLine(unicode_t chr);
 static bool _atEndOfText(unicode_t chr);
 static bool _atSpace(unicode_t chr);
@@ -37,6 +38,23 @@ static void _fillLineMapWhenWordWrapped
           size_t divCnt,
           LPM_TextLineMap * lineMap );
 
+void LPM_TextOperator_init
+    ( LPM_TextOperator * o,
+      LPM_Lang * lang,
+      const Unicode_Buf * specChars )
+{
+    o->lang = lang;
+    if(specChars == NULL)
+    {
+        o->specChars.size = 0;
+        o->specChars.data = NULL;
+    }
+    else
+    {
+        o->specChars.size = specChars->size;
+        o->specChars.data = specChars->size == 0 ? NULL : specChars->data;
+    }
+}
 
 bool LPM_TextOperator_checkInputChar
     ( LPM_TextOperator * o,
@@ -46,6 +64,9 @@ bool LPM_TextOperator_checkInputChar
     if( _charBelongsToBasicLatin(inputChr) ||
             _atEndOfLine(inputChr) ||
             _atEndOfText(inputChr))
+        return true;
+
+    if(_charBelongsToSpecChars(inputChr, &o->specChars))
         return true;
 
     return LPM_Lang_checkInputChar(o->lang, inputChr, pchr);
@@ -179,6 +200,19 @@ bool LPM_TextOperator_atSpace(LPM_TextOperator * o, const unicode_t * pchr)
 bool _charBelongsToBasicLatin(unicode_t chr)
 {
     return ((chr >= 0x0020) && (chr <= 0x007E));
+}
+
+bool _charBelongsToSpecChars(unicode_t chr, const Unicode_Buf * specChars)
+{
+    if(specChars->data == NULL)
+        return false;
+
+    const unicode_t * pchr = specChars->data;
+    const unicode_t * const end = specChars->data + specChars->size;
+    for( ; pchr != end; pchr++ )
+        if(chr == *pchr)
+            return true;
+    return false;
 }
 
 bool _atEndOfLine(unicode_t chr)

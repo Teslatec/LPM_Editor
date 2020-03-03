@@ -31,6 +31,7 @@ static LPM_Lang         lang;
 static LPM_TextOperator textOperator;
 
 static Modules modules;
+static const unicode_t specChars[1] = { UNICODE_LIGHT_SHADE };
 
 static void _createAndInit(const LPM_EditorParams * param);
 
@@ -72,7 +73,8 @@ void _createAndInit(const LPM_EditorParams * param)
     Core_init(&core, &modules, LPM_END_OF_LINE_TYPE_CRLF);
     CmdReader_init(&cmdReader, param->kbd, &modules.keyboardBuffer);
     LPM_TextStorage_init(&textStorage, &modules.textBuffer);
-    LPM_TextOperator_init(&textOperator, &lang);
+    Unicode_Buf buf = { (unicode_t*)specChars, 1 };
+    LPM_TextOperator_init(&textOperator, &lang, &buf);
     LPM_Lang_init(&lang, LPM_LANG_RUS_ENG);
     ActionStorage_init(&actionStorage, &modules.actionsBuffer);
     Clipboard_init(&clipboard, &modules);
