@@ -54,6 +54,11 @@ void TextBuffer_read(TextBuffer * o, size_t readPosition, Unicode_Buf * readText
             readTextBuffer->size * sizeof(unicode_t) );
 }
 
+void TextBuffer_sync(TextBuffer * o)
+{
+    (void)o;
+}
+
 
 size_t _calcEndOfTextPosition(TextBuffer * o)
 {

@@ -75,7 +75,7 @@ void _createAndInit(const LPM_EditorParams * param)
     LPM_TextOperator_init(&textOperator, &lang);
     LPM_Lang_init(&lang, LPM_LANG_RUS_ENG);
     ActionStorage_init(&actionStorage, &modules.actionsBuffer);
-    Clipboard_init(&clipboard, &modules.clipboardBuffer);
+    Clipboard_init(&clipboard, &modules);
     PageFormatter_init(&pageFormatter, &modules);
 
     modules.core          = &core;

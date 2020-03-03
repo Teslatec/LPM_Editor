@@ -2,20 +2,31 @@
 #define CLIPBOARD_H
 
 #include "lpm_unicode.h"
+#include "lpm_structs.h"
+#include "modules.h"
 
 typedef struct Clipboard
 {
-    Unicode_Buf * buf;
+    const Modules * modules;
+    size_t currLen;
 } Clipboard;
 
-inline void Clipboard_init(Clipboard * o, Unicode_Buf * buf)
+static inline void Clipboard_init
+    ( Clipboard * o,
+      const Modules * modules)
 {
-    o->buf = buf;
+    o->modules = modules;
+    o->currLen = 0;
 }
 
-//void Clipboard_clear(Clipboard * obj);
-//void Clipboard_write(Clipboard * obj, const Unicode_Buf * buf);
-//inline const unicode_t * Clipboard_data(Clipboard * obj);
-//inline size_t Clipboard_size(Clipboard * obj);
+static inline void Clipboard_clear(Clipboard * o) { o->currLen = 0; }
+
+bool Clipboard_push
+        ( Clipboard * o,
+          const LPM_SelectionCursor * text );
+
+bool Clipboard_pop
+        ( Clipboard * o,
+          LPM_SelectionCursor * text );
 
 #endif // CLIPBOARD_H

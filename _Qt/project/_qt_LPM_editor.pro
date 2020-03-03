@@ -42,7 +42,8 @@ SOURCES += \
     editor/controller.c \
     editor/core.c \
     editor/page_formatter.c \
-    text_support/lpm_text_operator.c
+    text_support/lpm_text_operator.c \
+    editor/clipboard.c
 
 HEADERS += \
         mainwindow.h \

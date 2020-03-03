@@ -5,6 +5,7 @@
 #include "lpm_text_operator.h"
 #include "lpm_lang.h"
 #include "line_buffer_support.h"
+#include "clipboard.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -25,6 +26,7 @@ static const unicode_t chrSpace = 0x0020;
 void test_print_display_cursor(size_t bx, size_t by, size_t ex, size_t ey);
 void test_print_text_cursor(size_t pos, size_t len);
 void test_print_page_map(size_t base, const LineMap * prev, const LineMap * table);
+void test_print_unicode(const unicode_t * buf, size_t size);
 
 static void _prepare(Obj * o);
 static void _copyTextCursor(const SlcCurs * src, SlcCurs * dst);
@@ -169,109 +171,60 @@ void _textChangedCmdHandler(Core * o)
 
     PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
     PageFormatter_updateDisplay(o->modules->pageFormatter);
-
-//    Unicode_Buf text;
-//    SlcCurs removingArea;
-//    _copyTextCursor(&o->textCursor, &removingArea);
-//    uint16_t flags = CmdReader_getFlags(o->modules->cmdReader);
-//    bool isReplaceMode = CmdReader_isReplacementMode(o->modules->cmdReader);
-
-//    if(flags == TEXT_FLAG_TEXT)
-//    {
-//        if(removingArea.len > 0)
-//        {
-//            LPM_TextStorage_replace(o->modules->textStorage, &removingArea, NULL);
-//            removingArea.len = 0;
-//            CmdReader_getText(o->modules->cmdReader, &text);
-//            LPM_TextStorage_replace(o->modules->textStorage, &removingArea, &text);
-//            o->textCursor.pos += text.size;
-//            o->textCursor.len = 0;
-//        }
-
-//        CmdReader_getText(o->modules->cmdReader, &text);
-//        if(isReplaceMode)
-//            if(removingArea.len == 0)
-//                removingArea.len = 1;
-//        LPM_TextStorage_replace(o->modules->textStorage, &removingArea, &text);
-//        o->textCursor.pos += text.size;
-//        o->textCursor.len = 0;
-//    }
-
-//    if(flags == TEXT_FLAG_TAB)
-//    {
-//        unicode_t   crlf[5] = { chrSpace, chrSpace, chrSpace, chrSpace, chrSpace };
-//        text.data = crlf;
-//        text.size = 5;
-//        removingArea.pos = o->textCursor.pos;
-//        removingArea.len = o->textCursor.len;
-
-//        LPM_TextStorage_replace(o->modules->textStorage, &removingArea, &text);
-
-//        removingArea.pos = o->textCursor.pos;
-//        removingArea.len = 5;
-//        o->textCursor.pos += 5;
-//        o->textCursor.len  = 0;
-//    }
-
-//    if(flags == TEXT_FLAG_NEW_LINE)
-//    {
-//        unicode_t   crlf[2] = { chrCr, chrLf };
-//        text.data = crlf;
-//        text.size = 2;
-//        removingArea.pos = o->textCursor.pos;
-//        removingArea.len = o->textCursor.len;
-
-//        LPM_TextStorage_replace(o->modules->textStorage, &removingArea, &text);
-
-//        removingArea.pos = o->textCursor.pos;
-//        removingArea.len = 2;
-//        o->textCursor.pos += 2;
-//        o->textCursor.len  = 0;
-//    }
-
-//    if(flags == TEXT_FLAG_REMOVE_PREV_CHAR)
-//    {
-//        if(o->textCursor.pos == 0)
-//            return;
-//        removingArea.pos = o->textCursor.pos-1;
-//        removingArea.len = 1;
-//        LPM_TextStorage_replace(o->modules->textStorage, &removingArea, NULL);
-//        o->textCursor.pos--;
-//    }
-
-//    if(flags == TEXT_FLAG_REMOVE_NEXT_CHAR)
-//    {
-//        if(o->textCursor.pos == 0)
-//            return;
-//        removingArea.pos = o->textCursor.pos;
-//        removingArea.len = 1;
-//        LPM_TextStorage_replace(o->modules->textStorage, &removingArea, NULL);
-//    }
-
-//    PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
-//    PageFormatter_updateDisplay(o->modules->pageFormatter);
-    //_printLineMap(o);
 }
 
 void _changeModeCmdHandler(Core * o)
 {
+    (void)o;
+}
+
+void _copyCmdHandler(Core * o)
+{
+    if(o->textCursor.len > 0)
+    {
+        Clipboard_push(o->modules->clipboard, &o->textCursor);
+        //test_print_unicode(o->modules->clipboardBuffer.data, o->textCursor.len);
+    }
+}
+
+void _pastCmdHandler(Core * o)
+{
+    Clipboard_pop(o->modules->clipboard, &o->textCursor);
     PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
     PageFormatter_updateDisplay(o->modules->pageFormatter);
 }
 
-void _copyCmdHandler(Core * o) { (void)o; }
-void _pastCmdHandler(Core * o) { (void)o; }
-void _cutCmdHandler(Core * o) { (void)o; }
+void _cutCmdHandler(Core * o)
+{
+    if(o->textCursor.len > 0)
+    {
+        Clipboard_push(o->modules->clipboard, &o->textCursor);
+        LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, NULL);
+        o->textCursor.len = 0;
+        PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
+        PageFormatter_updateDisplay(o->modules->pageFormatter);
+    }
+}
 
-void _clearClipboardCmdHandler(Core * o) { (void)o; }
+void _clearClipboardCmdHandler(Core * o)
+{
+    Clipboard_clear(o->modules->clipboard);
+}
 
-void _saveCmdHandler(Core * o) { (void)o; }
+void _saveCmdHandler(Core * o)
+{
+    LPM_TextStorage_sync(o->modules->textStorage);
+}
 
 void _undoHandler(Core * o) { (void)o; }
 
 void _outlineHelpCmdHandler(Core * o) { (void)o; }
 void _outlineStateHandler(Core * o) { (void)o; }
-void _timeoutCmdHandler(Core * o) { (void)o; }
+
+void _timeoutCmdHandler(Core * o)
+{
+    LPM_TextStorage_sync(o->modules->textStorage);
+}
 
 void _processEnteredChar(Core * o)
 {

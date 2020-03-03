@@ -46,6 +46,11 @@ extern "C" void test_print(const char * str, size_t num, size_t num1)
     qDebug() << str << num << num1;
 }
 
+extern "C" void test_print_unicode(const unicode_t * buf, size_t size)
+{
+    qDebug() << QString::fromRawData((QChar*)buf, size);
+}
+
 extern "C" void test_print_display_cursor(size_t bx, size_t by, size_t ex, size_t ey)
 {
     qDebug() << "Display cursor: begin(" << bx << "," << by << "), end(" << ex << ", " << ey << ")";
