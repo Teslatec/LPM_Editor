@@ -86,6 +86,17 @@ void LPM_TextStorage_read
     TextBuffer_read(&o->storage, readPosition, readTextBuffer);
 }
 
+bool LPM_TextStorage_enoughPlace
+        ( LPM_TextStorage * o,
+          LPM_SelectionCursor * removingArea,
+          const Unicode_Buf * textToWrite )
+{
+    Unicode_Buf textBuffer;
+    _normalizeRemovingArea(&o->storage, removingArea);
+    _initTextBuffer(&textBuffer, textToWrite);
+    return !_notEnoughSpaceToRemoveAndWrite(&o->storage, removingArea, &textBuffer);
+}
+
 //void LPM_TextStorage_readBack
 //        ( LPM_TextStorage * o,
 //          size_t readPosition,

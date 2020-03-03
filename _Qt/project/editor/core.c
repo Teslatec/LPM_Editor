@@ -44,13 +44,16 @@ static void _outlineHelpCmdHandler(Core * o);
 static void _outlineStateHandler(Core * o);
 static void _timeoutCmdHandler(Core * o);
 
-static void _processEnteredChar(Core * o);
-static void _processEnteredTab(Core * o);
-static void _processEnteredNewLine(Core * o);
+static bool _processEnteredChar(Core * o);
+static bool _processEnteredTab(Core * o);
+static bool _processEnteredNewLine(Core * o);
 static void _processRemoveNextChar(Core * o);
 static void _processRemovePrevChar(Core * o);
 static void _processRemovePage(Core * o);
 static void _processTruncateLine(Core * o);
+
+static void _handleNotEnoughPlaceInTextStorage(Core * o);
+static void _handleNotEnoughPlaceInClipboard(Core * o);
 
 static bool _checkInputText(Core * o, Unicode_Buf * text);
 
@@ -147,15 +150,17 @@ void _cursorChangedCmdHandler(Core * o)
 void _textChangedCmdHandler(Core * o)
 {
     uint16_t flag = CmdReader_getFlags(o->modules->cmdReader);
+    bool enoughPlaceInTextSrorage = true;
 
     if(flag == TEXT_FLAG_TEXT)
-        _processEnteredChar(o);
+        enoughPlaceInTextSrorage = _processEnteredChar(o);
 
     else if(flag == TEXT_FLAG_TAB)
-        _processEnteredTab(o);
+        enoughPlaceInTextSrorage = _processEnteredTab(o);
 
     else if(flag == TEXT_FLAG_NEW_LINE)
-        _processEnteredNewLine(o);
+        enoughPlaceInTextSrorage = _processEnteredNewLine(o);
+
 
     else if(flag == TEXT_FLAG_REMOVE_NEXT_CHAR)
         _processRemoveNextChar(o);
@@ -169,8 +174,15 @@ void _textChangedCmdHandler(Core * o)
     else if(flag == TEXT_FLAG_TRUCATE_LINE)
         _processTruncateLine(o);
 
-    PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
-    PageFormatter_updateDisplay(o->modules->pageFormatter);
+    if(enoughPlaceInTextSrorage)
+    {
+        PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
+        PageFormatter_updateDisplay(o->modules->pageFormatter);
+    }
+    else
+    {
+        _handleNotEnoughPlaceInTextStorage(o);
+    }
 }
 
 void _changeModeCmdHandler(Core * o)
@@ -181,28 +193,38 @@ void _changeModeCmdHandler(Core * o)
 void _copyCmdHandler(Core * o)
 {
     if(o->textCursor.len > 0)
-    {
-        Clipboard_push(o->modules->clipboard, &o->textCursor);
-        //test_print_unicode(o->modules->clipboardBuffer.data, o->textCursor.len);
-    }
+        if(!Clipboard_push(o->modules->clipboard, &o->textCursor))
+            _handleNotEnoughPlaceInClipboard(o);
 }
 
 void _pastCmdHandler(Core * o)
 {
-    Clipboard_pop(o->modules->clipboard, &o->textCursor);
-    PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
-    PageFormatter_updateDisplay(o->modules->pageFormatter);
+    if(Clipboard_pop(o->modules->clipboard, &o->textCursor))
+    {
+        PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
+        PageFormatter_updateDisplay(o->modules->pageFormatter);
+    }
+    else
+    {
+        _handleNotEnoughPlaceInTextStorage(o);
+    }
 }
 
 void _cutCmdHandler(Core * o)
 {
     if(o->textCursor.len > 0)
     {
-        Clipboard_push(o->modules->clipboard, &o->textCursor);
-        LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, NULL);
-        o->textCursor.len = 0;
-        PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
-        PageFormatter_updateDisplay(o->modules->pageFormatter);
+        if(Clipboard_push(o->modules->clipboard, &o->textCursor))
+        {
+            LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, NULL);
+            o->textCursor.len = 0;
+            PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
+            PageFormatter_updateDisplay(o->modules->pageFormatter);
+        }
+        else
+        {
+            _handleNotEnoughPlaceInClipboard(o);
+        }
     }
 }
 
@@ -226,42 +248,50 @@ void _timeoutCmdHandler(Core * o)
     LPM_TextStorage_sync(o->modules->textStorage);
 }
 
-void _processEnteredChar(Core * o)
+bool _processEnteredChar(Core * o)
 {
     Unicode_Buf text;
     CmdReader_getText(o->modules->cmdReader, &text);
-    if(_checkInputText(o, &text))
+    if(!_checkInputText(o, &text))
+        return true;
+
+    if(!LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, &text))
+        return false;
+
+    o->textCursor.pos += text.size;
+    if(o->textCursor.len == 0)
     {
-        LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
-        o->textCursor.pos += text.size;
-        if(o->textCursor.len == 0)
+        if(CmdReader_isReplacementMode(o->modules->cmdReader))
         {
-            if(CmdReader_isReplacementMode(o->modules->cmdReader))
-            {
-                const unicode_t * pchr = LineBuffer_LoadText(o->modules, o->textCursor.pos, CHAR_BUF_SIZE);
-                SlcCurs removeArea;
-                removeArea.pos = o->textCursor.pos;
-                removeArea.len = LPM_TextOperator_nextChar(o->modules->textOperator, pchr) - pchr;
-                LPM_TextStorage_replace(o->modules->textStorage, &removeArea, NULL);
-            }
-        }
-        else
-        {
-            o->textCursor.len = 0;
+            const unicode_t * pchr = LineBuffer_LoadText(o->modules, o->textCursor.pos, CHAR_BUF_SIZE);
+            SlcCurs removeArea;
+            removeArea.pos = o->textCursor.pos;
+            removeArea.len = LPM_TextOperator_nextChar(o->modules->textOperator, pchr) - pchr;
+            LPM_TextStorage_replace(o->modules->textStorage, &removeArea, NULL);
         }
     }
+    else
+    {
+        o->textCursor.len = 0;
+    }
+
+    return true;
 }
 
-void _processEnteredTab(Core * o)
+bool _processEnteredTab(Core * o)
 {
     static const unicode_t tabArray[5] = { 0x0020, 0x0020, 0x0020, 0x0020, 0x0020 };
     Unicode_Buf text = { (unicode_t*)tabArray, 5 };
-    LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
-    o->textCursor.pos += text.size;
-    o->textCursor.len = 0;
+    if(LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, &text))
+    {
+        o->textCursor.pos += text.size;
+        o->textCursor.len = 0;
+        return true;
+    }
+    return false;
 }
 
-void _processEnteredNewLine(Core * o)
+bool _processEnteredNewLine(Core * o)
 {
     static const unicode_t endlArray[2] = { 0x000D, 0x000A };
     Unicode_Buf text;
@@ -280,9 +310,15 @@ void _processEnteredNewLine(Core * o)
         text.data = (unicode_t*)endlArray;
         text.size = 2;
     }
-    LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
-    o->textCursor.pos += text.size;
-    o->textCursor.len = 0;
+
+    if(LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, &text))
+    {
+        o->textCursor.pos += text.size;
+        o->textCursor.len = 0;
+        return true;
+    }
+
+    return false;
 }
 
 void _processRemoveNextChar(Core * o)
@@ -354,6 +390,18 @@ void _processTruncateLine(Core * o)
             o->textCursor.len = 0;
         }
     }
+}
+
+void _handleNotEnoughPlaceInTextStorage(Core * o)
+{
+    // TODO: вывод сообщения о недостатке места в буфере текста
+    test_beep();
+}
+
+void _handleNotEnoughPlaceInClipboard(Core *o)
+{
+    // TODO: вывод сообщения о недостатке места в буфере текста
+    test_beep();
 }
 
 bool _checkInputText(Core * o, Unicode_Buf * text)

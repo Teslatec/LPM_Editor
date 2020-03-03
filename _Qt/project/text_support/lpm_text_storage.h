@@ -19,6 +19,11 @@ void LPM_TextStorage_read
           size_t readPosition,
           Unicode_Buf * readTextBuffer );
 
+bool LPM_TextStorage_enoughPlace
+        ( LPM_TextStorage * o,
+          LPM_SelectionCursor * removingArea,
+          const Unicode_Buf * textToWrite );
+
 //void LPM_TextStorage_readBack
 //        ( LPM_TextStorage * o,
 //          size_t readPosition,

@@ -49,7 +49,7 @@ void TestTextEditor::start(QTextEdit * textEdit, bool displayLatencyEnabled, boo
         TestDisplay dsp;
         TestDisplay_init(&dsp, &itc);
 
-        TestTextBuffer ttb("test_text_buf.txt", 65536);
+        TestTextBuffer ttb("test_text_buf.txt", 23000/*65536*/);
         LPM_Buf textBuf;
         ttb.buffer(&textBuf);
 
