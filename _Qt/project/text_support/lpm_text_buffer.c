@@ -117,6 +117,13 @@ bool LPM_TextBuffer_pop
     return true;
 }
 
+bool LPM_TextBuffer_checkPlaceInTextStorage
+    ( LPM_TextBuffer * o,
+      const LPM_SelectionCursor * textCursor )
+{
+    return !_noEnoughPlaceInTextStorage(o, textCursor);
+}
+
 bool _noEnoughPlaceInClipboard(LPM_TextBuffer * o, size_t len)
 {
     return len > o->buffer.size;

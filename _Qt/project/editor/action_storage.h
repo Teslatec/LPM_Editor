@@ -4,6 +4,9 @@
 #include "lpm_unicode.h"
 #include "lpm_structs.h"
 
+struct LPM_TextBuffer;
+struct Modules;
+
 typedef enum Action
 {
     ACTION_TEXT_ENTERED,
@@ -13,6 +16,8 @@ typedef enum Action
 
 typedef struct ActionStorage
 {
+    const struct Modules * modules;
+    LPM_SelectionCursor savedCursor;
 
     Unicode_Buf * deletedText;
     LPM_SelectionCursor cursorBefore;

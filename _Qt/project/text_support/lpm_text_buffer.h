@@ -26,5 +26,13 @@ bool LPM_TextBuffer_pop
     ( LPM_TextBuffer * o,
       LPM_SelectionCursor * textCursor );
 
+bool LPM_TextBuffer_checkPlaceInTextStorage
+    ( LPM_TextBuffer * o,
+      const LPM_SelectionCursor * textCursor );
+
+static inline bool LPM_TextBuffer_isEmpty(LPM_TextBuffer * o)
+{
+    return o->usedSize == 0;
+}
 
 #endif // LPM_TEXT_BUFFER_H

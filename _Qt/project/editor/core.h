@@ -8,7 +8,9 @@ typedef struct Core
 {
     Modules * modules;
     LPM_SelectionCursor textCursor;
+    LPM_SelectionCursor undoTextCursor;
     LPM_EndOfLineType endOfLineType;
+    bool hasActionToUndo;
 } Core;
 
 void Core_init(Core * o, Modules * modules, LPM_EndOfLineType endOfLineType);

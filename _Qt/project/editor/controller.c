@@ -1,7 +1,6 @@
 #include "controller.h"
 
 #include "command_reader.h"
-#include "clipboard.h"
 #include "lpm_text_storage.h"
 #include "action_storage.h"
 #include "page_formatter.h"

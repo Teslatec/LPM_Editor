@@ -42,7 +42,6 @@ SOURCES += \
     editor/core.c \
     editor/page_formatter.c \
     text_support/lpm_text_operator.c \
-    editor/clipboard.c \
     text_support/text_storage_impl.c \
     text_support/lpm_text_buffer.c
 
@@ -68,7 +67,6 @@ HEADERS += \
     language/lpm_lang.h \
     language/lpm_lang_rus_eng.h \
     text_support/lpm_text_storage.h \
-    editor/clipboard.h \
     editor/command_reader.h \
     editor/controller.h \
     editor/core.h \
