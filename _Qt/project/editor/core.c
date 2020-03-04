@@ -3,6 +3,7 @@
 #include "lpm_text_storage.h"
 #include "page_formatter.h"
 #include "lpm_text_operator.h"
+#include "lpm_text_buffer.h"
 #include "lpm_lang.h"
 #include "line_buffer_support.h"
 #include "clipboard.h"
@@ -27,6 +28,7 @@ void test_print_display_cursor(size_t bx, size_t by, size_t ex, size_t ey);
 void test_print_text_cursor(size_t pos, size_t len);
 void test_print_page_map(size_t base, const LineMap * prev, const LineMap * table);
 void test_print_unicode(const unicode_t * buf, size_t size);
+void test_beep();
 
 static void _prepare(Obj * o);
 static void _copyTextCursor(const SlcCurs * src, SlcCurs * dst);
@@ -192,14 +194,26 @@ void _changeModeCmdHandler(Core * o)
 
 void _copyCmdHandler(Core * o)
 {
+//    if(o->textCursor.len > 0)
+//        if(!Clipboard_push(o->modules->clipboard, &o->textCursor))
+//            _handleNotEnoughPlaceInClipboard(o);
     if(o->textCursor.len > 0)
-        if(!Clipboard_push(o->modules->clipboard, &o->textCursor))
+        if(!LPM_TextBuffer_push(o->modules->clipboardTextBuffer, &o->textCursor))
             _handleNotEnoughPlaceInClipboard(o);
 }
 
 void _pastCmdHandler(Core * o)
 {
-    if(Clipboard_pop(o->modules->clipboard, &o->textCursor))
+//    if(Clipboard_pop(o->modules->clipboard, &o->textCursor))
+//    {
+//        PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
+//        PageFormatter_updateDisplay(o->modules->pageFormatter);
+//    }
+//    else
+//    {
+//        _handleNotEnoughPlaceInTextStorage(o);
+//    }
+    if(LPM_TextBuffer_pop(o->modules->clipboardTextBuffer, &o->textCursor))
     {
         PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
         PageFormatter_updateDisplay(o->modules->pageFormatter);
@@ -212,9 +226,23 @@ void _pastCmdHandler(Core * o)
 
 void _cutCmdHandler(Core * o)
 {
+//    if(o->textCursor.len > 0)
+//    {
+//        if(Clipboard_push(o->modules->clipboard, &o->textCursor))
+//        {
+//            LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, NULL);
+//            o->textCursor.len = 0;
+//            PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
+//            PageFormatter_updateDisplay(o->modules->pageFormatter);
+//        }
+//        else
+//        {
+//            _handleNotEnoughPlaceInClipboard(o);
+//        }
+//    }
     if(o->textCursor.len > 0)
     {
-        if(Clipboard_push(o->modules->clipboard, &o->textCursor))
+        if(LPM_TextBuffer_push(o->modules->clipboardTextBuffer, &o->textCursor))
         {
             LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, NULL);
             o->textCursor.len = 0;
@@ -230,7 +258,8 @@ void _cutCmdHandler(Core * o)
 
 void _clearClipboardCmdHandler(Core * o)
 {
-    Clipboard_clear(o->modules->clipboard);
+    //Clipboard_clear(o->modules->clipboard);
+    LPM_TextBuffer_clear(o->modules->clipboardTextBuffer);
 }
 
 void _saveCmdHandler(Core * o)
@@ -395,11 +424,13 @@ void _processTruncateLine(Core * o)
 void _handleNotEnoughPlaceInTextStorage(Core * o)
 {
     // TODO: вывод сообщения о недостатке места в буфере текста
+    (void)o;
     test_beep();
 }
 
 void _handleNotEnoughPlaceInClipboard(Core *o)
 {
+    (void)o;
     // TODO: вывод сообщения о недостатке места в буфере текста
     test_beep();
 }

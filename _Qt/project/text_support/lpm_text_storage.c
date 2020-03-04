@@ -45,13 +45,13 @@ bool LPM_TextStorage_replace
 {
     Unicode_Buf textBuffer;
 
-    _normalizeRemovingArea(&o->storage, removingArea);
+    _normalizeRemovingArea(o->storage, removingArea);
     _initTextBuffer(&textBuffer, textToWrite);
 
     //printf("before ");
 
     if(_notEnoughSpaceToRemoveAndWrite(
-                &o->storage, removingArea, &textBuffer))
+                o->storage, removingArea, &textBuffer))
     {
         //printf("pos: %d, rmlen: %d, txtlen: %d\n", removingArea->pos, removingArea->len, textBuffer.size);
         return false;
@@ -61,7 +61,7 @@ bool LPM_TextStorage_replace
     //printf("not false ");
 
     _decomposeToSimpleFxns(
-                &o->storage, removingArea, &textBuffer);
+                o->storage, removingArea, &textBuffer);
 
     return true;
 }
@@ -71,7 +71,7 @@ void LPM_TextStorage_read
           size_t readPosition,
           Unicode_Buf * readTextBuffer )
 {
-    size_t endOfText = TextStorageImpl_endOfText(&o->storage);
+    size_t endOfText = TextStorageImpl_endOfText(o->storage);
     if(readPosition >= endOfText)
     {
         readTextBuffer->size = 0;
@@ -83,32 +83,20 @@ void LPM_TextStorage_read
                 distToEndOfText : readTextBuffer->size;
 
     readTextBuffer->size = actualReadTextSize;
-    TextStorageImpl_read(&o->storage, readPosition, readTextBuffer);
+    TextStorageImpl_read(o->storage, readPosition, readTextBuffer);
 }
 
 bool LPM_TextStorage_enoughPlace
         ( LPM_TextStorage * o,
-          LPM_SelectionCursor * removingArea,
+          const LPM_SelectionCursor * removingArea,
           const Unicode_Buf * textToWrite )
 {
     Unicode_Buf textBuffer;
-    _normalizeRemovingArea(&o->storage, removingArea);
+    LPM_SelectionCursor _remArea = { removingArea->pos, removingArea->len };
+    _normalizeRemovingArea(o->storage, &_remArea);
     _initTextBuffer(&textBuffer, textToWrite);
-    return !_notEnoughSpaceToRemoveAndWrite(&o->storage, removingArea, &textBuffer);
+    return !_notEnoughSpaceToRemoveAndWrite(o->storage, removingArea, &textBuffer);
 }
-
-//void LPM_TextStorage_readBack
-//        ( LPM_TextStorage * o,
-//          size_t readPosition,
-//          Unicode_Buf * readTextBuffer )
-//{
-//    size_t requestedSize = readTextBuffer->size;
-//    size_t actualSize =
-//            readPosition < requestedSize ? readPosition : requestedSize;
-//    readTextBuffer->size = actualSize;
-//    TextBuffer_read(&o->storage, readPosition - actualSize, readTextBuffer);
-//}
-
 
 void _normalizeRemovingArea( const TextStorageImpl * textStorage,
                              LPM_SelectionCursor * removingArea )

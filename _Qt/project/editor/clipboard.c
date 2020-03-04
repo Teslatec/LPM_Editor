@@ -98,7 +98,8 @@ bool Clipboard_pop
 
 bool _noEnoughPlaceInClipboard(Clipboard * o, size_t len)
 {
-    return len > o->modules->clipboardBuffer.size;
+    return true;
+    //return len > o->modules->clipboardBuffer.size;
 }
 
 bool _noEnoughPlaceInTextStorage(Clipboard * o, const LPM_SelectionCursor * removingArea)
@@ -112,16 +113,16 @@ bool _noEnoughPlaceInTextStorage(Clipboard * o, const LPM_SelectionCursor * remo
 
 void _write(Clipboard * o, size_t pos, size_t len)
 {
-    memcpy( o->modules->clipboardBuffer.data + pos,
-            o->modules->lineBuffer.data,
-            len * sizeof(unicode_t) );
+//    memcpy( o->modules->clipboardBuffer.data + pos,
+//            o->modules->lineBuffer.data,
+//            len * sizeof(unicode_t) );
 }
 
 void _read(Clipboard * o, size_t pos, size_t len)
 {
-    memcpy( o->modules->lineBuffer.data,
-            o->modules->clipboardBuffer.data + pos,
-            len * sizeof(unicode_t) );
+//    memcpy( o->modules->lineBuffer.data,
+//            o->modules->clipboardBuffer.data + pos,
+//            len * sizeof(unicode_t) );
 }
 
 size_t _calcPartialRemoveLen(size_t enterTextPos, size_t removeEndPos, size_t loadSize)

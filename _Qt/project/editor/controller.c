@@ -8,6 +8,7 @@
 #include "core.h"
 #include "lpm_lang.h"
 #include "lpm_text_operator.h"
+#include "lpm_text_buffer.h"
 
 #define KEYBOARD_WATI_TIMEOUT 1000
 
@@ -24,11 +25,14 @@ static unicode_t clipboardBuffer[CLIPBOARD_BUFFER_SIZE];
 static Core             core;
 static CmdReader        cmdReader;
 static PageFormatter    pageFormatter;
-static ActionStorage    actionStorage;
-static Clipboard        clipboard;
+//static ActionStorage    actionStorage;
+//static Clipboard        clipboard;
 static LPM_TextStorage  textStorage;
+static TextStorageImpl  textStorageImpl;
 static LPM_Lang         lang;
 static LPM_TextOperator textOperator;
+static LPM_TextBuffer   clipboardTextBuffer;
+static LPM_TextBuffer   actionsTextBuffer;
 
 static Modules modules;
 static const unicode_t specChars[1] = { UNICODE_LIGHT_SHADE };
@@ -61,31 +65,50 @@ void _createAndInit(const LPM_EditorParams * param)
     modules.lineBuffer.data = lineBuffer;
     modules.lineBuffer.size = LINE_BUFFER_SIZE;
 
-    modules.actionsBuffer.data = actionsBuffer;
-    modules.actionsBuffer.size = ACTIONS_BUFFER_SIZE;
+    //modules.actionsBuffer.data = actionsBuffer;
+    //modules.actionsBuffer.size = ACTIONS_BUFFER_SIZE;
 
-    modules.clipboardBuffer.data = clipboardBuffer;
-    modules.clipboardBuffer.size = CLIPBOARD_BUFFER_SIZE;
+    //modules.clipboardBuffer.data = clipboardBuffer;
+    //modules.clipboardBuffer.size = CLIPBOARD_BUFFER_SIZE;
 
-    modules.textBuffer.data = (unicode_t*)param->textBuffer->data;
-    modules.textBuffer.size = param->textBuffer->size / sizeof(unicode_t);
+//    modules.textBuffer.data = (unicode_t*)param->textBuffer->data;
+//    modules.textBuffer.size = param->textBuffer->size / sizeof(unicode_t);
+
+    Unicode_Buf tmp;
 
     Core_init(&core, &modules, LPM_END_OF_LINE_TYPE_CRLF);
     CmdReader_init(&cmdReader, param->kbd, &modules.keyboardBuffer);
-    LPM_TextStorage_init(&textStorage, &modules.textBuffer);
+
+    tmp.data = (unicode_t*)param->textBuffer->data;
+    tmp.size = param->textBuffer->size / sizeof(unicode_t);
+    TextStorageImpl_init(&textStorageImpl, &tmp);
+    LPM_TextStorage_init(&textStorage, &textStorageImpl);
     Unicode_Buf buf = { (unicode_t*)specChars, 1 };
     LPM_TextOperator_init(&textOperator, &lang, &buf);
     LPM_Lang_init(&lang, LPM_LANG_RUS_ENG);
-    ActionStorage_init(&actionStorage, &modules.actionsBuffer);
-    Clipboard_init(&clipboard, &modules);
+
+    tmp.data = clipboardBuffer;
+    tmp.size = CLIPBOARD_BUFFER_SIZE;
+    LPM_TextBuffer_init(&clipboardTextBuffer, &tmp, &modules);
+
+    tmp.data = actionsBuffer;
+    tmp.size = ACTIONS_BUFFER_SIZE;
+    LPM_TextBuffer_init(&actionsTextBuffer, &tmp, &modules);
+
+    //ActionStorage_init(&actionStorage, &modules.actionsBuffer);
+    //Clipboard_init(&clipboard, &modules);
+
     PageFormatter_init(&pageFormatter, &modules);
 
-    modules.core          = &core;
-    modules.cmdReader     = &cmdReader;
-    modules.pageFormatter = &pageFormatter;
-    modules.actionStorage = &actionStorage;
-    modules.clipboard     = &clipboard;
-    modules.textStorage   = &textStorage;
-    modules.textOperator  = &textOperator;
-    modules.lang          = &lang;
+    modules.core                = &core;
+    modules.cmdReader           = &cmdReader;
+    modules.pageFormatter       = &pageFormatter;
+    //modules.actionStorage = &actionStorage;
+    //modules.clipboard     = &clipboard;
+    modules.clipboardTextBuffer = &clipboardTextBuffer;
+    modules.actionsTextBuffer   = &actionsTextBuffer;
+    modules.textStorage         = &textStorage;
+    modules.textStorageImpl     = &textStorageImpl;
+    modules.textOperator        = &textOperator;
+    modules.lang                = &lang;
 }

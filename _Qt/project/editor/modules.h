@@ -10,25 +10,25 @@ struct CmdReader;
 struct ActionStorage;
 struct Clipboard;
 struct PageFormatter;
+struct LPM_TextBuffer;
 struct LPM_TextStorage;
 struct LPM_TextOperator;
+struct TextStorageImpl;
 struct LPM_Lang;
 
 typedef struct Modules
 {
     Unicode_Buf keyboardBuffer;
     Unicode_Buf lineBuffer;
-    Unicode_Buf actionsBuffer;
-    Unicode_Buf clipboardBuffer;
-    Unicode_Buf textBuffer;
     LPM_UnicodeKeyboard     * keyboard;
     LPM_UnicodeDisplay      * display;
     struct Core             * core;
     struct CmdReader        * cmdReader;
     struct PageFormatter    * pageFormatter;
-    struct ActionStorage    * actionStorage;
-    struct Clipboard        * clipboard;
+    struct LPM_TextBuffer   * clipboardTextBuffer;
+    struct LPM_TextBuffer   * actionsTextBuffer;
     struct LPM_TextStorage  * textStorage;
+    struct TextStorageImpl  * textStorageImpl;
     struct LPM_TextOperator * textOperator;
     struct LPM_Lang         * lang;
 } Modules;

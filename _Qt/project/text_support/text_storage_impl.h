@@ -5,11 +5,12 @@
 
 typedef struct TextStorageImpl
 {
-    Unicode_Buf * textBuffer;
+    //Unicode_Buf * textBuffer;
+    Unicode_Buf textBuffer;
     size_t endOfText;
 } TextStorageImpl;
 
-void TextStorageImpl_init(TextStorageImpl * o, Unicode_Buf * textBuffer);
+void TextStorageImpl_init(TextStorageImpl * o, const Unicode_Buf * textBuffer);
 void TextStorageImpl_append(TextStorageImpl * o, const Unicode_Buf * text );
 void TextStorageImpl_insert(TextStorageImpl * o, const Unicode_Buf * text, size_t pos);
 void TextStorageImpl_replace(TextStorageImpl * o, const Unicode_Buf * text, size_t pos );
@@ -25,7 +26,8 @@ static inline size_t TextStorageImpl_endOfText(const TextStorageImpl * o)
 
 static inline size_t TextStorageImpl_freeSize(const TextStorageImpl * o)
 {
-    return o->textBuffer->size - o->endOfText;
+    //return o->textBuffer->size - o->endOfText;
+    return o->textBuffer.size - o->endOfText;
 }
 
 #endif // TEXT_STORAGE_IMPL_H

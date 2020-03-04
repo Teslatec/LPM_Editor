@@ -56,17 +56,6 @@ void TestDisplayInteractor::clear()
     waitForGuiRepaint();
 }
 
-void TestDisplayInteractor::write(QString data, QPoint point)
-{
-    QString & line = vm.data[0];
-    line[0] = 'a';
-    line[1] = 'b';
-    line[2] = 'c';
-    line[3] = 'd';
-    //vm.data[point.y()][point.x()] = data[0];
-    //waitForGuiRepaint();
-}
-
 void TestDisplayInteractor::writeLine(int index, QString line, QPoint curs)
 {
     html[index] = TestDisplayHtmlConvertor::convertLine(line, curs, selectAreaUnderlined);

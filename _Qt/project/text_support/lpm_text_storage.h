@@ -6,7 +6,7 @@
 
 typedef struct LPM_TextStorage
 {
-    TextStorageImpl storage;
+    TextStorageImpl * storage;
 } LPM_TextStorage;
 
 bool LPM_TextStorage_replace
@@ -21,29 +21,30 @@ void LPM_TextStorage_read
 
 bool LPM_TextStorage_enoughPlace
         ( LPM_TextStorage * o,
-          LPM_SelectionCursor * removingArea,
+          const LPM_SelectionCursor * removingArea,
           const Unicode_Buf * textToWrite );
 
 static inline void LPM_TextStorage_init
         ( LPM_TextStorage * o,
-          Unicode_Buf * textBuffer )
+          TextStorageImpl * storageImpl)
 {
-    TextStorageImpl_init(&o->storage, textBuffer);
+    o->storage = storageImpl;
+    //TextStorageImpl_init(&o->storage, textBuffer);
 }
 
 static inline void LPM_TextStorage_sync(LPM_TextStorage * o)
 {
-    return TextStorageImpl_sync(&o->storage);
+    return TextStorageImpl_sync(o->storage);
 }
 
 static inline size_t LPM_TextStorage_freeSize(LPM_TextStorage * o)
 {
-    return TextStorageImpl_freeSize(&o->storage);
+    return TextStorageImpl_freeSize(o->storage);
 }
 
 static inline size_t LPM_TextStorage_endOfText(LPM_TextStorage * o)
 {
-    return TextStorageImpl_endOfText(&o->storage);
+    return TextStorageImpl_endOfText(o->storage);
 }
 
 #endif // LPM_TEXT_STORAGE_H
