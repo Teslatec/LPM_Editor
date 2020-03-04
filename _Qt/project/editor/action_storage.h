@@ -13,6 +13,7 @@ typedef enum Action
 
 typedef struct ActionStorage
 {
+
     Unicode_Buf * deletedText;
     LPM_SelectionCursor cursorBefore;
     uint32_t enteredTextLenght;
@@ -24,6 +25,15 @@ inline void ActionStorage_init(ActionStorage * o, Unicode_Buf * textBuf)
 {
     o->deletedText = textBuf;
 }
+
+bool ActionStorage_push
+    ( ActionStorage * o,
+      const Unicode_Buf * removingText,
+      const LPM_SelectionCursor * insertArea );
+
+bool ActionStorage_pop
+    ( ActionStorage * o,
+      LPM_SelectionCursor * textCursor );
 
 //void ActionStorage_saveDeletedText
 //        ( ActionStorage * obj,

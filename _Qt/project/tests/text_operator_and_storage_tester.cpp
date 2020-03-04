@@ -138,11 +138,11 @@ QString TextOperatorAndStorageTester::testStorageCalcEndOfTextStep(int textSize,
     QString text(bufSize, textNullChr);
     for(int i = 0; i < textSize; i++)
         text[i] = QChar('0'+i);
-    TextBuffer strg;
+    TextBufferImpl strg;
     Unicode_Buf bfr;
     fillUnicodeBuf(text, bfr);
-    TextBuffer_init(&strg, &bfr);
-    size_t calcedEndOfText = TextBuffer_endOfText(&strg);
+    TextBufferImpl_init(&strg, &bfr);
+    size_t calcedEndOfText = TextBufferImpl_endOfText(&strg);
     size_t actualEndOfText = textSize;
     return QString("Текст: ") + prepareToLog(text) +
             QString(" Конец текста: ") + QString::number(calcedEndOfText) +
@@ -177,17 +177,17 @@ QString TextOperatorAndStorageTester::testStorageAppendStep(int textSize, int ap
 {
     QString srcText = createText(textSize, bufSize, true);
     QString apndText = createText(appendSize, appendSize, false);
-    TextBuffer strg;
+    TextBufferImpl strg;
     Unicode_Buf srcBfr;
     Unicode_Buf apndBfr;
     fillUnicodeBuf(srcText, srcBfr);
     fillUnicodeBuf(apndText, apndBfr);
-    TextBuffer_init(&strg, &srcBfr);
+    TextBufferImpl_init(&strg, &srcBfr);
     QString log = QString("До: ") + prepareToLog(srcText) + ", " +
             QString::number(textSize) + " ";
-    TextBuffer_append(&strg, &apndBfr);
+    TextBufferImpl_append(&strg, &apndBfr);
     log += QString("После: ") + prepareToLog(srcText) + ", " +
-            QString::number(TextBuffer_endOfText(&strg)) + " ";
+            QString::number(TextBufferImpl_endOfText(&strg)) + " ";
     log += QString("Добавлено: ") + QString::number(appendSize);
     return log;
 }
@@ -241,17 +241,17 @@ QString TextOperatorAndStorageTester::testStorageInsertStep(int textSize, int in
 {
     QString srcTxt = createText(textSize, bufSize, true);
     QString insTxt = createText(insSize, insSize, false);
-    TextBuffer strg;
+    TextBufferImpl strg;
     Unicode_Buf srcBfr;
     Unicode_Buf insBfr;
     fillUnicodeBuf(srcTxt, srcBfr);
     fillUnicodeBuf(insTxt, insBfr);
-    TextBuffer_init(&strg, &srcBfr);
+    TextBufferImpl_init(&strg, &srcBfr);
     QString log = QString("До: ") + prepareToLog(srcTxt) + ", " +
             QString::number(textSize) + " ";
-    TextBuffer_insert(&strg, &insBfr, insPos);
+    TextBufferImpl_insert(&strg, &insBfr, insPos);
     log += QString("После: ") + prepareToLog(srcTxt) + ", " +
-            QString::number(TextBuffer_endOfText(&strg)) + " ";
+            QString::number(TextBufferImpl_endOfText(&strg)) + " ";
     log += QString("Вставлено: ") + QString::number(insSize);
     return log;
 }
@@ -292,17 +292,17 @@ QString TextOperatorAndStorageTester::testStorageReplaceStep(int textSize, int r
 {
     QString srcTxt = createText(textSize, bufSize,  true);
     QString rplTxt = createText(rplSize, rplSize, false);
-    TextBuffer strg;
+    TextBufferImpl strg;
     Unicode_Buf srcBfr;
     Unicode_Buf rplBfr;
     fillUnicodeBuf(srcTxt, srcBfr);
     fillUnicodeBuf(rplTxt, rplBfr);
-    TextBuffer_init(&strg, &srcBfr);
+    TextBufferImpl_init(&strg, &srcBfr);
     QString log = QString("До: ") + prepareToLog(srcTxt) + ", " +
             QString::number(textSize) + " ";
-    TextBuffer_replace(&strg, &rplBfr, rplPos);
+    TextBufferImpl_replace(&strg, &rplBfr, rplPos);
     log += QString("После: ") + prepareToLog(srcTxt) + ", " +
-            QString::number(TextBuffer_endOfText(&strg)) + " ";
+            QString::number(TextBufferImpl_endOfText(&strg)) + " ";
     log += QString("Заменено: ") + QString::number(rplSize);
     return log;
 }

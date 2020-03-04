@@ -36,14 +36,14 @@ SOURCES += \
     tests/text_operator_and_storage_tester.cpp \
     language/lpm_lang.c \
     language/lpm_lang_rus_eng.c \
-    text_support/text_buffer.c \
     text_support/lpm_text_storage.c \
     editor/command_reader.c \
     editor/controller.c \
     editor/core.c \
     editor/page_formatter.c \
     text_support/lpm_text_operator.c \
-    editor/clipboard.c
+    editor/clipboard.c \
+    text_support/text_buffer_impl.c
 
 HEADERS += \
         mainwindow.h \
@@ -66,7 +66,6 @@ HEADERS += \
     tests/text_operator_and_storage_tester.h \
     language/lpm_lang.h \
     language/lpm_lang_rus_eng.h \
-    text_support/text_buffer.h \
     text_support/lpm_text_storage.h \
     editor/clipboard.h \
     editor/command_reader.h \
@@ -78,7 +77,8 @@ HEADERS += \
     editor/action_storage.h \
     text_support/lpm_text_operator.h \
     editor/crc16_table.h \
-    editor/line_buffer_support.h
+    editor/line_buffer_support.h \
+    text_support/text_buffer_impl.h
 
 FORMS += \
         mainwindow.ui
