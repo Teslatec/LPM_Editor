@@ -43,7 +43,7 @@ SOURCES += \
     editor/page_formatter.c \
     text_support/lpm_text_operator.c \
     editor/clipboard.c \
-    text_support/text_buffer_impl.c
+    text_support/text_storage_impl.c
 
 HEADERS += \
         mainwindow.h \
@@ -78,7 +78,7 @@ HEADERS += \
     text_support/lpm_text_operator.h \
     editor/crc16_table.h \
     editor/line_buffer_support.h \
-    text_support/text_buffer_impl.h
+    text_support/text_storage_impl.h
 
 FORMS += \
         mainwindow.ui

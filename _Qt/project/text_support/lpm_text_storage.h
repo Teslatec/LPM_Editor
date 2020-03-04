@@ -2,11 +2,11 @@
 #define LPM_TEXT_STORAGE_H
 
 #include "lpm_structs.h"
-#include "text_buffer_impl.h"
+#include "text_storage_impl.h"
 
 typedef struct LPM_TextStorage
 {
-    TextBufferImpl storage;
+    TextStorageImpl storage;
 } LPM_TextStorage;
 
 bool LPM_TextStorage_replace
@@ -28,22 +28,22 @@ static inline void LPM_TextStorage_init
         ( LPM_TextStorage * o,
           Unicode_Buf * textBuffer )
 {
-    TextBufferImpl_init(&o->storage, textBuffer);
+    TextStorageImpl_init(&o->storage, textBuffer);
 }
 
 static inline void LPM_TextStorage_sync(LPM_TextStorage * o)
 {
-    return TextBufferImpl_sync(&o->storage);
+    return TextStorageImpl_sync(&o->storage);
 }
 
 static inline size_t LPM_TextStorage_freeSize(LPM_TextStorage * o)
 {
-    return TextBufferImpl_freeSize(&o->storage);
+    return TextStorageImpl_freeSize(&o->storage);
 }
 
 static inline size_t LPM_TextStorage_endOfText(LPM_TextStorage * o)
 {
-    return TextBufferImpl_endOfText(&o->storage);
+    return TextStorageImpl_endOfText(&o->storage);
 }
 
 #endif // LPM_TEXT_STORAGE_H
