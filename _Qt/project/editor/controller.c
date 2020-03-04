@@ -2,7 +2,6 @@
 
 #include "command_reader.h"
 #include "lpm_text_storage.h"
-#include "action_storage.h"
 #include "page_formatter.h"
 #include "core.h"
 #include "lpm_lang.h"
@@ -24,14 +23,12 @@ static unicode_t clipboardBuffer[CLIPBOARD_BUFFER_SIZE];
 static Core             core;
 static CmdReader        cmdReader;
 static PageFormatter    pageFormatter;
-//static ActionStorage    actionStorage;
-//static Clipboard        clipboard;
 static LPM_TextStorage  textStorage;
 static TextStorageImpl  textStorageImpl;
 static LPM_Lang         lang;
 static LPM_TextOperator textOperator;
 static LPM_TextBuffer   clipboardTextBuffer;
-static LPM_TextBuffer   actionsTextBuffer;
+static LPM_TextBuffer   undoTextBuffer;
 
 static Modules modules;
 static const unicode_t specChars[1] = { UNICODE_LIGHT_SHADE };
@@ -64,15 +61,6 @@ void _createAndInit(const LPM_EditorParams * param)
     modules.lineBuffer.data = lineBuffer;
     modules.lineBuffer.size = LINE_BUFFER_SIZE;
 
-    //modules.actionsBuffer.data = actionsBuffer;
-    //modules.actionsBuffer.size = ACTIONS_BUFFER_SIZE;
-
-    //modules.clipboardBuffer.data = clipboardBuffer;
-    //modules.clipboardBuffer.size = CLIPBOARD_BUFFER_SIZE;
-
-//    modules.textBuffer.data = (unicode_t*)param->textBuffer->data;
-//    modules.textBuffer.size = param->textBuffer->size / sizeof(unicode_t);
-
     Unicode_Buf tmp;
 
     Core_init(&core, &modules, LPM_END_OF_LINE_TYPE_CRLF);
@@ -81,9 +69,13 @@ void _createAndInit(const LPM_EditorParams * param)
     tmp.data = (unicode_t*)param->textBuffer->data;
     tmp.size = param->textBuffer->size / sizeof(unicode_t);
     TextStorageImpl_init(&textStorageImpl, &tmp);
+
     LPM_TextStorage_init(&textStorage, &textStorageImpl);
-    Unicode_Buf buf = { (unicode_t*)specChars, 1 };
-    LPM_TextOperator_init(&textOperator, &lang, &buf);
+
+    tmp.data = (unicode_t*)specChars;
+    tmp.size = 1;
+    LPM_TextOperator_init(&textOperator, &lang, &tmp);
+
     LPM_Lang_init(&lang, LPM_LANG_RUS_ENG);
 
     tmp.data = clipboardBuffer;
@@ -92,20 +84,15 @@ void _createAndInit(const LPM_EditorParams * param)
 
     tmp.data = actionsBuffer;
     tmp.size = ACTIONS_BUFFER_SIZE;
-    LPM_TextBuffer_init(&actionsTextBuffer, &tmp, &modules);
-
-    //ActionStorage_init(&actionStorage, &modules.actionsBuffer);
-    //Clipboard_init(&clipboard, &modules);
+    LPM_TextBuffer_init(&undoTextBuffer, &tmp, &modules);
 
     PageFormatter_init(&pageFormatter, &modules);
 
     modules.core                = &core;
     modules.cmdReader           = &cmdReader;
     modules.pageFormatter       = &pageFormatter;
-    //modules.actionStorage = &actionStorage;
-    //modules.clipboard     = &clipboard;
     modules.clipboardTextBuffer = &clipboardTextBuffer;
-    modules.actionsTextBuffer   = &actionsTextBuffer;
+    modules.undoTextBuffer   = &undoTextBuffer;
     modules.textStorage         = &textStorage;
     modules.textStorageImpl     = &textStorageImpl;
     modules.textOperator        = &textOperator;

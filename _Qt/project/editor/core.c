@@ -197,9 +197,6 @@ void _changeModeCmdHandler(Core * o)
 
 void _copyCmdHandler(Core * o)
 {
-//    if(o->textCursor.len > 0)
-//        if(!Clipboard_push(o->modules->clipboard, &o->textCursor))
-//            _handleNotEnoughPlaceInClipboard(o);
     if(o->textCursor.len > 0)
         if(!LPM_TextBuffer_push(o->modules->clipboardTextBuffer, &o->textCursor))
             _handleNotEnoughPlaceInClipboard(o);
@@ -207,15 +204,6 @@ void _copyCmdHandler(Core * o)
 
 void _pastCmdHandler(Core * o)
 {
-//    if(Clipboard_pop(o->modules->clipboard, &o->textCursor))
-//    {
-//        PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
-//        PageFormatter_updateDisplay(o->modules->pageFormatter);
-//    }
-//    else
-//    {
-//        _handleNotEnoughPlaceInTextStorage(o);
-//    }
     if(LPM_TextBuffer_checkPlaceInTextStorage(o->modules->clipboardTextBuffer, &o->textCursor))
     {
         _saveAction(o, o->modules->clipboardTextBuffer->usedSize);
@@ -227,49 +215,10 @@ void _pastCmdHandler(Core * o)
     {
         _handleNotEnoughPlaceInTextStorage(o);
     }
-//    if(LPM_TextBuffer_pop(o->modules->clipboardTextBuffer, &o->textCursor))
-//    {
-//        PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
-//        PageFormatter_updateDisplay(o->modules->pageFormatter);
-//    }
-//    else
-//    {
-//        _handleNotEnoughPlaceInTextStorage(o);
-//    }
 }
 
 void _cutCmdHandler(Core * o)
 {
-//    if(o->textCursor.len > 0)
-//    {
-//        if(Clipboard_push(o->modules->clipboard, &o->textCursor))
-//        {
-//            LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, NULL);
-//            o->textCursor.len = 0;
-//            PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
-//            PageFormatter_updateDisplay(o->modules->pageFormatter);
-//        }
-//        else
-//        {
-//            _handleNotEnoughPlaceInClipboard(o);
-//        }
-//    }
-//    if(o->textCursor.len > 0)
-//    {
-//        if(LPM_TextBuffer_push(o->modules->clipboardTextBuffer, &o->textCursor))
-//        {
-//            LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, NULL);
-//            o->textCursor.len = 0;
-//            PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
-//            PageFormatter_updateDisplay(o->modules->pageFormatter);
-//        }
-//        else
-//        {
-//            _handleNotEnoughPlaceInClipboard(o);
-//        }
-//    }
-
-
     if(o->textCursor.len > 0)
     {
         if(LPM_TextBuffer_push(o->modules->clipboardTextBuffer, &o->textCursor))
@@ -289,7 +238,6 @@ void _cutCmdHandler(Core * o)
 
 void _clearClipboardCmdHandler(Core * o)
 {
-    //Clipboard_clear(o->modules->clipboard);
     LPM_TextBuffer_clear(o->modules->clipboardTextBuffer);
 }
 
@@ -361,33 +309,6 @@ bool _processEnteredChar(Core * o)
         }
     }
     return false;
-
-//    Unicode_Buf text;
-//    CmdReader_getText(o->modules->cmdReader, &text);
-//    if(!_checkInputText(o, &text))
-//        return true;
-
-//    if(!LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, &text))
-//        return false;
-
-//    o->textCursor.pos += text.size;
-//    if(o->textCursor.len == 0)
-//    {
-//        if(CmdReader_isReplacementMode(o->modules->cmdReader))
-//        {
-//            const unicode_t * pchr = LineBuffer_LoadText(o->modules, o->textCursor.pos, CHAR_BUF_SIZE);
-//            SlcCurs removeArea;
-//            removeArea.pos = o->textCursor.pos;
-//            removeArea.len = LPM_TextOperator_nextChar(o->modules->textOperator, pchr) - pchr;
-//            LPM_TextStorage_replace(o->modules->textStorage, &removeArea, NULL);
-//        }
-//    }
-//    else
-//    {
-//        o->textCursor.len = 0;
-//    }
-
-//    return true;
 }
 
 bool _processEnteredTab(Core * o)
@@ -404,14 +325,6 @@ bool _processEnteredTab(Core * o)
         return true;
     }
     return false;
-
-//    if(LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, &text))
-//    {
-//        o->textCursor.pos += text.size;
-//        o->textCursor.len = 0;
-//        return true;
-//    }
-//    return false;
 }
 
 bool _processEnteredNewLine(Core * o)
@@ -443,15 +356,6 @@ bool _processEnteredNewLine(Core * o)
         return true;
     }
     return false;
-
-//    if(LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, &text))
-//    {
-//        o->textCursor.pos += text.size;
-//        o->textCursor.len = 0;
-//        return true;
-//    }
-
-//    return false;
 }
 
 void _processRemoveNextChar(Core * o)
@@ -534,21 +438,17 @@ void _saveAction(Core * o, size_t insertTextSize)
 {
     if(o->textCursor.len > 0)
     {
-        if(!LPM_TextBuffer_push(o->modules->actionsTextBuffer, &o->textCursor))
+        if(!LPM_TextBuffer_push(o->modules->undoTextBuffer, &o->textCursor))
             return;
     }
     else
     {
-        LPM_TextBuffer_clear(o->modules->actionsTextBuffer);
+        LPM_TextBuffer_clear(o->modules->undoTextBuffer);
     }
 
     o->undoTextCursor.pos = o->textCursor.pos;
     o->undoTextCursor.len = insertTextSize;
     o->hasActionToUndo = true;
-
-    test_print_unicode( o->modules->actionsTextBuffer->buffer.data,
-                        o->modules->actionsTextBuffer->usedSize );
-    test_print_text_cursor(o->undoTextCursor.pos, o->undoTextCursor.len);
 }
 
 void _undoAction(Core * o)
@@ -556,7 +456,7 @@ void _undoAction(Core * o)
     if(!o->hasActionToUndo)
         return;
 
-    if(LPM_TextBuffer_isEmpty(o->modules->actionsTextBuffer))
+    if(LPM_TextBuffer_isEmpty(o->modules->undoTextBuffer))
     {
         LPM_TextStorage_replace(o->modules->textStorage, &o->undoTextCursor, NULL);
         o->textCursor.pos = o->undoTextCursor.pos;
@@ -565,11 +465,11 @@ void _undoAction(Core * o)
     }
     else
     {
-        if(LPM_TextBuffer_pop(o->modules->actionsTextBuffer, &o->undoTextCursor))
+        if(LPM_TextBuffer_pop(o->modules->undoTextBuffer, &o->undoTextCursor))
         {
             o->textCursor.pos = o->undoTextCursor.pos;
             o->textCursor.len = 0;
-            LPM_TextBuffer_clear(o->modules->actionsTextBuffer);
+            LPM_TextBuffer_clear(o->modules->undoTextBuffer);
             o->hasActionToUndo = false;
         }
         else
@@ -577,13 +477,6 @@ void _undoAction(Core * o)
             _handleNotEnoughPlaceInTextStorage(o);
         }
     }
-
-    test_print_unicode( o->modules->actionsTextBuffer->buffer.data,
-                        o->modules->actionsTextBuffer->usedSize );
-    test_print_text_cursor(o->textCursor.pos, o->textCursor.len);
-
-    // 1. Удалить текст сохраненной области вставки
-    // 2. Вставить текст из буфера в полученную позицию
 }
 
 void _handleNotEnoughPlaceInTextStorage(Core * o)

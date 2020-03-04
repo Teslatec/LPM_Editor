@@ -7,8 +7,6 @@
 
 struct Core;
 struct CmdReader;
-struct ActionStorage;
-struct Clipboard;
 struct PageFormatter;
 struct LPM_TextBuffer;
 struct LPM_TextStorage;
@@ -26,7 +24,7 @@ typedef struct Modules
     struct CmdReader        * cmdReader;
     struct PageFormatter    * pageFormatter;
     struct LPM_TextBuffer   * clipboardTextBuffer;
-    struct LPM_TextBuffer   * actionsTextBuffer;
+    struct LPM_TextBuffer   * undoTextBuffer;
     struct LPM_TextStorage  * textStorage;
     struct TextStorageImpl  * textStorageImpl;
     struct LPM_TextOperator * textOperator;

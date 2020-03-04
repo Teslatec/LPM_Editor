@@ -29,7 +29,6 @@ static inline void LPM_TextStorage_init
           TextStorageImpl * storageImpl)
 {
     o->storage = storageImpl;
-    //TextStorageImpl_init(&o->storage, textBuffer);
 }
 
 static inline void LPM_TextStorage_sync(LPM_TextStorage * o)
