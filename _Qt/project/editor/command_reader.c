@@ -31,12 +31,13 @@ static bool _thereIsAltModifier(Obj * obj);
 static bool _thereIsShiftModifier(Obj * obj);
 
 void CmdReader_init
-        ( CmdReader * obj,
+        (CmdReader * obj,
           LPM_UnicodeKeyboard * keyboard,
-          Unicode_Buf * kbdBuf )
+          const Unicode_Buf * kbdBuf )
 {
     obj->keyboard     = keyboard;
-    obj->kbdBuf       = kbdBuf;
+    obj->kbdBuf.data  = kbdBuf->data;
+    obj->kbdBuf.size  = kbdBuf->size;
     obj->receivedSize = 0;
     obj->flags        = 0;
     obj->modifiers    = 0;
@@ -48,12 +49,7 @@ EditorCmd CmdReader_read
           uint32_t timeoutMs )
 {
     EditorCmd cmd = __EDITOR_NO_CMD;
-    Unicode_Buf buf =
-    {
-        .data = obj->kbdBuf->data,
-        .size = obj->kbdBuf->size
-    };
-
+    Unicode_Buf buf = { obj->kbdBuf.data, obj->kbdBuf.size };
     do
     {
         LPM_UnicodeKeyboard_read(obj->keyboard, &buf, timeoutMs);
@@ -148,7 +144,7 @@ Cmd _processAsWithCtrlAndConvertToCmd(Obj * obj, const UBuf * buf)
 
         case ' ':
             obj->receivedSize = 1;
-            obj->kbdBuf->data[0] = UNICODE_LIGHT_SHADE;
+            obj->kbdBuf.data[0] = UNICODE_LIGHT_SHADE;
             cmd = EDITOR_CMD_TEXT_CHANGED;
             obj->flags = TEXT_FLAG_TEXT;
             break;

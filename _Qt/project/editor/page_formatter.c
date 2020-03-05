@@ -160,6 +160,12 @@ void PageFormatter_updatePageWhenCursorMoved
         _updatePageByTextCursor(o, textCurs);
 }
 
+void PageFormatter_updateWholePage(PageFormatter * o)
+{
+    _setAllLineChangedFlags(o);
+    PageFormatter_updateDisplay(o);
+}
+
 void PageFormatter_updateDisplay
         ( PageFormatter * o )
 {

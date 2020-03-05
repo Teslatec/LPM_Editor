@@ -63,6 +63,8 @@ void PageFormatter_updatePageWhenCursorMoved
           uint32_t moveFlags ,
           LPM_SelectionCursor * textCurs );
 
+void PageFormatter_updateWholePage(PageFormatter * o);
+
 void PageFormatter_updateDisplay(PageFormatter * o);
 
 size_t PageFormatter_getCurrLinePos(PageFormatter * o);

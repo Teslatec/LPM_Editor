@@ -25,7 +25,7 @@ typedef enum EditorCmd
 typedef struct CmdReader
 {
     LPM_UnicodeKeyboard * keyboard;
-    Unicode_Buf * kbdBuf;
+    Unicode_Buf kbdBuf;
     size_t receivedSize;
     uint16_t flags;
     uint8_t modifiers;
@@ -35,7 +35,7 @@ typedef struct CmdReader
 void CmdReader_init
         ( CmdReader * obj,
           LPM_UnicodeKeyboard * keyboard,
-          Unicode_Buf * kbdBuf );
+          const Unicode_Buf * kbdBuf );
 
 EditorCmd CmdReader_read
         ( CmdReader * obj,
@@ -47,7 +47,7 @@ inline void CmdReader_getText
         ( CmdReader * obj,
           Unicode_Buf * buf )
 {
-    buf->data = obj->kbdBuf->data;
+    buf->data = obj->kbdBuf.data;
     buf->size = obj->receivedSize;
 }
 

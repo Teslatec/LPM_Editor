@@ -85,6 +85,29 @@ extern "C" void test_beep()
     QApplication::beep();
 }
 
+const QString editorStrTextBufferFull("Текстовый буфер заполнен, ввод нового текста невозможен!");
+const QString editorStrClipboardFull("Буфер обмена заполнен, операция копирования невозможна!");
+
+const QString editorStrShortCut(
+//      "------------------------------------------------------------"
+        "                 Управляющие команды:\n"
+        "\n"
+        "Ctrl+A Выделить текст страницы Ctrl+1 Справочное меню       \n"
+        "Ctrl+C Копировать текст        Ctrl+? Строка состояния      \n"
+        "Ctrl+X Вырезать текст          Ctrl+Пробел Ввести символ ░  \n"
+        "Ctrl+V Вставить текст          Ctrl+Home Курсор в начало    \n"
+        "Ctrl+B Уделить текст строки    Ctrl+End                     \n"
+        "Ctrl+D Выделить строку         Ctrl+Enter                   \n"
+        "Ctrl+S Сохранить               Shift+Enter                  \n"
+        "Ctrl+R Восстановить страницу   Alt+PgUp                     \n"
+        "Ctrl+E Удалить страницу        Alt+PgDn                     \n"
+        "Ctrl+W Очистить буфер обмена   Alt+Home                     \n"
+        "Ctrl+Z Отменить действие       Alt+End                      \n"
+        "");
+
+const unicode_t * editorTextShortcut = (const unicode_t*)editorStrShortCut.data();
+const unicode_t * editorTextTextBufferFull = (const unicode_t*)editorStrTextBufferFull.data();
+const unicode_t * editorTextClipboardFull = (const unicode_t*)editorStrClipboardFull.data();
 
 QStringList testList
 {

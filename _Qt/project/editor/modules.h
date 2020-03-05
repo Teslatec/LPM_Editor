@@ -13,10 +13,10 @@ struct LPM_TextStorage;
 struct LPM_TextOperator;
 struct TextStorageImpl;
 struct LPM_Lang;
+struct ScreenPainter;
 
 typedef struct Modules
 {
-    Unicode_Buf keyboardBuffer;
     Unicode_Buf lineBuffer;
     LPM_UnicodeKeyboard     * keyboard;
     LPM_UnicodeDisplay      * display;
@@ -29,6 +29,7 @@ typedef struct Modules
     struct TextStorageImpl  * textStorageImpl;
     struct LPM_TextOperator * textOperator;
     struct LPM_Lang         * lang;
+    struct ScreenPainter    * screenPainter;
 } Modules;
 
 #endif // MODULES_H

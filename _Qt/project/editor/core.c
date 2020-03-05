@@ -6,6 +6,7 @@
 #include "lpm_text_buffer.h"
 #include "lpm_lang.h"
 #include "line_buffer_support.h"
+#include "screen_painter.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -60,6 +61,10 @@ static void _handleNotEnoughPlaceInTextStorage(Core * o);
 static void _handleNotEnoughPlaceInClipboard(Core * o);
 
 static bool _checkInputText(Core * o, Unicode_Buf * text);
+
+static void _execStateScreen(Core * o);
+static void _execHelpScreen(Core * o);
+static void _outlineUnicodeBuffer(Core * o, const Unicode_Buf * buf);
 
 static void _printLineMap(Core * o);
 static void _printDisplayCursor(Core * o);
@@ -253,8 +258,16 @@ void _undoHandler(Core * o)
     PageFormatter_updateDisplay(o->modules->pageFormatter);
 }
 
-void _outlineHelpCmdHandler(Core * o) { (void)o; }
-void _outlineStateHandler(Core * o) { (void)o; }
+void _outlineHelpCmdHandler(Core * o)
+{
+    ScreenPainter_drawEditorMessage(o->modules->screenPainter, EDITOR_MESSAGE_SHORT_CUTS);
+    PageFormatter_updateWholePage(o->modules->pageFormatter);
+}
+
+void _outlineStateHandler(Core * o)
+{
+     PageFormatter_updateWholePage(o->modules->pageFormatter);
+}
 
 void _timeoutCmdHandler(Core * o)
 {
@@ -481,15 +494,15 @@ void _undoAction(Core * o)
 
 void _handleNotEnoughPlaceInTextStorage(Core * o)
 {
-    // TODO: вывод сообщения о недостатке места в буфере текста
-    (void)o;
+    ScreenPainter_drawEditorMessage(o->modules->screenPainter, EDITOR_MESSAGE_TEXT_BUFFER_FULL);
+    PageFormatter_updateWholePage(o->modules->pageFormatter);
     test_beep();
 }
 
 void _handleNotEnoughPlaceInClipboard(Core *o)
 {
-    (void)o;
-    // TODO: вывод сообщения о недостатке места в буфере текста
+    ScreenPainter_drawEditorMessage(o->modules->screenPainter, EDITOR_MESSAGE_CLIPBOARD_FULL);
+    PageFormatter_updateWholePage(o->modules->pageFormatter);
     test_beep();
 }
 
@@ -507,4 +520,16 @@ bool _checkInputText(Core * o, Unicode_Buf * text)
     text->data = inputBegin;
     text->size = inputPtr - inputBegin;
     return text->size != 0;
+}
+
+void _execStateScreen(Core * o)
+{}
+
+void _execHelpScreen(Core * o)
+{
+}
+
+void _outlineUnicodeBuffer(Core * o, const Unicode_Buf * buf)
+{
+
 }

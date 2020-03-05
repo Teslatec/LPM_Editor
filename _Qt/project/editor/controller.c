@@ -7,6 +7,7 @@
 #include "lpm_lang.h"
 #include "lpm_text_operator.h"
 #include "lpm_text_buffer.h"
+#include "screen_painter.h"
 
 #define KEYBOARD_WATI_TIMEOUT 1000
 
@@ -29,6 +30,13 @@ static LPM_Lang         lang;
 static LPM_TextOperator textOperator;
 static LPM_TextBuffer   clipboardTextBuffer;
 static LPM_TextBuffer   undoTextBuffer;
+static ScreenPainter    screenPainter;
+
+extern const unicode_t * editorTextShortcut;
+extern const unicode_t * editorTextTextBufferFull;
+extern const unicode_t * editorTextClipboardFull;
+
+static ScreenPainterTextTable screenPainterTextTable;
 
 static Modules modules;
 static const unicode_t specChars[1] = { UNICODE_LIGHT_SHADE };
@@ -55,16 +63,16 @@ void _createAndInit(const LPM_EditorParams * param)
     modules.keyboard = param->kbd;
     modules.display  = param->dsp;
 
-    modules.keyboardBuffer.data = keyboardBuffer;
-    modules.keyboardBuffer.size = KEYBOARD_BUFFER_SIZE;
-
     modules.lineBuffer.data = lineBuffer;
     modules.lineBuffer.size = LINE_BUFFER_SIZE;
 
     Unicode_Buf tmp;
 
     Core_init(&core, &modules, LPM_END_OF_LINE_TYPE_CRLF);
-    CmdReader_init(&cmdReader, param->kbd, &modules.keyboardBuffer);
+
+    tmp.data = keyboardBuffer;
+    tmp.size = KEYBOARD_BUFFER_SIZE;
+    CmdReader_init(&cmdReader, param->kbd, &tmp);
 
     tmp.data = (unicode_t*)param->textBuffer->data;
     tmp.size = param->textBuffer->size / sizeof(unicode_t);
@@ -88,13 +96,19 @@ void _createAndInit(const LPM_EditorParams * param)
 
     PageFormatter_init(&pageFormatter, &modules);
 
+    screenPainterTextTable.shortcurs = editorTextShortcut;
+    screenPainterTextTable.textBufferFull = editorTextTextBufferFull;
+    screenPainterTextTable.clipboardFull = editorTextClipboardFull;
+    ScreenPainter_init(&screenPainter, &modules, &screenPainterTextTable);
+
     modules.core                = &core;
     modules.cmdReader           = &cmdReader;
     modules.pageFormatter       = &pageFormatter;
     modules.clipboardTextBuffer = &clipboardTextBuffer;
-    modules.undoTextBuffer   = &undoTextBuffer;
+    modules.undoTextBuffer      = &undoTextBuffer;
     modules.textStorage         = &textStorage;
     modules.textStorageImpl     = &textStorageImpl;
     modules.textOperator        = &textOperator;
     modules.lang                = &lang;
+    modules.screenPainter       = &screenPainter;
 }
