@@ -18,9 +18,9 @@ TestTextEditor::TestTextEditor(QObject * p)
     : QObject(p)
 {}
 
-void TestTextEditor::start(QTextEdit * textEdit, bool displayLatencyEnabled, bool selectAreaUnderlined)
-{
-    QtConcurrent::run([this, textEdit, displayLatencyEnabled, selectAreaUnderlined]()
+void TestTextEditor::start(const Param & param)
+{   
+    QtConcurrent::run([this, param]()
     {
         TestKeyboardKeyCatcher kc;
         connect( this, &TestTextEditor::_gotKey,
@@ -29,14 +29,14 @@ void TestTextEditor::start(QTextEdit * textEdit, bool displayLatencyEnabled, boo
         TestKeyboard kbrd;
         TestKeyboard_init(&kbrd, &kc);
 
-        TestDisplayInteractor itc(64, 16, displayLatencyEnabled, selectAreaUnderlined);
+        TestDisplayInteractor itc(64, 16, param.displayLatencyEnabled, param.selectAreaUnderlined);
         connect( this, &TestTextEditor::_textUpdated,
                  &itc, &TestDisplayInteractor::_htmlTextUpdated );
         connect( &itc, &TestDisplayInteractor::_htmlTextChanged, this,
-                 [textEdit](QString html)
+                 [param](QString html)
         {
-            textEdit->clear();
-            textEdit->setHtml(html);
+            param.textEdit->clear();
+            param.textEdit->setHtml(html);
         });
         connect( &itc, &TestDisplayInteractor::_lineUpdated,
                  this, &TestTextEditor::_lineUpdated );
@@ -49,7 +49,7 @@ void TestTextEditor::start(QTextEdit * textEdit, bool displayLatencyEnabled, boo
         TestDisplay dsp;
         TestDisplay_init(&dsp, &itc);
 
-        TestTextBuffer ttb("test_text_buf.txt", 23000/*65536*/);
+        TestTextBuffer ttb(param.file, param.textBufferSize, param.saveChangesToFile);
         LPM_Buf textBuf;
         ttb.buffer(&textBuf);
 

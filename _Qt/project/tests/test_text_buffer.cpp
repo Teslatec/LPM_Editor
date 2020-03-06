@@ -4,8 +4,9 @@
 #include <QDebug>
 #include <QSerialPort>
 
-TestTextBuffer::TestTextBuffer(const QString & fileName, size_t maxSize)
+TestTextBuffer::TestTextBuffer(const QString & fileName, size_t maxSize, bool saveChanges_)
     : f(fileName)
+    , saveChanges(saveChanges_)
 {
     isErr = true;
     if(f.open(QFile::ReadOnly))
@@ -27,30 +28,31 @@ TestTextBuffer::~TestTextBuffer()
 {
     isErr = true;
 
-//    if(f.open(QFile::WriteOnly))
-//    {
-//        int zeroPos = a.size()-2;
-//        for( ; ; zeroPos -= 2)
-//        {
-//            if( (a[zeroPos] != (char)0) || (a[zeroPos+1] != (char)0) )
-//            {
-//                zeroPos += 2;
-//                break;
-//            }
-//        }
+    if(saveChanges)
+    {
+        if(f.open(QFile::WriteOnly))
+        {
+            int zeroPos = a.size()-2;
+            for( ; ; zeroPos -= 2)
+            {
+                if( (a[zeroPos] != (char)0) || (a[zeroPos+1] != (char)0) )
+                {
+                    zeroPos += 2;
+                    break;
+                }
+            }
 
-//        QByteArray tmp = a;
-//        tmp.remove(zeroPos, a.size() - zeroPos);
+            QByteArray tmp = a;
+            tmp.remove(zeroPos, a.size() - zeroPos);
 
-//        tmp.insert(0, (char)0xfe);
-//        tmp.insert(0, (char)0xff);
+            tmp.insert(0, (char)0xfe);
+            tmp.insert(0, (char)0xff);
 
-//        //qDebug() << tmp.size() << tmp.toHex();
-
-//        f.write(tmp);
-//        f.close();
-//        isErr = false;
-//    }
+            f.write(tmp);
+            f.close();
+            isErr = false;
+        }
+    }
 
 //    QSerialPort port("COM33");
 //    if(port.open(QSerialPort::WriteOnly))

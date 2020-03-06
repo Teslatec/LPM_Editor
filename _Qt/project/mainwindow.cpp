@@ -6,6 +6,8 @@
 #include <QSettings>
 #include <QApplication>
 #include <QTimer>
+#include <QFileDialog>
+#include <QDir>
 
 #include "test_text_editor.h"
 #include "lao.h"
@@ -21,15 +23,23 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     QSettings s;
-    //ui->textEdit->setStyleSheet("border-image: url(test.png)");
     ui->textEdit->setStyleSheet("background-image: url(test.png)");
-    //qDebug() << ui->textEdit->geometry().width() << ui->textEdit->geometry().height();
     ui->ckbxLatency->setChecked(s.value("LATENCY_ENABLED", false).toBool());
     ui->ckbxSelectionAreaByUnderlying->setChecked(s.value("SELECT_UNDERLINE", false).toBool());
+    ui->ckbxSaveChanges->setChecked(s.value("SAVE_CHANGES", false).toBool());
+    ui->sbxTextSize->setValue(s.value("TEXT_SZIE", 1).toInt());
+    textFileName = s.value("TEXT_FILE", "text.txt").toString();
 
     connect(ui->pbLaunchEditor, &QPushButton::clicked, [this]()
     {
-        testTextEditor->start(ui->textEdit, ui->ckbxLatency->isChecked(), ui->ckbxSelectionAreaByUnderlying->isChecked());
+        TestTextEditor::Param param;
+        param.textEdit = ui->textEdit;
+        param.file = textFileName;
+        param.displayLatencyEnabled = ui->ckbxLatency->isChecked();
+        param.selectAreaUnderlined = ui->ckbxSelectionAreaByUnderlying->isChecked();
+        param.textBufferSize = ui->sbxTextSize->value() * 1024;
+        param.saveChangesToFile = ui->ckbxSaveChanges->isChecked();
+        testTextEditor->start(param);
     });
 
     ui->pbLaunchEditor->click();
@@ -44,6 +54,14 @@ MainWindow::MainWindow(QWidget *parent)
     connect( ui->ckbxSelectionAreaByUnderlying, &QCheckBox::clicked,
              testTextEditor, &TestTextEditor::gui_set_display_outline_select_area_underlined );
 
+    connect( ui->pbTextFile, &QPushButton::clicked, [this]()
+    {
+        QDir d(textFileName);
+        QString newName = QFileDialog::getOpenFileName(this, tr("Выбрать файл"), d.absolutePath(), "*.txt");
+        if(!newName.isEmpty())
+            textFileName = newName;
+    });
+
     lineUpdateResetTimer->setInterval(LINE_UPDATE_RESET_TIMER_VALUE);
     lineUpdateResetTimer->setSingleShot(true);
 
@@ -57,6 +75,9 @@ MainWindow::~MainWindow()
     QSettings s;
     s.setValue("LATENCY_ENABLED", ui->ckbxLatency->isChecked());
     s.setValue("SELECT_UNDERLINE", ui->ckbxSelectionAreaByUnderlying->isChecked());
+    s.setValue("SAVE_CHANGES", ui->ckbxSaveChanges->isChecked());
+    s.setValue("TEXT_FILE", textFileName);
+    s.setValue("TEXT_SZIE", ui->sbxTextSize->value());
     delete ui;
 }
 

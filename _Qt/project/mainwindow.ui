@@ -64,6 +64,40 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="pbTextFile">
+        <property name="focusPolicy">
+         <enum>Qt::NoFocus</enum>
+        </property>
+        <property name="text">
+         <string>Выбрать файл...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>Размер буфера текста (кБ)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="sbxTextSize">
+          <property name="focusPolicy">
+           <enum>Qt::NoFocus</enum>
+          </property>
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>1024</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
        <widget class="QCheckBox" name="ckbxLatency">
         <property name="focusPolicy">
          <enum>Qt::NoFocus</enum>
@@ -80,6 +114,16 @@
         </property>
         <property name="text">
          <string>Область выделения подчеркиванием</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="ckbxSaveChanges">
+        <property name="focusPolicy">
+         <enum>Qt::NoFocus</enum>
+        </property>
+        <property name="text">
+         <string>Сохранять изменения</string>
         </property>
        </widget>
       </item>

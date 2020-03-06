@@ -7,11 +7,22 @@
 
 class QTextEdit;
 
+
 class TestTextEditor : public QObject
 {
     Q_OBJECT
 public:
     explicit TestTextEditor(QObject * p);
+
+    struct Param
+    {
+        QTextEdit * textEdit;
+        QString file;
+        size_t textBufferSize;
+        bool saveChangesToFile;
+        bool displayLatencyEnabled;
+        bool selectAreaUnderlined;
+    };
 
 signals:
     void _gotKey(int code);
@@ -22,7 +33,7 @@ signals:
     void _setDisplaySelectAreaUnderlined(bool state);
 
 public slots:
-    void start(QTextEdit * textEdit, bool displayLatencyEnabled, bool selectAreaUnderlined);
+    void start(const Param & par);
     void gui_key_event(QKeyEvent * evt);
     void gui_set_display_latency_enabled(bool state);
     void gui_set_display_outline_select_area_underlined(bool state);

@@ -28,6 +28,7 @@ private:
     Ui::MainWindow * ui;
     TestTextEditor * testTextEditor;
     QTimer * lineUpdateResetTimer;
+    QString textFileName;
 
 private slots:
     void onLineUpdated(int lineIndex);
