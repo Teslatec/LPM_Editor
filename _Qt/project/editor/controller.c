@@ -45,6 +45,15 @@ static void _createAndInit(const LPM_EditorParams * param);
 
 void Controller_exec(const LPM_EditorParams * param)
 {
+    size_t fullSize = sizeof(unicode_t)*(LINE_BUFFER_SIZE + KEYBOARD_BUFFER_SIZE) +
+            sizeof(Core) + sizeof(CmdReader) + sizeof(PageFormatter) +
+            sizeof(TextStorageImpl) + sizeof(LPM_TextStorage) +
+            sizeof(LPM_Lang) + sizeof(LPM_TextOperator) +
+            sizeof(LPM_TextBuffer)*2 + sizeof(ScreenPainter) +
+            sizeof(ScreenPainterTextTable) + sizeof(Modules);
+
+    test_print("Full internal RAM size:", fullSize, 0);
+
     // Читаем настройки
     // Создаем объекты (пока что они статические и глобальные)
 

@@ -52,7 +52,7 @@ static bool _processEnteredNewLine(Core * o);
 static void _processRemoveNextChar(Core * o);
 static void _processRemovePrevChar(Core * o);
 static void _processRemovePage(Core * o);
-static void _processTruncateLine(Core * o);
+static bool _processTruncateLine(Core * o);
 
 static void _saveAction(Core * o, size_t insertTextSize);
 static void _undoAction(Core * o);
@@ -61,6 +61,7 @@ static void _handleNotEnoughPlaceInTextStorage(Core * o);
 static void _handleNotEnoughPlaceInClipboard(Core * o);
 
 static bool _checkInputText(Core * o, Unicode_Buf * text);
+static void _setTextBufToEndlSeq(Core * o, Unicode_Buf * text);
 
 static void _execStateScreen(Core * o);
 static void _execHelpScreen(Core * o);
@@ -182,7 +183,7 @@ void _textChangedCmdHandler(Core * o)
         _processRemovePage(o);
 
     else if(flag == TEXT_FLAG_TRUCATE_LINE)
-        _processTruncateLine(o);
+        enoughPlaceInTextSrorage = _processTruncateLine(o);
 
     if(enoughPlaceInTextSrorage)
     {
@@ -342,23 +343,8 @@ bool _processEnteredTab(Core * o)
 
 bool _processEnteredNewLine(Core * o)
 {
-    static const unicode_t endlArray[2] = { 0x000D, 0x000A };
     Unicode_Buf text;
-    if(o->endOfLineType == LPM_END_OF_LINE_TYPE_CR)
-    {
-        text.data = (unicode_t*)endlArray;
-        text.size = 1;
-    }
-    else if(o->endOfLineType == LPM_END_OF_LINE_TYPE_LF)
-    {
-        text.data = (unicode_t*)endlArray+1;
-        text.size = 1;
-    }
-    else
-    {
-        text.data = (unicode_t*)endlArray;
-        text.size = 2;
-    }
+    _setTextBufToEndlSeq(o, &text);
 
     if(LPM_TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, &text))
     {
@@ -428,23 +414,36 @@ void _processRemovePage(Core * o)
     }
 }
 
-void _processTruncateLine(Core * o)
+bool _processTruncateLine(Core * o)
 {
     size_t currLinePos = PageFormatter_getCurrLinePos(o->modules->pageFormatter);
     size_t currLineLen = PageFormatter_getCurrLineLen(o->modules->pageFormatter);
 
     if(currLinePos <= o->textCursor.pos)
-    {
+    {   
         size_t offset = o->textCursor.pos - currLinePos;
         if(offset <= currLineLen)
         {
-            o->textCursor.pos = currLinePos + offset;
+
+            Unicode_Buf text;
+            _setTextBufToEndlSeq(o, &text);
+
+            size_t prevLen = o->textCursor.len;
             o->textCursor.len = currLineLen - offset;
-            _saveAction(o, 0);
-            LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, NULL);
-            o->textCursor.len = 0;
+
+            if(LPM_TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, &text))
+            {
+                _saveAction(o, text.size);
+                LPM_TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
+                o->textCursor.len = 0;
+                return true;
+            }
+
+            o->textCursor.len = prevLen;
+            return false;
         }
     }
+    return true;
 }
 
 void _saveAction(Core * o, size_t insertTextSize)
@@ -520,6 +519,27 @@ bool _checkInputText(Core * o, Unicode_Buf * text)
     text->data = inputBegin;
     text->size = inputPtr - inputBegin;
     return text->size != 0;
+}
+
+void _setTextBufToEndlSeq(Core * o, Unicode_Buf * text)
+{
+    static const unicode_t endlSeq[2] = { 0x000D, 0x000A };
+
+    if(o->endOfLineType == LPM_END_OF_LINE_TYPE_CR)
+    {
+        text->data = (unicode_t*)endlSeq;
+        text->size = 1;
+    }
+    else if(o->endOfLineType == LPM_END_OF_LINE_TYPE_LF)
+    {
+        text->data = (unicode_t*)endlSeq+1;
+        text->size = 1;
+    }
+    else
+    {
+        text->data = (unicode_t*)endlSeq;
+        text->size = 2;
+    }
 }
 
 void _execStateScreen(Core * o)

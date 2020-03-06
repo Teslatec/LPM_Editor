@@ -5,8 +5,10 @@
 const QString htmlLineFeed          = "<br>";
 const QString htmlCursorBegin       = "<u>";
 const QString htmlCursorEnd         = "</u>";
-const QString htmlHighlightingBegin = "<font color=\"#8852C5\"><b>";
-const QString htmlHighlightingEnd   = "</b></font>";
+//const QString htmlHighlightingBegin = "<font color=\"#8852C5\"><b>";
+//const QString htmlHighlightingEnd   = "</b></font>";
+const QString htmlHighlightingBegin = "<b>";
+const QString htmlHighlightingEnd   = "</b>";
 
 QString convertTextWithoutHighlighting( const QStringList & src,
                                         QPoint cursor );

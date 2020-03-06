@@ -59,20 +59,22 @@ void TestDisplayInteractor::clear()
 void TestDisplayInteractor::writeLine(int index, QString line, QPoint curs)
 {
     html[index] = TestDisplayHtmlConvertor::convertLine(line, curs, selectAreaUnderlined);
-//    for(auto & sym : html[index])
-//    {
-//        if(sym == QChar(' '))
-//            sym = QChar(0x2593);
-//        else if(sym == QChar(0x2591))
-//            sym = QChar(0x2592);
-//    }
+    for(auto & sym : html[index])
+    {
+        if(sym == QChar(' '))
+            sym = QChar(0x00A0);
+        else if(sym == QChar(0x2591))
+            sym = QChar(0x2592);
+    }
 
     if(latencyEnabled)
         QThread::msleep(12);
-    QString text = "<PRE><span style=\" color:#FABD05;\">"; //#FFC90E
+    //QString text = "<PRE><span style=\" color:#FABD05;\">"; //#FFC90E
+    QString text = "<span style=\" color:#FABD05;\">"; //#FFC90E
     for(const auto & line : html)
         text += line;
-    text += "</span></PRE>";
+    //text += "</span></PRE>";
+    text += "</span>";
     emit _htmlTextChanged(text);
     emit _lineUpdated(index);
 }

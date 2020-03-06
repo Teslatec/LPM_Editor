@@ -216,7 +216,7 @@ size_t PageFormatter_getCurrLineLen(PageFormatter * o)
 {
     size_t currIndex = o->displayCursor.begin.y;
     if(currIndex < LINE_AMOUNT)
-        return o->pageStruct.lineMapTable[currIndex].payloadLen;
+        return o->pageStruct.lineMapTable[currIndex].fullLen;
     return 0;
 }
 
@@ -582,7 +582,7 @@ bool _areaIntersect( size_t firstBegin,
 
 bool _posWithinRange(size_t pos, size_t rangeBegin, size_t rangeEnd)
 {
-    return (pos >= rangeBegin) && (pos < rangeEnd);
+    return (pos >= rangeBegin) && (pos <= rangeEnd);
 }
 
 
