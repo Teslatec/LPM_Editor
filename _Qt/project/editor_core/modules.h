@@ -8,11 +8,9 @@
 struct Core;
 struct CmdReader;
 struct PageFormatter;
-struct LPM_TextBuffer;
-struct LPM_TextStorage;
-struct LPM_TextOperator;
-struct TextStorageImpl;
-struct LPM_Lang;
+struct TextBuffer;
+struct TextStorage;
+struct TextOperator;
 struct ScreenPainter;
 
 typedef struct Modules
@@ -23,12 +21,10 @@ typedef struct Modules
     struct Core             * core;
     struct CmdReader        * cmdReader;
     struct PageFormatter    * pageFormatter;
-    struct LPM_TextBuffer   * clipboardTextBuffer;
-    struct LPM_TextBuffer   * undoTextBuffer;
-    struct LPM_TextStorage  * textStorage;
-    struct TextStorageImpl  * textStorageImpl;
-    struct LPM_TextOperator * textOperator;
-    struct LPM_Lang         * lang;
+    struct TextBuffer   * clipboardTextBuffer;
+    struct TextBuffer   * undoTextBuffer;
+    struct TextStorage  * textStorage;
+    struct TextOperator * textOperator;
     struct ScreenPainter    * screenPainter;
 } Modules;
 

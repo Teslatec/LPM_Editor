@@ -1,6 +1,6 @@
 #include "page_formatter.h"
-#include "lpm_text_storage.h"
-#include "lpm_text_operator.h"
+#include "text_storage.h"
+#include "text_operator.h"
 #include "crc16_table.h"
 #include "editor_flags.h"
 #include "line_buffer_support.h"
@@ -489,7 +489,7 @@ size_t _updateLineMap(Obj * o, LineMap * lineMap, size_t lineBase)
             LineBuffer_LoadText(o->modules, lineBase, o->modules->lineBuffer.size);
 
     LPM_TextLineMap textLineMap;
-    if(LPM_TextOperator_analizeLine( o->modules->textOperator,
+    if(TextOperator_analizeLine( o->modules->textOperator,
                                      begin,
                                      CHAR_AMOUNT,
                                      &textLineMap) )
@@ -974,7 +974,7 @@ size_t _movePosLeftAtChar(Obj * o, size_t pos)
     if(pos > 0)
     {
         unicode_t * pchr = LineBuffer_LoadTextBack(o->modules, pos, 10);
-        pos -= pchr - LPM_TextOperator_prevChar(o->modules->textOperator, pchr);
+        pos -= pchr - TextOperator_prevChar(o->modules->textOperator, pchr);
     }
     return pos;
 }
@@ -982,7 +982,7 @@ size_t _movePosLeftAtChar(Obj * o, size_t pos)
 size_t _movePosRightAtChar(Obj * o, size_t pos)
 {
     unicode_t * pchr = LineBuffer_LoadText(o->modules, pos, 10);
-    pos += LPM_TextOperator_nextChar(o->modules->textOperator, pchr) - pchr;
+    pos += TextOperator_nextChar(o->modules->textOperator, pchr) - pchr;
     return pos;
 }
 
@@ -1005,10 +1005,10 @@ size_t _movePosUpAtChar(Obj * o, size_t textPos, const LPM_Point * dspPoint)
         {
             textPos -= currLineX;
             const unicode_t * pchr = LineBuffer_LoadText(o->modules, textPos, o->modules->lineBuffer.size );
-            size_t chrAmount = LPM_TextOperator_calcChrAmount(o->modules->textOperator, pchr, pchr+currLineX);
+            size_t chrAmount = TextOperator_calcChrAmount(o->modules->textOperator, pchr, pchr+currLineX);
             textPos -= prevLine->fullLen;
             pchr = LineBuffer_LoadText(o->modules, textPos, o->modules->lineBuffer.size);
-            textPos += LPM_TextOperator_nextNChar(o->modules->textOperator, pchr, chrAmount) - pchr;
+            textPos += TextOperator_nextNChar(o->modules->textOperator, pchr, chrAmount) - pchr;
         }
     }
     return textPos;
@@ -1043,10 +1043,10 @@ size_t _movePosDownAtChar(Obj * o, size_t textPos, const LPM_Point * dspPoint)
     {
         textPos -= currLineX;
         const unicode_t * pchr = LineBuffer_LoadText(o->modules, textPos, o->modules->lineBuffer.size );
-        size_t chrAmount = LPM_TextOperator_calcChrAmount(o->modules->textOperator, pchr, pchr + currLineX);
+        size_t chrAmount = TextOperator_calcChrAmount(o->modules->textOperator, pchr, pchr + currLineX);
         textPos += currLine->fullLen;
         pchr = LineBuffer_LoadText(o->modules, textPos, o->modules->lineBuffer.size);
-        textPos += LPM_TextOperator_nextNChar(o->modules->textOperator, pchr, chrAmount) - pchr;
+        textPos += TextOperator_nextNChar(o->modules->textOperator, pchr, chrAmount) - pchr;
     }
     return textPos;
 }
@@ -1194,7 +1194,7 @@ void _formatLineForDisplay(Obj * o, const LineMap * lineMap, size_t lineOffset)
         .data = o->modules->lineBuffer.data,
         .size = lineMap->payloadLen,
     };
-    LPM_TextStorage_read(o->modules->textStorage, lineOffset, &buf);
+    TextStorage_read(o->modules->textStorage, lineOffset, &buf);
 
     unicode_t * pchr = buf.data + lineMap->payloadLen;
     unicode_t * const end = pchr + lineMap->restLen;

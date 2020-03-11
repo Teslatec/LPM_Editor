@@ -1,49 +1,49 @@
-#ifndef LPM_TEXT_STORAGE_H
-#define LPM_TEXT_STORAGE_H
+#ifndef TEXT_STORAGE_H
+#define TEXT_STORAGE_H
 
 #include "lpm_structs.h"
 #include "text_storage_impl.h"
 
-typedef struct LPM_TextStorage
+typedef struct TextStorage
 {
     TextStorageImpl * storage;
-} LPM_TextStorage;
+} TextStorage;
 
-bool LPM_TextStorage_replace
-        ( LPM_TextStorage * o,
+bool TextStorage_replace
+        ( TextStorage * o,
           LPM_SelectionCursor * removingArea,
           const Unicode_Buf * textToWrite );
 
-void LPM_TextStorage_read
-        ( LPM_TextStorage * o,
+void TextStorage_read
+        ( TextStorage * o,
           size_t readPosition,
           Unicode_Buf * readTextBuffer );
 
-bool LPM_TextStorage_enoughPlace
-        ( LPM_TextStorage * o,
+bool TextStorage_enoughPlace
+        ( TextStorage * o,
           const LPM_SelectionCursor * removingArea,
           const Unicode_Buf * textToWrite );
 
-static inline void LPM_TextStorage_init
-        ( LPM_TextStorage * o,
+static inline void TextStorage_init
+        ( TextStorage * o,
           TextStorageImpl * storageImpl)
 {
     o->storage = storageImpl;
 }
 
-static inline void LPM_TextStorage_sync(LPM_TextStorage * o)
+static inline void TextStorage_sync(TextStorage * o)
 {
     return TextStorageImpl_sync(o->storage);
 }
 
-static inline size_t LPM_TextStorage_freeSize(LPM_TextStorage * o)
+static inline size_t TextStorage_freeSize(TextStorage * o)
 {
     return TextStorageImpl_freeSize(o->storage);
 }
 
-static inline size_t LPM_TextStorage_endOfText(LPM_TextStorage * o)
+static inline size_t TextStorage_endOfText(TextStorage * o)
 {
     return TextStorageImpl_endOfText(o->storage);
 }
 
-#endif // LPM_TEXT_STORAGE_H
+#endif // TEXT_STORAGE_H

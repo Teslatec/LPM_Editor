@@ -1,5 +1,5 @@
-#include "lpm_text_operator.h"
-#include "lpm_lang.h"
+#include "text_operator.h"
+#include "lpm_lang_api.h"
 
 static const unicode_t chrEndOfText = 0x0000;
 static const unicode_t chrCr = 0x000D;
@@ -15,8 +15,8 @@ static bool _atSpace(unicode_t chr);
 static const unicode_t * _nextCharWhenEndOfLine(const unicode_t * pchr);
 static const unicode_t * _prevCharWhenEndOfLine(const unicode_t * pchr);
 
-static size_t _calcChrAmountForward(LPM_TextOperator * o, const unicode_t * begin, const unicode_t * end);
-static size_t _calcChrAmountBackward(LPM_TextOperator * o, const unicode_t * begin, const unicode_t * end);
+static size_t _calcChrAmountForward(TextOperator * o, const unicode_t * begin, const unicode_t * end);
+static size_t _calcChrAmountBackward(TextOperator * o, const unicode_t * begin, const unicode_t * end);
 
 static void _fillLineMapWhenAtEndOfText
         ( const unicode_t * pchr,
@@ -38,9 +38,9 @@ static void _fillLineMapWhenWordWrapped
           size_t divCnt,
           LPM_TextLineMap * lineMap );
 
-void LPM_TextOperator_init
-    ( LPM_TextOperator * o,
-      LPM_Lang * lang,
+void TextOperator_init
+    ( TextOperator * o,
+      struct LPM_LangFxns * lang,
       const Unicode_Buf * specChars )
 {
     o->lang = lang;
@@ -56,8 +56,8 @@ void LPM_TextOperator_init
     }
 }
 
-bool LPM_TextOperator_checkInputChar
-    ( LPM_TextOperator * o,
+bool TextOperator_checkInputChar
+    ( TextOperator * o,
       unicode_t inputChr,
       const unicode_t * pchr )
 {
@@ -72,8 +72,8 @@ bool LPM_TextOperator_checkInputChar
     return LPM_Lang_checkInputChar(o->lang, inputChr, pchr);
 }
 
-const unicode_t * LPM_TextOperator_nextChar
-    ( LPM_TextOperator * o,
+const unicode_t * TextOperator_nextChar
+    ( TextOperator * o,
       const unicode_t * pchr )
 {
     if(_atEndOfText(*pchr))
@@ -85,8 +85,8 @@ const unicode_t * LPM_TextOperator_nextChar
     return LPM_Lang_nextChar(o->lang, pchr);
 }
 
-const unicode_t * LPM_TextOperator_prevChar
-    ( LPM_TextOperator * o,
+const unicode_t * TextOperator_prevChar
+    ( TextOperator * o,
       const unicode_t * pchr )
 {
     --pchr;
@@ -100,8 +100,8 @@ const unicode_t * LPM_TextOperator_prevChar
     return LPM_Lang_prevChar(o->lang, pchr);
 }
 
-bool LPM_TextOperator_analizeLine
-        ( LPM_TextOperator * o,
+bool TextOperator_analizeLine
+        ( TextOperator * o,
           const unicode_t  * pchr,
           size_t maxLenInChrs,
           LPM_TextLineMap * lineMap )
@@ -147,8 +147,8 @@ bool LPM_TextOperator_analizeLine
     return endOfTextReached;
 }
 
-const unicode_t * LPM_TextOperator_nextNChar
-    ( LPM_TextOperator * o,
+const unicode_t * TextOperator_nextNChar
+    ( TextOperator * o,
       const unicode_t * pchr,
       size_t chrAmount )
 {
@@ -165,8 +165,8 @@ const unicode_t * LPM_TextOperator_nextNChar
     return pchr;
 }
 
-size_t LPM_TextOperator_calcChrAmount
-    ( LPM_TextOperator * o,
+size_t TextOperator_calcChrAmount
+    ( TextOperator * o,
       const unicode_t * begin,
       const unicode_t * end )
 {
@@ -179,19 +179,19 @@ size_t LPM_TextOperator_calcChrAmount
     return _calcChrAmountForward(o, begin, end);
 }
 
-bool LPM_TextOperator_atEndOfText(LPM_TextOperator * o, const unicode_t * pchr)
+bool TextOperator_atEndOfText(TextOperator * o, const unicode_t * pchr)
 {
     (void)o;
     return *pchr == chrEndOfText;
 }
 
-bool LPM_TextOperator_atEndOfLine(LPM_TextOperator * o, const unicode_t * pchr)
+bool TextOperator_atEndOfLine(TextOperator * o, const unicode_t * pchr)
 {
     (void)o;
     return _atEndOfLine(*pchr);
 }
 
-bool LPM_TextOperator_atSpace(LPM_TextOperator * o, const unicode_t * pchr)
+bool TextOperator_atSpace(TextOperator * o, const unicode_t * pchr)
 {
     (void)o;
     return *pchr == chrSpace;
@@ -306,7 +306,7 @@ void _fillLineMapWhenWordWrapped
 }
 
 size_t _calcChrAmountForward
-    ( LPM_TextOperator * o,
+    ( TextOperator * o,
       const unicode_t * begin,
       const unicode_t * end )
 {
@@ -326,7 +326,7 @@ size_t _calcChrAmountForward
 }
 
 size_t _calcChrAmountBackward
-    ( LPM_TextOperator * o,
+    ( TextOperator * o,
       const unicode_t * begin,
       const unicode_t * end )
 {

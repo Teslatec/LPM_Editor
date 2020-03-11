@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#include "lpm_editor_params.h"
+#include "lpm_editor_api.h"
 
 typedef struct Controller
 {} Controller;

@@ -2,7 +2,7 @@
 #define CORE_H
 
 #include "modules.h"
-#include "lpm_editor_params.h"
+#include "lpm_editor_api.h"
 
 typedef struct Core
 {

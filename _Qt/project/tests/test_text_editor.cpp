@@ -54,13 +54,16 @@ void TestTextEditor::start(const Param & param)
         ttb.buffer(&textBuf);
 
         LPM_EditorParams par;
-        par.kbd = TestKeyboard_base(&kbrd);
-        par.dsp = TestDisplay_base(&dsp);
-        par.textBuffer = &textBuf;
+        par.keyboard = TestKeyboard_base(&kbrd);
+        par.display = TestDisplay_base(&dsp);
+        //par.textBuffer = &textBuf;
 
         qDebug() << "Начинаю работу редактора в потоке " << QThread::currentThreadId();
-        LPM_launchEditor(&par);
+        LPM_API_execEditor(&par);
         qDebug() << "Работа завершена";
+
+        //QThread::msleep(5);
+        emit _editingFinished();
     });
 }
 

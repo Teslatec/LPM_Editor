@@ -23,7 +23,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     QSettings s;
-    ui->textEdit->setStyleSheet("background-image: url(test.png)");
+    ui->textEdit->setStyleSheet("background-image: url(display_background.png)");
     ui->ckbxLatency->setChecked(s.value("LATENCY_ENABLED", false).toBool());
     ui->ckbxSelectionAreaByUnderlying->setChecked(s.value("SELECT_UNDERLINE", false).toBool());
     ui->ckbxSaveChanges->setChecked(s.value("SAVE_CHANGES", false).toBool());
@@ -32,6 +32,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->pbLaunchEditor, &QPushButton::clicked, [this]()
     {
+        ui->pbLaunchEditor->setEnabled(false);
         TestTextEditor::Param param;
         param.textEdit = ui->textEdit;
         param.file = textFileName;
@@ -42,7 +43,10 @@ MainWindow::MainWindow(QWidget *parent)
         testTextEditor->start(param);
     });
 
-    ui->pbLaunchEditor->click();
+    //ui->pbLaunchEditor->click();
+    ui->pbLaunchInsertionEditor->setVisible(false);
+    ui->pbLaunchMeteoEditor->setVisible(false);
+    ui->pbLaunchTemplateEditor->setVisible(false);
 
 
     connect( testTextEditor, &TestTextEditor::_lineUpdated,
@@ -62,6 +66,11 @@ MainWindow::MainWindow(QWidget *parent)
             textFileName = newName;
     });
 
+    connect( testTextEditor, &TestTextEditor::_editingFinished, [this]()
+    {
+        ui->pbLaunchEditor->setEnabled(true);
+    });
+
     lineUpdateResetTimer->setInterval(LINE_UPDATE_RESET_TIMER_VALUE);
     lineUpdateResetTimer->setSingleShot(true);
 
@@ -71,7 +80,21 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     QKeyEvent evt(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
-    keyPressEvent(&evt);
+
+    if(!ui->pbLaunchEditor->isEnabled())
+    {
+        QEventLoop loop;
+        connect( testTextEditor, &TestTextEditor::_editingFinished,
+                 &loop, &QEventLoop::quit );
+
+        keyPressEvent(&evt);
+        QThread::msleep(50);
+        keyPressEvent(&evt);
+
+        loop.exec();
+        loop.disconnect();
+    }
+
     QSettings s;
     s.setValue("LATENCY_ENABLED", ui->ckbxLatency->isChecked());
     s.setValue("SELECT_UNDERLINE", ui->ckbxSelectionAreaByUnderlying->isChecked());

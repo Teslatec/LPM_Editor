@@ -1,5 +1,5 @@
-#include "lpm_text_buffer.h"
-#include "lpm_text_storage.h"
+#include "text_buffer.h"
+#include "text_storage.h"
 #include "line_buffer_support.h"
 
 /*
@@ -7,14 +7,14 @@
  *  нужно переписать функции _read и _write
  */
 
-static bool _noEnoughPlaceInClipboard(LPM_TextBuffer * o, size_t len);
-static bool _noEnoughPlaceInTextStorage(LPM_TextBuffer * o, const LPM_SelectionCursor * removingArea);
-static void _write(LPM_TextBuffer * o, size_t pos, size_t len);
-static void _read(LPM_TextBuffer * o, size_t pos, size_t len);
+static bool _noEnoughPlaceInClipboard(TextBuffer * o, size_t len);
+static bool _noEnoughPlaceInTextStorage(TextBuffer * o, const LPM_SelectionCursor * removingArea);
+static void _write(TextBuffer * o, size_t pos, size_t len);
+static void _read(TextBuffer * o, size_t pos, size_t len);
 static size_t _calcPartialRemoveLen(size_t enterTextPos, size_t removeEndPos, size_t loadSize);
 
-void LPM_TextBuffer_init
-    ( LPM_TextBuffer * o,
+void TextBuffer_init
+    ( TextBuffer * o,
       const Unicode_Buf * buffer,
       Modules * modules )
 {
@@ -24,13 +24,13 @@ void LPM_TextBuffer_init
     o->modules     = modules;
 }
 
-void LPM_TextBuffer_clear(LPM_TextBuffer * o)
+void TextBuffer_clear(TextBuffer * o)
 {
     o->usedSize = 0;
 }
 
-bool LPM_TextBuffer_push
-    ( LPM_TextBuffer * o,
+bool TextBuffer_push
+    ( TextBuffer * o,
       const LPM_SelectionCursor * textCursor )
 {
     if(_noEnoughPlaceInClipboard(o, textCursor->len))
@@ -61,8 +61,8 @@ bool LPM_TextBuffer_push
     return true;
 }
 
-bool LPM_TextBuffer_pop
-    ( LPM_TextBuffer * o,
+bool TextBuffer_pop
+    ( TextBuffer * o,
       LPM_SelectionCursor * textCursor )
 {
     if(o->usedSize == 0)
@@ -91,7 +91,7 @@ bool LPM_TextBuffer_pop
         partRemoveArea.len = _calcPartialRemoveLen(enterTextPos, removeEndPos, loadSize);
 
         _read(o, clipboardPos, loadSize);
-        LPM_TextStorage_replace(o->modules->textStorage, &partRemoveArea, &partEnterText);
+        TextStorage_replace(o->modules->textStorage, &partRemoveArea, &partEnterText);
 
         if(lastPieceReatched)
         {
@@ -108,7 +108,7 @@ bool LPM_TextBuffer_pop
     {
         partRemoveArea.pos = enterTextPos;
         partRemoveArea.len = removeEndPos - enterTextPos;
-        LPM_TextStorage_replace(o->modules->textStorage, &partRemoveArea, NULL);
+        TextStorage_replace(o->modules->textStorage, &partRemoveArea, NULL);
     }
 
     textCursor->pos = enterTextPos;
@@ -117,34 +117,34 @@ bool LPM_TextBuffer_pop
     return true;
 }
 
-bool LPM_TextBuffer_checkPlaceInTextStorage
-    ( LPM_TextBuffer * o,
+bool TextBuffer_checkPlaceInTextStorage
+    ( TextBuffer * o,
       const LPM_SelectionCursor * textCursor )
 {
     return !_noEnoughPlaceInTextStorage(o, textCursor);
 }
 
-bool _noEnoughPlaceInClipboard(LPM_TextBuffer * o, size_t len)
+bool _noEnoughPlaceInClipboard(TextBuffer * o, size_t len)
 {
     return len > o->buffer.size;
 }
 
-bool _noEnoughPlaceInTextStorage(LPM_TextBuffer * o, const LPM_SelectionCursor * removingArea)
+bool _noEnoughPlaceInTextStorage(TextBuffer * o, const LPM_SelectionCursor * removingArea)
 {
     Unicode_Buf textToWrite = { o->buffer.data, o->usedSize };
-    return !LPM_TextStorage_enoughPlace( o->modules->textStorage,
+    return !TextStorage_enoughPlace( o->modules->textStorage,
                                          removingArea,
                                          &textToWrite );
 }
 
-void _write(LPM_TextBuffer * o, size_t pos, size_t len)
+void _write(TextBuffer * o, size_t pos, size_t len)
 {
     memcpy( o->buffer.data + pos,
             o->modules->lineBuffer.data,
             len * sizeof(unicode_t) );
 }
 
-void _read(LPM_TextBuffer * o, size_t pos, size_t len)
+void _read(TextBuffer * o, size_t pos, size_t len)
 {
     memcpy( o->modules->lineBuffer.data,
             o->buffer.data + pos,

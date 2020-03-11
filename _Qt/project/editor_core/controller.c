@@ -1,13 +1,14 @@
 #include "controller.h"
 
 #include "command_reader.h"
-#include "lpm_text_storage.h"
+#include "text_storage.h"
 #include "page_formatter.h"
 #include "core.h"
-#include "lpm_lang.h"
-#include "lpm_text_operator.h"
-#include "lpm_text_buffer.h"
+#include "lpm_lang_api.h"
+#include "text_operator.h"
+#include "text_buffer.h"
 #include "screen_painter.h"
+#include "lang_rus_eng.h"
 
 #define KEYBOARD_WATI_TIMEOUT 1000
 
@@ -21,15 +22,17 @@ static unicode_t lineBuffer[LINE_BUFFER_SIZE];
 static unicode_t actionsBuffer[ACTIONS_BUFFER_SIZE];
 static unicode_t clipboardBuffer[CLIPBOARD_BUFFER_SIZE];
 
+static unicode_t textBuffer[23*1024];
+
 static Core             core;
 static CmdReader        cmdReader;
 static PageFormatter    pageFormatter;
-static LPM_TextStorage  textStorage;
+static TextStorage  textStorage;
 static TextStorageImpl  textStorageImpl;
-static LPM_Lang         lang;
-static LPM_TextOperator textOperator;
-static LPM_TextBuffer   clipboardTextBuffer;
-static LPM_TextBuffer   undoTextBuffer;
+static LPM_LangFxns     langFxns;
+static TextOperator textOperator;
+static TextBuffer   clipboardTextBuffer;
+static TextBuffer   undoTextBuffer;
 static ScreenPainter    screenPainter;
 
 extern const unicode_t * editorTextShortcut;
@@ -47,9 +50,9 @@ void Controller_exec(const LPM_EditorParams * param)
 {
     size_t fullSize = sizeof(unicode_t)*(LINE_BUFFER_SIZE + KEYBOARD_BUFFER_SIZE) +
             sizeof(Core) + sizeof(CmdReader) + sizeof(PageFormatter) +
-            sizeof(TextStorageImpl) + sizeof(LPM_TextStorage) +
-            sizeof(LPM_Lang) + sizeof(LPM_TextOperator) +
-            sizeof(LPM_TextBuffer)*2 + sizeof(ScreenPainter) +
+            sizeof(TextStorageImpl) + sizeof(TextStorage) +
+            sizeof(LPM_LangFxns) + sizeof(TextOperator) +
+            sizeof(TextBuffer)*2 + sizeof(ScreenPainter) +
             sizeof(ScreenPainterTextTable) + sizeof(Modules);
 
     test_print("Full internal RAM size:", fullSize, 0);
@@ -69,8 +72,8 @@ void Controller_exec(const LPM_EditorParams * param)
 
 void _createAndInit(const LPM_EditorParams * param)
 {
-    modules.keyboard = param->kbd;
-    modules.display  = param->dsp;
+    modules.keyboard = param->keyboard;
+    modules.display  = param->display;
 
     modules.lineBuffer.data = lineBuffer;
     modules.lineBuffer.size = LINE_BUFFER_SIZE;
@@ -81,27 +84,33 @@ void _createAndInit(const LPM_EditorParams * param)
 
     tmp.data = keyboardBuffer;
     tmp.size = KEYBOARD_BUFFER_SIZE;
-    CmdReader_init(&cmdReader, param->kbd, &tmp);
+    CmdReader_init(&cmdReader, param->keyboard, &tmp);
 
-    tmp.data = (unicode_t*)param->textBuffer->data;
-    tmp.size = param->textBuffer->size / sizeof(unicode_t);
+//    tmp.data = (unicode_t*)param->textBuffer->data;
+//    tmp.size = param->textBuffer->size / sizeof(unicode_t);
+    tmp.data = textBuffer;
+    tmp.size = 23*1024;
     TextStorageImpl_init(&textStorageImpl, &tmp);
 
-    LPM_TextStorage_init(&textStorage, &textStorageImpl);
+    TextStorage_init(&textStorage, &textStorageImpl);
+
+    //LPM_Lang_init(&langFxns, LPM_LANG_RUS_ENG);
+    langFxns.checkInputChar = &Lang_RusEng_checkInputChar;
+    langFxns.nextChar       = &Lang_RusEng_nextChar;
+    langFxns.prevChar       = &Lang_RusEng_prevChar;
 
     tmp.data = (unicode_t*)specChars;
     tmp.size = 1;
-    LPM_TextOperator_init(&textOperator, &lang, &tmp);
+    TextOperator_init(&textOperator, &langFxns, &tmp);
 
-    LPM_Lang_init(&lang, LPM_LANG_RUS_ENG);
 
     tmp.data = clipboardBuffer;
     tmp.size = CLIPBOARD_BUFFER_SIZE;
-    LPM_TextBuffer_init(&clipboardTextBuffer, &tmp, &modules);
+    TextBuffer_init(&clipboardTextBuffer, &tmp, &modules);
 
     tmp.data = actionsBuffer;
     tmp.size = ACTIONS_BUFFER_SIZE;
-    LPM_TextBuffer_init(&undoTextBuffer, &tmp, &modules);
+    TextBuffer_init(&undoTextBuffer, &tmp, &modules);
 
     PageFormatter_init(&pageFormatter, &modules);
 
@@ -116,8 +125,6 @@ void _createAndInit(const LPM_EditorParams * param)
     modules.clipboardTextBuffer = &clipboardTextBuffer;
     modules.undoTextBuffer      = &undoTextBuffer;
     modules.textStorage         = &textStorage;
-    modules.textStorageImpl     = &textStorageImpl;
     modules.textOperator        = &textOperator;
-    modules.lang                = &lang;
     modules.screenPainter       = &screenPainter;
 }

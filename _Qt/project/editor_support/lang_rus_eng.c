@@ -1,4 +1,4 @@
-#include "lpm_lang_rus_eng.h"
+#include "lang_rus_eng.h"
 
 static const unicode_t chrYoBig   = 0x0401;
 static const unicode_t chrYoSmall = 0x0451;
@@ -17,7 +17,7 @@ static bool _isChrLetterE(unicode_t chr);
 static bool _isChrCratca(unicode_t chr);
 static bool _isChrUmlaut(unicode_t chr);
 
-bool LPM_LangRusEng_checkInputChar(unicode_t inputChr, const unicode_t * pchr)
+bool Lang_RusEng_checkInputChar(unicode_t inputChr, const unicode_t * pchr)
 {
     if(_belongsBaseRussian(inputChr))
         return true;
@@ -33,7 +33,7 @@ bool LPM_LangRusEng_checkInputChar(unicode_t inputChr, const unicode_t * pchr)
     return false;
 }
 
-const unicode_t * LPM_LangRusEng_nextChar(const unicode_t * pchr)
+const unicode_t * Lang_RusEng_nextChar(const unicode_t * pchr)
 {
     if(_isChrLetterI(pchr[0]))
     {
@@ -48,7 +48,7 @@ const unicode_t * LPM_LangRusEng_nextChar(const unicode_t * pchr)
     return ++pchr;
 }
 
-const unicode_t * LPM_LangRusEng_prevChar(const unicode_t * pchr)
+const unicode_t * Lang_RusEng_prevChar(const unicode_t * pchr)
 {
     if(_isChrCratca(*pchr) || _isChrUmlaut(*pchr))
         --pchr;

@@ -1,7 +1,7 @@
 #ifndef LINE_BUFFER_SUPPORT_H
 #define LINE_BUFFER_SUPPORT_H
 
-#include "lpm_text_storage.h"
+#include "text_storage.h"
 #include "modules.h"
 #include <string.h>
 
@@ -12,7 +12,7 @@ static inline unicode_t * LineBuffer_LoadText(const Modules * m, size_t pos, siz
     //  случае остаток буфера строки добивается нулями
 
     Unicode_Buf buf = { m->lineBuffer.data, amount };
-    LPM_TextStorage_read(m->textStorage, pos, &buf);
+    TextStorage_read(m->textStorage, pos, &buf);
     memset(buf.data + buf.size, 0, (amount - buf.size)*sizeof(unicode_t));
     return m->lineBuffer.data;
 }
@@ -23,7 +23,7 @@ static inline unicode_t * LineBuffer_LoadTextBack(const Modules * m, size_t pos,
     size_t restAmount = amount - actualAmount;
     memset(m->lineBuffer.data, 0, restAmount*sizeof(unicode_t));
     Unicode_Buf buf = { m->lineBuffer.data+restAmount, actualAmount };
-    LPM_TextStorage_read(m->textStorage, pos-actualAmount, &buf);
+    TextStorage_read(m->textStorage, pos-actualAmount, &buf);
     return buf.data + actualAmount;
 }
 

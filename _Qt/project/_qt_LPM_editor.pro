@@ -26,7 +26,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    editor/lpm_editor_api.c \
+    editor_api/lpm_editor_api.c \
     tests/test_text_editor.cpp \
     tests/test_keyboard.cpp \
     tests/test_display.cpp \
@@ -34,22 +34,19 @@ SOURCES += \
     tests/test_display_html_convertor.cpp \
     tests/test_text_buffer.cpp \
     tests/text_operator_and_storage_tester.cpp \
-    language/lpm_lang.c \
-    language/lpm_lang_rus_eng.c \
-    text_support/lpm_text_storage.c \
-    editor/command_reader.c \
-    editor/controller.c \
-    editor/core.c \
-    editor/page_formatter.c \
-    text_support/lpm_text_operator.c \
-    text_support/text_storage_impl.c \
-    text_support/lpm_text_buffer.c \
-    editor/screen_painter.c
+    editor_core/text_storage.c \
+    editor_core/command_reader.c \
+    editor_core/controller.c \
+    editor_core/core.c \
+    editor_core/page_formatter.c \
+    editor_core/text_operator.c \
+    editor_core/text_storage_impl.c \
+    editor_core/text_buffer.c \
+    editor_core/screen_painter.c \
+    editor_support/lang_rus_eng.c
 
 HEADERS += \
         mainwindow.h \
-    editor/lpm_editor_params.h \
-    editor/lpm_editor_api.h \
     tests/test_text_editor.h \
     tests/test_keyboard.h \
     lao.h \
@@ -65,28 +62,33 @@ HEADERS += \
     system/lpm_error.h \
     tests/test_text_buffer.h \
     tests/text_operator_and_storage_tester.h \
-    language/lpm_lang.h \
-    language/lpm_lang_rus_eng.h \
-    text_support/lpm_text_storage.h \
-    editor/command_reader.h \
-    editor/controller.h \
-    editor/core.h \
-    editor/editor_flags.h \
-    editor/modules.h \
-    editor/page_formatter.h \
-    text_support/lpm_text_operator.h \
-    editor/crc16_table.h \
-    editor/line_buffer_support.h \
-    text_support/text_storage_impl.h \
-    text_support/lpm_text_buffer.h \
-    editor/screen_painter.h
+    editor_core/text_storage.h \
+    editor_core/command_reader.h \
+    editor_core/controller.h \
+    editor_core/core.h \
+    editor_core/editor_flags.h \
+    editor_core/modules.h \
+    editor_core/page_formatter.h \
+    editor_core/text_operator.h \
+    editor_core/crc16_table.h \
+    editor_core/line_buffer_support.h \
+    editor_core/text_storage_impl.h \
+    editor_core/text_buffer.h \
+    editor_core/screen_painter.h \
+    editor_api/lpm_editor_api.h \
+    editor_api/lpm_lang_api.h \
+    editor_api/lpm_settings_api.h \
+    editor_api/lpm_gui_texts_api.h \
+    editor_api/lpm_encoding_api.h \
+    editor_api/lpm_meteo_api.h \
+    editor_support/lang_rus_eng.h
 
 FORMS += \
         mainwindow.ui
 
 INCLUDEPATH += \
     system \
-    editor \
+    editor_core \
+    editor_api \
+    editor_support \
     tests \
-    language \
-    text_support

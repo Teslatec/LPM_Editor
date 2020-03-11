@@ -7,7 +7,7 @@
 #include <QVector>
 
 extern "C" {
-#include "lpm_text_storage.h"
+#include "text_storage.h"
 }
 
 const QChar textNullChr = QChar::Null;
@@ -69,12 +69,12 @@ void TextOperatorAndStorageTester::exec( const QString & logFileName,
 
         fillUnicodeBuf(txtSrc, bfrSrc);
         fillUnicodeBuf(txtIns, bfrIns);
-        LPM_TextStorage op;
+        TextStorage op;
         TextStorageImpl impl;
         TextStorageImpl_init(&impl, &bfrSrc);
-        LPM_TextStorage_init(&op, &impl);
+        TextStorage_init(&op, &impl);
         LPM_SelectionCursor rmar = { .pos = (size_t)rmawrPos, .len = (size_t)rmLen };
-        bool writtenOp = LPM_TextStorage_replace(&op, &rmar, &bfrIns);
+        bool writtenOp = TextStorage_replace(&op, &rmar, &bfrIns);
 
         txtSrc = prepareToLog(txtSrc);
         correctText(txtSrc);

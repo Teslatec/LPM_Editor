@@ -1,6 +1,6 @@
 #include "screen_painter.h"
 #include "command_reader.h"
-#include "lpm_text_operator.h"
+#include "text_operator.h"
 #include "lpm_unicode_display.h"
 #include "page_formatter.h"
 #include <string.h>
@@ -52,7 +52,7 @@ void _drawText(Obj * o, const unicode_t * text)
     {
         if(!lastLine)
         {
-            lastLine = LPM_TextOperator_analizeLine
+            lastLine = TextOperator_analizeLine
                     ( o->modules->textOperator,
                       currLine,
                       PAGE_CHAR_AMOUNT-2,

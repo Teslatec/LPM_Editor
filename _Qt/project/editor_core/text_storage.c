@@ -1,4 +1,4 @@
-#include "lpm_text_storage.h"
+#include "text_storage.h"
 
 static void _normalizeRemovingArea( const TextStorageImpl * textStorage,
                                     LPM_SelectionCursor * removingArea );
@@ -38,8 +38,8 @@ static bool _removingAreaAbutsFreeSpace( const TextStorageImpl * textStorage,
 
 
 
-bool LPM_TextStorage_replace
-        ( LPM_TextStorage * o,
+bool TextStorage_replace
+        ( TextStorage * o,
           LPM_SelectionCursor * removingArea,
           const Unicode_Buf * textToWrite )
 {
@@ -66,8 +66,8 @@ bool LPM_TextStorage_replace
     return true;
 }
 
-void LPM_TextStorage_read
-        ( LPM_TextStorage * o,
+void TextStorage_read
+        ( TextStorage * o,
           size_t readPosition,
           Unicode_Buf * readTextBuffer )
 {
@@ -86,8 +86,8 @@ void LPM_TextStorage_read
     TextStorageImpl_read(o->storage, readPosition, readTextBuffer);
 }
 
-bool LPM_TextStorage_enoughPlace
-        ( LPM_TextStorage * o,
+bool TextStorage_enoughPlace
+        ( TextStorage * o,
           const LPM_SelectionCursor * removingArea,
           const Unicode_Buf * textToWrite )
 {

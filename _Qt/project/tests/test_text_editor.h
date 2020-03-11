@@ -31,6 +31,7 @@ signals:
     void _resetLinesUpdating();
     void _setDisplayLatencyEnabled(bool state);
     void _setDisplaySelectAreaUnderlined(bool state);
+    void _editingFinished();
 
 public slots:
     void start(const Param & par);
