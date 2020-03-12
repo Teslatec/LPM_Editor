@@ -92,13 +92,13 @@ typedef enum LPM_insertionInputPolicy
  *  что они будут храниться в ПЗУ. Не путать с LPM_EditorUserParams!
  */
 
-typedef struct PageParams
+typedef struct LPM_EditorPageParams
 {
     uint16_t charAmount;
     uint16_t lineAmount;
     uint16_t pageGroupAmount;
     uint16_t pageInGroupAmount;
-} PageParams;
+} LPM_EditorPageParams;
 
 typedef struct LPM_EditorSettings
 {
@@ -111,16 +111,14 @@ typedef struct LPM_EditorSettings
     size_t maxMeteoSize;
     size_t maxFaxChainSize;
     size_t maxTemplateSize;
-    uint32_t keyboardTimeout;
+    uint16_t keyboardTimeout;
     uint16_t lineBufferSize;
     uint16_t charBufferSize;
-    PageParams pageParams;
-//    uint16_t screenCharAmount;
-//    uint16_t screenLineAmount;
-//    uint16_t pageInGroupAmount;
-//    uint16_t pageGroupAmount;
+    LPM_EditorPageParams pageParams;
+    unicode_t insertionBorderChar;
     LPM_EndOfLineType defaultEndOfLineType;
     LPM_insertionInputPolicy insertionInputPolicy;
+    uint8_t tabSpaceAmount;
 } LPM_EditorSettings;
 
 /*

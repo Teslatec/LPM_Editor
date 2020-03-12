@@ -27,6 +27,7 @@ typedef struct CmdReader
     LPM_UnicodeKeyboard * keyboard;
     Unicode_Buf kbdBuf;
     size_t receivedSize;
+    uint16_t timeout;
     uint16_t flags;
     uint8_t modifiers;
     bool isReplacementMode;
@@ -35,11 +36,10 @@ typedef struct CmdReader
 void CmdReader_init
         ( CmdReader * obj,
           LPM_UnicodeKeyboard * keyboard,
-          const Unicode_Buf * kbdBuf );
+          const Unicode_Buf * kbdBuf,
+          uint16_t timeout );
 
-EditorCmd CmdReader_read
-        ( CmdReader * obj,
-          uint32_t timeoutMs );
+EditorCmd CmdReader_read(CmdReader * obj);
 
 bool CmdReader_errorOccured(CmdReader * obj);
 

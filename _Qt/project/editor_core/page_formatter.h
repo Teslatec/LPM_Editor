@@ -6,11 +6,6 @@
 #include "lpm_editor_api.h"
 #include "modules.h"
 
-//#define PAGE_LINE_AMOUNT 16
-//#define PAGE_CHAR_AMOUNT 64
-//#define PAGE_GROUP_AMOUNT 4
-//#define PAGES_IN_GROUP  4
-
 typedef struct LineMap
 {
     uint16_t crc;
@@ -39,7 +34,7 @@ typedef struct PageStruct
 typedef struct PageFormatter
 {
     const Modules * modules;
-    const PageParams * pageParams;
+    const LPM_EditorPageParams * pageParams;
     LPM_UnicodeDisplay * display;
     PageNavigation pageNavi;
     PageStruct pageStruct;
@@ -53,7 +48,7 @@ void PageFormatter_init
         ( PageFormatter * o,
           const Modules * modules,
           LPM_UnicodeDisplay * display,
-          const PageParams * pageParams );
+          const LPM_EditorPageParams * pageParams );
 
 void PageFormatter_startWithPageAtTextPosition
         ( PageFormatter * o,

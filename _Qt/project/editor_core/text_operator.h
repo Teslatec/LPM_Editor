@@ -8,7 +8,6 @@ struct LPM_LangFxns;
 typedef struct TextOperator
 {
     struct LPM_LangFxns * lang;
-    Unicode_Buf specChars;
 } TextOperator;
 
 typedef struct LPM_TextLineMap
@@ -19,10 +18,8 @@ typedef struct LPM_TextLineMap
     bool endsWithEndl;
 } LPM_TextLineMap;
 
-void TextOperator_init
-    ( TextOperator * o,
-      struct LPM_LangFxns * lang,
-      const Unicode_Buf * specChars );
+static inline void TextOperator_init
+    (TextOperator * o, struct LPM_LangFxns * lang) { o->lang = lang; }
 
 bool TextOperator_checkInputChar
     ( TextOperator * o,

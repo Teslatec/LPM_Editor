@@ -33,9 +33,11 @@ static const size_t SCREEN_CHAR_AMOUNT = 64;
 static const size_t SCREEN_LINE_AMOUNT = 16;
 static const size_t PAGE_IN_GROUP_AMOUNT = 32;
 static const size_t PAGE_GROUP_AMOUNT = 32;
+static const unicode_t INSERTION_BORDER_CHAR = UNICODE_LIGHT_SHADE;
 static const LPM_EndOfLineType DEFAULT_END_OF_LINE_TYPE = LPM_END_OF_LINE_TYPE_CRLF;
 static const LPM_insertionInputPolicy INSERTION_INPUT_POLICY = LPM_INSERTION_INPUT_POLICY_NO_INPUT;
 static const uint32_t KEYBOARD_TIMEOUT = 1000;
+static const uint8_t TAB_SPACE_AMOUNT = 5;
 
 static const LPM_EditorSettings editorSettings =
 {
@@ -55,8 +57,10 @@ static const LPM_EditorSettings editorSettings =
       SCREEN_LINE_AMOUNT,
       PAGE_IN_GROUP_AMOUNT,
       PAGE_GROUP_AMOUNT },
+    INSERTION_BORDER_CHAR,
     DEFAULT_END_OF_LINE_TYPE,
     INSERTION_INPUT_POLICY,
+    TAB_SPACE_AMOUNT
 };
 
 bool TestEditorSwSupport::readSettings(LPM_EditorSettings * setting)

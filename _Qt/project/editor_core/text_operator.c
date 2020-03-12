@@ -7,7 +7,6 @@ static const unicode_t chrLf = 0x000A;
 static const unicode_t chrSpace = 0x0020;
 
 static bool _charBelongsToBasicLatin(unicode_t chr);
-static bool _charBelongsToSpecChars(unicode_t chr, const Unicode_Buf * specChars);
 static bool _atEndOfLine(unicode_t chr);
 static bool _atEndOfText(unicode_t chr);
 static bool _atSpace(unicode_t chr);
@@ -38,24 +37,6 @@ static void _fillLineMapWhenWordWrapped
           size_t divCnt,
           LPM_TextLineMap * lineMap );
 
-void TextOperator_init
-    ( TextOperator * o,
-      struct LPM_LangFxns * lang,
-      const Unicode_Buf * specChars )
-{
-    o->lang = lang;
-    if(specChars == NULL)
-    {
-        o->specChars.size = 0;
-        o->specChars.data = NULL;
-    }
-    else
-    {
-        o->specChars.size = specChars->size;
-        o->specChars.data = specChars->size == 0 ? NULL : specChars->data;
-    }
-}
-
 bool TextOperator_checkInputChar
     ( TextOperator * o,
       unicode_t inputChr,
@@ -64,9 +45,6 @@ bool TextOperator_checkInputChar
     if( _charBelongsToBasicLatin(inputChr) ||
             _atEndOfLine(inputChr) ||
             _atEndOfText(inputChr))
-        return true;
-
-    if(_charBelongsToSpecChars(inputChr, &o->specChars))
         return true;
 
     return LPM_Lang_checkInputChar(o->lang, inputChr, pchr);
@@ -202,6 +180,17 @@ bool _charBelongsToBasicLatin(unicode_t chr)
     return ((chr >= 0x0020) && (chr <= 0x007E));
 }
 
+/*
+ * Выключил код для проверки принадлежности к спец.символам, поскольку
+ *  вообще-то этим должен заниматься модуль поддержки языка, потому что
+ *  заранее неизвестно, допустимы ли, например, знаки ударения и т.п.
+ *  Можно конечно добавить как частный случай именно непечатные символы,
+ *  но для этого придется создавать где-то в памяти массив таких символов.
+ *  Проще уж, чтобы этим занимался внешний модуль, так и легче будет менять
+ *  такие наборы.
+ */
+#if 0
+
 bool _charBelongsToSpecChars(unicode_t chr, const Unicode_Buf * specChars)
 {
     if(specChars->data == NULL)
@@ -214,6 +203,8 @@ bool _charBelongsToSpecChars(unicode_t chr, const Unicode_Buf * specChars)
             return true;
     return false;
 }
+
+#endif
 
 bool _atEndOfLine(unicode_t chr)
 {

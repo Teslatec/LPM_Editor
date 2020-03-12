@@ -14,10 +14,6 @@ typedef Core Obj;
 typedef LPM_SelectionCursor SlcCurs;
 typedef void(*CmdHandler)(Core*);
 
-#define CMD_READER_TIMEOUT 2500
-#define CHAR_BUF_SIZE 10
-
-
 static const unicode_t chrCr = 0x000D;
 static const unicode_t chrLf = 0x000A;
 static const unicode_t chrEndOfText = 0x0000;
@@ -48,6 +44,7 @@ static void _timeoutCmdHandler(Core * o);
 static bool _processEnteredChar(Core * o);
 static bool _processEnteredTab(Core * o);
 static bool _processEnteredNewLine(Core * o);
+static bool _processEnteredInsertionBorder(Core * o);
 static void _processRemoveNextChar(Core * o);
 static void _processRemovePrevChar(Core * o);
 static void _processRemovePage(Core * o);
@@ -61,6 +58,7 @@ static void _handleNotEnoughPlaceInClipboard(Core * o);
 
 static bool _checkInputText(Core * o, Unicode_Buf * text);
 static void _setTextBufToEndlSeq(Core * o, Unicode_Buf * text);
+static bool _enterTextDespiteInertionMode(Core * o, const Unicode_Buf * text);
 
 static void _execStateScreen(Core * o);
 static void _execHelpScreen(Core * o);
@@ -87,25 +85,19 @@ static const CmdHandler cmdHandlerTable[] =
     &_timeoutCmdHandler,
 };
 
-//void Core_init(Core * o, Modules * modules, LPM_EndOfLineType endOfLineType)
-//{
-//    o->modules = modules;
-//    o->endOfLine = endOfLineType;
-//    o->hasActionToUndo = false;
-//}
-
-//extern Unicode_Buf testTextBuf;
-
 void Core_init
         ( Core * o,
           Modules * modules,
           LPM_UnicodeDisplay * display,
-          LPM_EndOfLineType endOfLine )
+          unicode_t insertionBorderChar,
+          LPM_EndOfLineType endOfLine , uint8_t tabSpaceAmount)
 {
     o->modules = modules;
     o->display = display;
+    o->insertionBorderChar = insertionBorderChar;
     o->endOfLine = endOfLine;
     o->hasActionToUndo = false;
+    o->tabSpaceAmount = tabSpaceAmount;
 }
 
 
@@ -115,8 +107,7 @@ void Core_exec(Core * o)
 
     for(;;)
     {
-        EditorCmd cmd =
-                CmdReader_read(o->modules->cmdReader, CMD_READER_TIMEOUT);
+        EditorCmd cmd = CmdReader_read(o->modules->cmdReader);
 
         if(cmd == EDITOR_CMD_EXIT)
             break;
@@ -183,6 +174,9 @@ void _textChangedCmdHandler(Core * o)
 
     else if(flag == TEXT_FLAG_NEW_LINE)
         enoughPlaceInTextSrorage = _processEnteredNewLine(o);
+
+    else if(flag == TEXT_FLAG_INSERTION_BORDER)
+        enoughPlaceInTextSrorage = _processEnteredInsertionBorder(o);
 
 
     else if(flag == TEXT_FLAG_REMOVE_NEXT_CHAR)
@@ -298,7 +292,7 @@ bool _processEnteredChar(Core * o)
     {
         if(o->textCursor.len == 0)
         {
-            const unicode_t * pchr = LineBuffer_LoadText(o->modules, o->textCursor.pos, CHAR_BUF_SIZE);
+            const unicode_t * pchr = LineBuffer_LoadText(o->modules, o->textCursor.pos, o->modules->charBuffer.size);
             o->textCursor.len = TextOperator_nextChar(o->modules->textOperator, pchr) - pchr;
 
             if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, &text))
@@ -339,41 +333,51 @@ bool _processEnteredChar(Core * o)
 
 bool _processEnteredTab(Core * o)
 {
-    static const unicode_t tabArray[5] = { 0x0020, 0x0020, 0x0020, 0x0020, 0x0020 };
-    Unicode_Buf text = { (unicode_t*)tabArray, 5 };
+    //static const unicode_t tabArray[5] = { 0x0020, 0x0020, 0x0020, 0x0020, 0x0020 };
+    Unicode_Buf text = { o->modules->lineBuffer.data, o->tabSpaceAmount };
+    for(uint8_t i = 0; i < text.size; i++)
+        text.data[i] = chrSpace;
+    return _enterTextDespiteInertionMode(o, &text);
 
-    if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, &text))
-    {
-        _saveAction(o, text.size);
-        TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
-        o->textCursor.pos += text.size;
-        o->textCursor.len = 0;
-        return true;
-    }
-    return false;
+//    if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, &text))
+//    {
+//        _saveAction(o, text.size);
+//        TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
+//        o->textCursor.pos += text.size;
+//        o->textCursor.len = 0;
+//        return true;
+//    }
+//    return false;
 }
 
 bool _processEnteredNewLine(Core * o)
 {
     Unicode_Buf text;
     _setTextBufToEndlSeq(o, &text);
+    return _enterTextDespiteInertionMode(o, &text);
 
-    if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, &text))
-    {
-        _saveAction(o, text.size);
-        TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
-        o->textCursor.pos += text.size;
-        o->textCursor.len = 0;
-        return true;
-    }
-    return false;
+//    if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, &text))
+//    {
+//        _saveAction(o, text.size);
+//        TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
+//        o->textCursor.pos += text.size;
+//        o->textCursor.len = 0;
+//        return true;
+//    }
+//    return false;
+}
+
+bool _processEnteredInsertionBorder(Core * o)
+{
+    Unicode_Buf text = { &o->insertionBorderChar, 1 };
+    return _enterTextDespiteInertionMode(o, &text);
 }
 
 void _processRemoveNextChar(Core * o)
 {
     if(o->textCursor.len == 0)
     {
-        const unicode_t * pchr = LineBuffer_LoadText(o->modules, o->textCursor.pos, CHAR_BUF_SIZE);
+        const unicode_t * pchr = LineBuffer_LoadText(o->modules, o->textCursor.pos, o->modules->charBuffer.size);
         o->textCursor.len = TextOperator_nextChar(o->modules->textOperator, pchr) - pchr;
     }
     _saveAction(o, 0);
@@ -387,7 +391,7 @@ void _processRemovePrevChar(Core * o)
     {
         if(o->textCursor.pos > 0)
         {
-            const unicode_t * pchr = LineBuffer_LoadTextBack(o->modules, o->textCursor.pos, CHAR_BUF_SIZE);
+            const unicode_t * pchr = LineBuffer_LoadTextBack(o->modules, o->textCursor.pos, o->modules->charBuffer.size);
             const unicode_t * prev = TextOperator_prevChar(o->modules->textOperator, pchr);
             if(TextOperator_atEndOfLine(o->modules->textOperator, prev))
             {
@@ -519,7 +523,7 @@ void _handleNotEnoughPlaceInClipboard(Core *o)
 
 bool _checkInputText(Core * o, Unicode_Buf * text)
 {
-    unicode_t * const inputBegin = LineBuffer_LoadTextBack(o->modules, o->textCursor.pos, CHAR_BUF_SIZE);
+    unicode_t * const inputBegin = LineBuffer_LoadTextBack(o->modules, o->textCursor.pos, o->modules->charBuffer.size);
     unicode_t * inputPtr = inputBegin;
     const unicode_t * textPtr = text->data;
     const unicode_t * const textEnd = textPtr + text->size;
@@ -552,6 +556,19 @@ void _setTextBufToEndlSeq(Core * o, Unicode_Buf * text)
         text->data = (unicode_t*)endlSeq;
         text->size = 2;
     }
+}
+
+bool _enterTextDespiteInertionMode(Core * o, const Unicode_Buf * text)
+{
+    if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, text))
+    {
+        _saveAction(o, text->size);
+        TextStorage_replace(o->modules->textStorage, &o->textCursor, text);
+        o->textCursor.pos += text->size;
+        o->textCursor.len = 0;
+        return true;
+    }
+    return false;
 }
 
 void _execStateScreen(Core * o)

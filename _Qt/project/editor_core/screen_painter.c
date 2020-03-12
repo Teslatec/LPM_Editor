@@ -73,7 +73,7 @@ void _drawText(Obj * o, const unicode_t * text)
 
 void _waitForAnyKeyPressed(Obj * o)
 {
-    while(CmdReader_read(o->modules->cmdReader, 0) == EDITOR_CMD_TIMEOUT) {}
+    while(CmdReader_read(o->modules->cmdReader) == EDITOR_CMD_TIMEOUT) {}
 }
 
 void _drawLineBuffer(Obj * o, size_t size, size_t lineIndex)

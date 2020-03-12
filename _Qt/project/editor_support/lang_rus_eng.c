@@ -30,7 +30,7 @@ bool Lang_RusEng_checkInputChar(unicode_t inputChr, const unicode_t * pchr)
     if(_isChrUmlaut(inputChr))
         return _isChrLetterE(*pchr);
 
-    return false;
+    return true;
 }
 
 const unicode_t * Lang_RusEng_nextChar(const unicode_t * pchr)

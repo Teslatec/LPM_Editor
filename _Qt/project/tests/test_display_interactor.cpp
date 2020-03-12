@@ -63,8 +63,8 @@ void TestDisplayInteractor::writeLine(int index, QString line, QPoint curs)
     {
         if(sym == QChar(' '))
             sym = QChar(0x00A0);
-        else if(sym == QChar(0x2591))
-            sym = QChar(0x2592);
+//        else if(sym == QChar(0x2591))
+//            sym = QChar(0x2592);
     }
 
     if(latencyEnabled)

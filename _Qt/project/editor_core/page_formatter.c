@@ -7,10 +7,6 @@
 
 #include <string.h>
 
-//#define LINE_AMOUNT PAGE_LINE_AMOUNT
-//#define CHAR_AMOUNT PAGE_CHAR_AMOUNT
-//#define LAST_GROUP  (PAGE_GROUP_AMOUNT-1)
-
 typedef PageFormatter Obj;
 typedef LPM_DisplayCursor DspCurs;
 typedef LPM_SelectionCursor SlcCurs;
@@ -126,7 +122,7 @@ void PageFormatter_init
         ( PageFormatter * o,
           const Modules * modules,
           LPM_UnicodeDisplay * display,
-          const PageParams * pageParams )
+          const LPM_EditorPageParams * pageParams )
 {
     memset(o, 0, sizeof(PageFormatter));
     o->modules = modules;
@@ -282,7 +278,6 @@ bool _changePageIfNotOnCurrTextPosition(Obj * o, size_t pos)
     size_t initGroupIndex = o->pageNavi.currGroupIndex;
     size_t initPageIndex  = o->pageNavi.currPageIndex;
 
-    test_print("-----", 0, 0);
     size_t itCount;
     for(itCount = 0; itCount < 1024; itCount++)
     {
@@ -290,8 +285,6 @@ bool _changePageIfNotOnCurrTextPosition(Obj * o, size_t pos)
         _fillCurrPageAttr(o, &pa);
 
         bool textPosIsOnCurrPage;
-
-        test_print("Group, page:", o->pageNavi.currGroupIndex, o->pageNavi.currPageIndex);
 
         if(pa.isFirst && pa.isLast)
             textPosIsOnCurrPage = true;
@@ -984,7 +977,7 @@ size_t _movePosLeftAtChar(Obj * o, size_t pos)
 {
     if(pos > 0)
     {
-        unicode_t * pchr = LineBuffer_LoadTextBack(o->modules, pos, 10);
+        unicode_t * pchr = LineBuffer_LoadTextBack(o->modules, pos, o->modules->charBuffer.size);
         pos -= pchr - TextOperator_prevChar(o->modules->textOperator, pchr);
     }
     return pos;
@@ -992,7 +985,7 @@ size_t _movePosLeftAtChar(Obj * o, size_t pos)
 
 size_t _movePosRightAtChar(Obj * o, size_t pos)
 {
-    unicode_t * pchr = LineBuffer_LoadText(o->modules, pos, 10);
+    unicode_t * pchr = LineBuffer_LoadText(o->modules, pos, o->modules->charBuffer.size);
     pos += TextOperator_nextChar(o->modules->textOperator, pchr) - pchr;
     return pos;
 }

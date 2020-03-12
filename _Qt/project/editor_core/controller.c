@@ -19,7 +19,6 @@ extern const unicode_t * editorTextTextBufferFull;
 extern const unicode_t * editorTextClipboardFull;
 
 static ScreenPainterTextTable screenPainterTextTable;
-static const unicode_t specChars[1] = { UNICODE_LIGHT_SHADE };
 
 static Modules * _allocateModules(const LPM_EditorSystemParams * sp);
 static void _clearHeap(const LPM_EditorSystemParams * sp);
@@ -139,9 +138,9 @@ void _initModules(Modules * m, const LPM_EditorUserParams * up, const LPM_Editor
 {
     Unicode_Buf tmp;
 
-    Core_init(m->core, m, sp->displayDriver, up->endOfLineType);
+    Core_init(m->core, m, sp->displayDriver, sp->settings->insertionBorderChar, up->endOfLineType, sp->settings->tabSpaceAmount);
 
-    CmdReader_init(m->cmdReader, sp->keyboardDriver, &m->charBuffer);
+    CmdReader_init(m->cmdReader, sp->keyboardDriver, &m->charBuffer, sp->settings->keyboardTimeout);
 
     tmp.data = (unicode_t*)sp->settings->textBuffer.data;
     tmp.size = sp->settings->textBuffer.size;
@@ -154,9 +153,7 @@ void _initModules(Modules * m, const LPM_EditorUserParams * up, const LPM_Editor
     fxns.meteo    = m->meteoFxns;
     LPM_API_readSupportFxns(sp, &fxns, up->lang);
 
-    tmp.data = (unicode_t*)specChars;
-    tmp.size = 1;
-    TextOperator_init(m->textOperator, m->langFxns, &tmp);
+    TextOperator_init(m->textOperator, m->langFxns);
 
     tmp.data = (unicode_t*)sp->settings->clipboard.data;
     tmp.size = sp->settings->clipboard.size;

@@ -31,28 +31,28 @@ static bool _thereIsAltModifier(Obj * obj);
 static bool _thereIsShiftModifier(Obj * obj);
 
 void CmdReader_init
-        (CmdReader * obj,
+        ( CmdReader * obj,
           LPM_UnicodeKeyboard * keyboard,
-          const Unicode_Buf * kbdBuf )
+          const Unicode_Buf * kbdBuf,
+          uint16_t timeout)
 {
     obj->keyboard     = keyboard;
     obj->kbdBuf.data  = kbdBuf->data;
     obj->kbdBuf.size  = kbdBuf->size;
     obj->receivedSize = 0;
+    obj->timeout      = timeout;
     obj->flags        = 0;
     obj->modifiers    = 0;
     obj->isReplacementMode = false;
 }
 
-EditorCmd CmdReader_read
-        ( CmdReader * obj,
-          uint32_t timeoutMs )
+EditorCmd CmdReader_read(CmdReader * obj)
 {
     EditorCmd cmd = __EDITOR_NO_CMD;
     Unicode_Buf buf = { obj->kbdBuf.data, obj->kbdBuf.size };
     do
     {
-        LPM_UnicodeKeyboard_read(obj->keyboard, &buf, timeoutMs);
+        LPM_UnicodeKeyboard_read(obj->keyboard, &buf, obj->timeout);
         cmd = _processAndConvertToCmd(obj, &buf);
     }
     while(cmd == __EDITOR_NO_CMD);
@@ -144,9 +144,9 @@ Cmd _processAsWithCtrlAndConvertToCmd(Obj * obj, const UBuf * buf)
 
         case ' ':
             obj->receivedSize = 1;
-            obj->kbdBuf.data[0] = UNICODE_LIGHT_SHADE;
+            //obj->kbdBuf.data[0] = UNICODE_LIGHT_SHADE;
             cmd = EDITOR_CMD_TEXT_CHANGED;
-            obj->flags = TEXT_FLAG_TEXT;
+            obj->flags = TEXT_FLAG_INSERTION_BORDER;//TEXT_FLAG_TEXT;
             break;
 
         case 'e':

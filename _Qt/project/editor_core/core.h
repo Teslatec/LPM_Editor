@@ -11,7 +11,9 @@ typedef struct Core
     LPM_UnicodeDisplay * display;
     LPM_SelectionCursor textCursor;
     LPM_SelectionCursor undoTextCursor;
+    unicode_t insertionBorderChar;
     LPM_EndOfLineType endOfLine;
+    uint8_t tabSpaceAmount;
     bool hasActionToUndo;
 } Core;
 
@@ -19,7 +21,9 @@ void Core_init
         ( Core * o,
           Modules * modules,
           LPM_UnicodeDisplay * display,
-          LPM_EndOfLineType endOfLine );
+          unicode_t insertionBorderChar,
+          LPM_EndOfLineType endOfLine,
+          uint8_t tabSpaceAmount );
 
 void Core_exec(Core * o);
 
