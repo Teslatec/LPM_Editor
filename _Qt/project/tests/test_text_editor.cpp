@@ -67,6 +67,7 @@ void TestTextEditor::start(const Param & param)
 
         LPM_EditorSettings settings;
         TestEditorSwSupport::readSettings(&settings);
+        ttb.buffer(&settings.textBuffer);
 
         LPM_EditorSystemParams systemParams;
         systemParams.keyboardDriver     = TestKeyboard_base(&kbrd);
@@ -76,7 +77,8 @@ void TestTextEditor::start(const Param & param)
         systemParams.readSupportFxnsFxn = &TestEditorSwSupport::readSupportFxns;
         systemParams.readGuiTextFxn     = &TestEditorSwSupport::readGuiText;
 
-        qDebug() << "Начинаю работу редактора в потоке " << QThread::currentThreadId();
+        qDebug() << "Начинаю работу редактора в потоке" << QThread::currentThreadId();
+        qDebug() << "Служебная память:" <<  LPM_API_getDesiredHeapSize(&systemParams);
         LPM_API_execEditor(&userParams, &systemParams);
         qDebug() << "Работа завершена";
 

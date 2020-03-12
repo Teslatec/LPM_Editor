@@ -2,6 +2,7 @@
 #define SCREEN_PAINTER_H
 
 #include "modules.h"
+#include "lpm_editor_api.h"
 
 typedef struct ScreenPainterTextTable
 {
@@ -13,6 +14,7 @@ typedef struct ScreenPainterTextTable
 typedef struct ScreenPainter
 {
     const Modules * modules;
+    const PageParams * pageParams;
     LPM_UnicodeDisplay * display;
     const ScreenPainterTextTable * textTable;
 } ScreenPainter;
@@ -27,12 +29,14 @@ typedef enum EditorMessage
 static inline void ScreenPainter_init
     ( ScreenPainter * o,
       const Modules * modules,
+      const PageParams * pageParams,
       LPM_UnicodeDisplay * display,
       const ScreenPainterTextTable * textTable )
 {
-    o->modules   = modules;
-    o->display   = display;
-    o->textTable = textTable;
+    o->modules    = modules;
+    o->pageParams = pageParams;
+    o->display    = display;
+    o->textTable  = textTable;
 }
 
 void ScreenPainter_drawEditorMessage

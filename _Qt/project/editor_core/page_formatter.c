@@ -7,9 +7,9 @@
 
 #include <string.h>
 
-#define LINE_AMOUNT PAGE_LINE_AMOUNT
-#define CHAR_AMOUNT PAGE_CHAR_AMOUNT
-#define LAST_GROUP  (PAGE_GROUP_AMOUNT-1)
+//#define LINE_AMOUNT PAGE_LINE_AMOUNT
+//#define CHAR_AMOUNT PAGE_CHAR_AMOUNT
+//#define LAST_GROUP  (PAGE_GROUP_AMOUNT-1)
 
 typedef PageFormatter Obj;
 typedef LPM_DisplayCursor DspCurs;
@@ -81,8 +81,8 @@ static bool _posWithinRange(size_t pos, size_t rangeBegin, size_t rangeEnd);
 static void _updateDisplayCursorByTextCursor(Obj * o, const SlcCurs * curs);
 static size_t _calcDisplayCursorByLineMapAnalizing(Obj * o, const SlcCurs * txtCurs, DspCurs * dspCurs);
 static void _setDisplayCursorValueForEmptyPage(DspCurs * curs);
-static void _setDisplayCursorInvalidValue(DspCurs * curs);
-static bool _isDisplayCursorPointInvalid(const LPM_Point * point);
+static void _setDisplayCursorInvalidValue(Obj * o);
+static bool _isDisplayCursorPointInvalid(Obj * o, const LPM_Point * point);
 static void _validateDisplayCursorPointIfInvalid(Obj * o, size_t lineIndex, LPM_Point * point);
 
 static void _displayCursorToLineCursor(Obj * o, size_t lineIndex, size_t lineSize, SlcCurs * lineCursor);
@@ -125,11 +125,17 @@ void test_beep();
 void PageFormatter_init
         ( PageFormatter * o,
           const Modules * modules,
-          LPM_UnicodeDisplay * display)
+          LPM_UnicodeDisplay * display,
+          const PageParams * pageParams )
 {
     memset(o, 0, sizeof(PageFormatter));
     o->modules = modules;
     o->display = display;
+    o->pageParams = pageParams;
+    o->pageStruct.lineMapTable = modules->lineMapTable;
+    o->pageNavi.groupBaseTable = modules->pageGroupBaseTable;
+    memset(o->pageNavi.groupBaseTable, 0, sizeof(size_t) * o->pageParams->pageGroupAmount);
+    memset(o->pageStruct.lineMapTable, 0, sizeof(LineMap) * o->pageParams->lineAmount);
 }
 
 void PageFormatter_startWithPageAtTextPosition
@@ -175,7 +181,7 @@ void PageFormatter_updateDisplay
     LPM_SelectionCursor lineCursor;
 
     const LineMap * lineMap = o->pageStruct.lineMapTable;
-    const LineMap * end     = lineMap + LINE_AMOUNT;
+    const LineMap * end     = lineMap + o->pageParams->lineAmount;
     size_t lineBase = _calcCurrPageFirstLineBase(o);
     size_t lineIndex  = 0;
     for( ; lineMap != end; lineMap++, lineIndex++)
@@ -199,11 +205,11 @@ size_t PageFormatter_getCurrLinePos(PageFormatter * o)
     size_t lineBase = _calcCurrPageFirstLineBase(o);
     size_t currIndex = o->displayCursor.begin.y;
 
-    if(currIndex < LINE_AMOUNT)
+    if(currIndex < o->pageParams->lineAmount)
     {
         size_t lineIndex  = 0;
         const LineMap * lineMap = o->pageStruct.lineMapTable;
-        const LineMap * end     = lineMap + LINE_AMOUNT;
+        const LineMap * end     = lineMap + o->pageParams->lineAmount;
         for( ; lineMap != end; lineMap++, lineIndex++)
         {
             if(lineIndex == currIndex)
@@ -217,7 +223,7 @@ size_t PageFormatter_getCurrLinePos(PageFormatter * o)
 size_t PageFormatter_getCurrLineLen(PageFormatter * o)
 {
     size_t currIndex = o->displayCursor.begin.y;
-    if(currIndex < LINE_AMOUNT)
+    if(currIndex < o->pageParams->lineAmount)
         return o->pageStruct.lineMapTable[currIndex].fullLen;
     return 0;
 }
@@ -276,6 +282,7 @@ bool _changePageIfNotOnCurrTextPosition(Obj * o, size_t pos)
     size_t initGroupIndex = o->pageNavi.currGroupIndex;
     size_t initPageIndex  = o->pageNavi.currPageIndex;
 
+    test_print("-----", 0, 0);
     size_t itCount;
     for(itCount = 0; itCount < 1024; itCount++)
     {
@@ -283,6 +290,8 @@ bool _changePageIfNotOnCurrTextPosition(Obj * o, size_t pos)
         _fillCurrPageAttr(o, &pa);
 
         bool textPosIsOnCurrPage;
+
+        test_print("Group, page:", o->pageNavi.currGroupIndex, o->pageNavi.currPageIndex);
 
         if(pa.isFirst && pa.isLast)
             textPosIsOnCurrPage = true;
@@ -293,10 +302,10 @@ bool _changePageIfNotOnCurrTextPosition(Obj * o, size_t pos)
         else
             textPosIsOnCurrPage = _changePageIfNotOnCurrTextPositionWhenPageCommon(o, pos, &pa);
 
+
         if(textPosIsOnCurrPage)
             break;
     }
-
     if(itCount == 1024)
         test_beep();
 
@@ -369,7 +378,7 @@ void _switchToFirstPageInGroup(Obj * o, size_t groupIndex)
 {
     o->pageNavi.currPageIndex  = 0;
     o->pageNavi.currGroupIndex = groupIndex;
-    o->pageStruct.base      = o->pageNavi.groupBaseTable[groupIndex];
+    o->pageStruct.base         = o->pageNavi.groupBaseTable[groupIndex];
 }
 
 void _switchToNextPage(Obj * o)
@@ -384,7 +393,7 @@ size_t _calcNextPageBase(Obj * o)
 {
     size_t base = _calcCurrPageFirstLineBase(o);
     const LineMap * lineMap   = o->pageStruct.lineMapTable;
-    const LineMap * const end = o->pageStruct.lineMapTable+LINE_AMOUNT-1;
+    const LineMap * const end = o->pageStruct.lineMapTable+o->pageParams->lineAmount-1;
     for( ; lineMap != end; lineMap++)
         base += lineMap->fullLen;
     return base;
@@ -394,7 +403,7 @@ size_t _calcCurrPageLen(Obj * o)
 {
     size_t len = 0;
     const LineMap * lineMap   = o->pageStruct.lineMapTable;
-    const LineMap * const end = o->pageStruct.lineMapTable+LINE_AMOUNT;
+    const LineMap * const end = o->pageStruct.lineMapTable+o->pageParams->lineAmount;
     for( ; lineMap != end; lineMap++)
         len += lineMap->fullLen;
     return len;
@@ -408,9 +417,9 @@ size_t _calcCurrPageFirstLineBase(Obj * o)
 bool _incPageIndex(Obj * o)
 {
     o->pageNavi.currPageIndex++;
-    if(o->pageNavi.currGroupIndex < LAST_GROUP)
+    if(o->pageNavi.currGroupIndex < (o->pageParams->pageGroupAmount-1u))
     {
-        if(o->pageNavi.currPageIndex == PAGES_IN_GROUP)
+        if(o->pageNavi.currPageIndex == o->pageParams->pageInGroupAmount)
         {
             o->pageNavi.currPageIndex = 0;
             o->pageNavi.currGroupIndex++;
@@ -449,7 +458,7 @@ void _updateLinesMap(Obj * o)
         _makePrevLineMapForFirstPage(&o->pageStruct.prevLastLine);
 
     LineMap * lineMap   = o->pageStruct.lineMapTable;
-    LineMap * const end = o->pageStruct.lineMapTable + LINE_AMOUNT;
+    LineMap * const end = o->pageStruct.lineMapTable + o->pageParams->lineAmount;
     LineMap copy;
     size_t lineIndex = 0;
     for( ; lineMap != end; lineMap++, lineIndex++)
@@ -493,13 +502,13 @@ size_t _updateLineMap(Obj * o, LineMap * lineMap, size_t lineBase)
     LPM_TextLineMap textLineMap;
     if(TextOperator_analizeLine( o->modules->textOperator,
                                      begin,
-                                     CHAR_AMOUNT,
+                                     o->pageParams->charAmount,
                                      &textLineMap) )
         endOfTextFind = true;
 
     lineMap->fullLen    = (uint8_t)(textLineMap.nextLine    - begin);
     lineMap->payloadLen = (uint8_t)(textLineMap.printBorder - begin);
-    lineMap->restLen    = CHAR_AMOUNT - textLineMap.lenInChr;
+    lineMap->restLen    = o->pageParams->charAmount - textLineMap.lenInChr;
     lineMap->crc        = _calcLineCrc(o, lineMap);
     lineMap->endsWithEndl = textLineMap.endsWithEndl;
     return endOfTextFind;
@@ -599,7 +608,7 @@ void _updateDisplayCursorByTextCursor(Obj * o, const SlcCurs * curs)
     }
     else
     {
-        _setDisplayCursorInvalidValue(&o->displayCursor);
+        _setDisplayCursorInvalidValue(o);
         size_t lastNotEmptyLineIndex = _calcDisplayCursorByLineMapAnalizing(o, curs, &o->displayCursor);
 
         if(_isCurrPageLast(o))
@@ -616,7 +625,7 @@ size_t _calcDisplayCursorByLineMapAnalizing(Obj * o, const SlcCurs * txtCurs, Ds
     LPM_Point * findPoint = &dspCurs->begin;
 
     const LineMap * lineMap = o->pageStruct.lineMapTable;
-    const LineMap * const end = lineMap + LINE_AMOUNT;
+    const LineMap * const end = lineMap + o->pageParams->lineAmount;
     size_t lineIndex = 0;
     size_t lineBegin = _calcCurrPageFirstLineBase(o);
     for( ; lineMap != end; lineIndex++, lineMap++)
@@ -663,25 +672,25 @@ void _setDisplayCursorValueForEmptyPage(DspCurs * curs)
     curs->end.y = 0;
 }
 
-void _setDisplayCursorInvalidValue(DspCurs * curs)
+void _setDisplayCursorInvalidValue(Obj * o)
 {
-    curs->begin.x = 0;
-    curs->begin.y = LINE_AMOUNT;
-    curs->end.x = 0;
-    curs->end.y = LINE_AMOUNT;
+    o->displayCursor.begin.x = 0;
+    o->displayCursor.begin.y = o->pageParams->lineAmount;
+    o->displayCursor.end.x = 0;
+    o->displayCursor.end.y = o->pageParams->lineAmount;
 }
 
-bool _isDisplayCursorPointInvalid(const LPM_Point * point)
+bool _isDisplayCursorPointInvalid(Obj * o, const LPM_Point * point)
 {
-    return point->y == LINE_AMOUNT;
+    return point->y == o->pageParams->lineAmount;
 }
 
 void _validateDisplayCursorPointIfInvalid(Obj * o, size_t lineIndex, LPM_Point * point)
 {
-    if(_isDisplayCursorPointInvalid(point))
+    if(_isDisplayCursorPointInvalid(o, point))
     {
         const LineMap * lineMap = o->pageStruct.lineMapTable + lineIndex;
-        if(lineIndex == LINE_AMOUNT-1)
+        if(lineIndex == o->pageParams->lineAmount-1u)
         {
             point->y = lineIndex;
             point->x = lineMap->payloadLen;
@@ -781,7 +790,7 @@ void _moveCursorToLineBorder(Obj * o, uint32_t borderFlag, SlcCurs * textCurs)
 {
     textCurs->len = 0;
     const LineMap * lineMap = o->pageStruct.lineMapTable;
-    const LineMap * const end = lineMap + LINE_AMOUNT;
+    const LineMap * const end = lineMap + o->pageParams->lineAmount;
     size_t lineBase = _calcCurrPageFirstLineBase(o);
     for( ; lineMap != end; lineBase += lineMap->fullLen, lineMap++)
         if(_posWithinRange(textCurs->pos, lineBase, lineBase + lineMap->fullLen))
@@ -808,7 +817,7 @@ bool _moveCursorToPageBorder(Obj * o, uint32_t borderFlag, SlcCurs * textCurs)
     if(borderFlag == CURSOR_FLAG_END)
     {
         textCurs->pos = _calcNextPageBase(o) +
-                o->pageStruct.lineMapTable[LINE_AMOUNT-1].payloadLen;
+                o->pageStruct.lineMapTable[o->pageParams->lineAmount-1].payloadLen;
         return false;
     }
 
@@ -817,7 +826,7 @@ bool _moveCursorToPageBorder(Obj * o, uint32_t borderFlag, SlcCurs * textCurs)
         if(_isCurrPageLast(o))
             return false;
         textCurs->pos = _calcNextPageBase(o)+
-                o->pageStruct.lineMapTable[LINE_AMOUNT-1].fullLen;
+                o->pageStruct.lineMapTable[o->pageParams->lineAmount-1].fullLen;
         _changePageIfNotOnCurrTextPosition(o, textCurs->pos);
     }
     else // CURSOR_FLAG_PREV
@@ -885,7 +894,7 @@ void _selectAllPage(Obj * o, SlcCurs * textCurs)
 void _selectAllLine(Obj * o, SlcCurs * textCurs)
 {
     const LineMap * lineMap = o->pageStruct.lineMapTable;
-    const LineMap * const end = lineMap + LINE_AMOUNT;
+    const LineMap * const end = lineMap + o->pageParams->lineAmount;
     size_t lineBase = _calcCurrPageFirstLineBase(o);
     for( ; lineMap != end; lineBase += lineMap->fullLen, lineMap++)
         if(_posWithinRange(textCurs->pos, lineBase, lineBase + lineMap->fullLen))
@@ -1024,7 +1033,7 @@ size_t _movePosDownAtChar(Obj * o, size_t textPos, const LPM_Point * dspPoint)
     LineMap nextLine;
     const LineMap * currLine = o->pageStruct.lineMapTable+lineIndex;
 
-    if(lineIndex == LINE_AMOUNT-1)
+    if(lineIndex == o->pageParams->lineAmount-1u)
     {
         size_t nextLineBase = _calcNextPageBase(o) + currLine->fullLen;
         _updateLineMap(o, &nextLine, nextLineBase);
@@ -1171,7 +1180,7 @@ void _normalizeTextCursorAndFillBeginEnd(const SlcCurs * curs, size_t * begin, s
 void _updateLineChangedFlagsByTextCursorChanging(Obj * o, const SlcCurs * symDiff1, const SlcCurs * symmDiff2)
 {
     const LineMap * lineMap = o->pageStruct.lineMapTable;
-    const LineMap * const end = lineMap + LINE_AMOUNT;
+    const LineMap * const end = lineMap + o->pageParams->lineAmount;
     size_t lineBase = _calcCurrPageFirstLineBase(o);
     size_t lineIndex = 0;
     for( ; lineMap != end; lineBase += lineMap->fullLen, lineMap++, lineIndex++)

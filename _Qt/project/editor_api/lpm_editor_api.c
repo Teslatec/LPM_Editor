@@ -7,3 +7,10 @@ uint32_t LPM_API_execEditor
 {
     return Controller_exec(userParams, systemParams);
 }
+
+
+size_t LPM_API_getDesiredHeapSize
+        (const LPM_EditorSystemParams * systemParams)
+{
+    return Controller_calcDesiredHeapSize(systemParams);
+}

@@ -3,12 +3,13 @@
 
 #include "lpm_structs.h"
 #include "lpm_unicode.h"
+#include "lpm_editor_api.h"
 #include "modules.h"
 
-#define PAGE_LINE_AMOUNT 16
-#define PAGE_CHAR_AMOUNT 64
-#define PAGE_GROUP_AMOUNT 4
-#define PAGES_IN_GROUP  4
+//#define PAGE_LINE_AMOUNT 16
+//#define PAGE_CHAR_AMOUNT 64
+//#define PAGE_GROUP_AMOUNT 4
+//#define PAGES_IN_GROUP  4
 
 typedef struct LineMap
 {
@@ -21,7 +22,7 @@ typedef struct LineMap
 
 typedef struct PageNavigation
 {
-    size_t groupBaseTable[PAGE_GROUP_AMOUNT];
+    size_t * groupBaseTable;
     size_t currGroupIndex;
     size_t currPageIndex;
 } PageNavigation;
@@ -29,7 +30,7 @@ typedef struct PageNavigation
 typedef struct PageStruct
 {
     LineMap prevLastLine;
-    LineMap lineMapTable[PAGE_LINE_AMOUNT];
+    LineMap * lineMapTable;
     size_t base;
     bool lastPageReached;
 } PageStruct;
@@ -38,6 +39,7 @@ typedef struct PageStruct
 typedef struct PageFormatter
 {
     const Modules * modules;
+    const PageParams * pageParams;
     LPM_UnicodeDisplay * display;
     PageNavigation pageNavi;
     PageStruct pageStruct;
@@ -50,7 +52,8 @@ typedef struct PageFormatter
 void PageFormatter_init
         ( PageFormatter * o,
           const Modules * modules,
-          LPM_UnicodeDisplay * display );
+          LPM_UnicodeDisplay * display,
+          const PageParams * pageParams );
 
 void PageFormatter_startWithPageAtTextPosition
         ( PageFormatter * o,

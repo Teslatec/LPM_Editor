@@ -48,14 +48,14 @@ void _drawText(Obj * o, const unicode_t * text)
     LPM_TextLineMap lineMap;
     const unicode_t * currLine = text;
     bool lastLine = false;
-    for(size_t i = 1; i < PAGE_LINE_AMOUNT-1; i++)
+    for(size_t i = 1; i < o->pageParams->lineAmount-1u; i++)
     {
         if(!lastLine)
         {
             lastLine = TextOperator_analizeLine
                     ( o->modules->textOperator,
                       currLine,
-                      PAGE_CHAR_AMOUNT-2,
+                      o->pageParams->charAmount-2,
                       &lineMap );
 
             size_t textSize = lineMap.printBorder-currLine;
@@ -86,18 +86,18 @@ void _drawLineBuffer(Obj * o, size_t size, size_t lineIndex)
 size_t _formatBorderLine(Obj * o, bool isUp)
 {
     unicode_t * pchr = o->modules->lineBuffer.data;
-    unicode_t * const end = o->modules->lineBuffer.data + PAGE_CHAR_AMOUNT-1;
+    unicode_t * const end = o->modules->lineBuffer.data + o->pageParams->charAmount-1;
     *pchr++ = isUp ? chrAngleLU : chrAngleLD;
     for( ; pchr != end; pchr++)
         *pchr = chrLineH;
     *pchr = isUp ? chrAngleRU : chrAngleRD;
-    return PAGE_CHAR_AMOUNT;
+    return o->pageParams->charAmount;
 }
 
 void _drawBorderLine(Obj *o, bool isUp)
 {
     size_t drawSize = _formatBorderLine(o, isUp);
-    _drawLineBuffer(o, drawSize, isUp ? 0 : PAGE_LINE_AMOUNT-1);
+    _drawLineBuffer(o, drawSize, isUp ? 0 : o->pageParams->lineAmount-1);
 }
 
 void _drawTextWithBorderLine(Obj * o, const unicode_t * ptxt, size_t textSize, size_t lineIndex)
@@ -108,7 +108,7 @@ void _drawTextWithBorderLine(Obj * o, const unicode_t * ptxt, size_t textSize, s
 
 size_t _formatTextWithBorderLine(Obj * o, const unicode_t * ptxt, size_t textSize)
 {
-    size_t restSize = PAGE_CHAR_AMOUNT - 2 - textSize;
+    size_t restSize = o->pageParams->charAmount- 2 - textSize;
     unicode_t * pchr = o->modules->lineBuffer.data;
     *pchr++ = chrLineV;
     memcpy(pchr, ptxt, textSize*sizeof(unicode_t));

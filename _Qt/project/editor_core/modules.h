@@ -16,11 +16,14 @@ struct ScreenPainter;
 struct LPM_LangFxns;
 struct LPM_EncodingFxns;
 struct LPM_MeteoFxns;
+struct LineMap;
 
 typedef struct Modules
 {
     Unicode_Buf lineBuffer;
     Unicode_Buf charBuffer;
+    size_t * pageGroupBaseTable;
+    struct LineMap * lineMapTable;
     struct Core             * core;
     struct CmdReader        * cmdReader;
     struct PageFormatter    * pageFormatter;

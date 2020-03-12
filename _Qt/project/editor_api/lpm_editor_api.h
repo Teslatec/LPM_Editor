@@ -91,6 +91,15 @@ typedef enum LPM_insertionInputPolicy
  * Структура настроек. Это - "константные" настройки редактора. Предполагается,
  *  что они будут храниться в ПЗУ. Не путать с LPM_EditorUserParams!
  */
+
+typedef struct PageParams
+{
+    uint16_t charAmount;
+    uint16_t lineAmount;
+    uint16_t pageGroupAmount;
+    uint16_t pageInGroupAmount;
+} PageParams;
+
 typedef struct LPM_EditorSettings
 {
     LPM_Buf textBuffer;
@@ -105,10 +114,11 @@ typedef struct LPM_EditorSettings
     uint32_t keyboardTimeout;
     uint16_t lineBufferSize;
     uint16_t charBufferSize;
-    uint16_t screenCharAmount;
-    uint16_t screenLineAmount;
-    uint16_t pageInGroupAmount;
-    uint16_t pageGroupAmount;
+    PageParams pageParams;
+//    uint16_t screenCharAmount;
+//    uint16_t screenLineAmount;
+//    uint16_t pageInGroupAmount;
+//    uint16_t pageGroupAmount;
     LPM_EndOfLineType defaultEndOfLineType;
     LPM_insertionInputPolicy insertionInputPolicy;
 } LPM_EditorSettings;
@@ -153,7 +163,8 @@ uint32_t LPM_API_execEditor
         ( const LPM_EditorUserParams * userParams,
           const LPM_EditorSystemParams * systemParams );
 
-size_t LPM_API_getDesiredHeapSize();
+size_t LPM_API_getDesiredHeapSize
+        (const LPM_EditorSystemParams * systemParams);
 
 static inline bool LPM_API_readSupportFxns
         ( const LPM_EditorSystemParams * sp,
