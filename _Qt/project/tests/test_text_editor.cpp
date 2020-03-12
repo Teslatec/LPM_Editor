@@ -3,10 +3,11 @@
 #include "test_display_interactor.h"
 #include "test_display_widget.h"
 #include "test_text_buffer.h"
+#include "test_text_editor.h"
+#include "test_editor_sw_support.h"
 
 extern "C"
 {
-#include "test_text_editor.h"
 #include "lpm_editor_api.h"
 }
 
@@ -53,13 +54,30 @@ void TestTextEditor::start(const Param & param)
         LPM_Buf textBuf;
         ttb.buffer(&textBuf);
 
-        LPM_EditorParams par;
-        par.keyboard = TestKeyboard_base(&kbrd);
-        par.display = TestDisplay_base(&dsp);
-        //par.textBuffer = &textBuf;
+        LPM_EditorUserParams userParams;
+        userParams.mode            = LPM_EDITOR_MODE_TEXT_EDIT;
+        userParams.endOfLineType   = LPM_END_OF_LINE_TYPE_AUTO;
+        userParams.cursorInitPos   = LPM_CURSOR_INIT_POS_BEGIN;
+        userParams.encodingTo      = LPM_ENCODING_UNICODE_UCS2LE;
+        userParams.encodingFrom    = LPM_ENCODING_UNICODE_UCS2LE;
+        userParams.prepareToPrint  = true;
+        userParams.lineBeginSpaces = 4;
+        userParams.lang            = LPM_LANG_RUS_ENG;
+//        userParams.meteoFormat     = LPM_METEO_GSM_CURR_ADDR_1;
+
+        LPM_EditorSettings settings;
+        TestEditorSwSupport::readSettings(&settings);
+
+        LPM_EditorSystemParams systemParams;
+        systemParams.keyboardDriver     = TestKeyboard_base(&kbrd);
+        systemParams.displayDriver      = TestDisplay_base(&dsp);
+//        systemParam.templatesFile      = ;
+        systemParams.settings           = &settings;
+        systemParams.readSupportFxnsFxn = &TestEditorSwSupport::readSupportFxns;
+        systemParams.readGuiTextFxn     = &TestEditorSwSupport::readGuiText;
 
         qDebug() << "Начинаю работу редактора в потоке " << QThread::currentThreadId();
-        LPM_API_execEditor(&par);
+        LPM_API_execEditor(&userParams, &systemParams);
         qDebug() << "Работа завершена";
 
         //QThread::msleep(5);
@@ -83,4 +101,3 @@ void TestTextEditor::gui_set_display_outline_select_area_underlined(bool state)
 {
     emit _setDisplaySelectAreaUnderlined(state);
 }
-

@@ -38,6 +38,7 @@ typedef struct PageStruct
 typedef struct PageFormatter
 {
     const Modules * modules;
+    LPM_UnicodeDisplay * display;
     PageNavigation pageNavi;
     PageStruct pageStruct;
     uint32_t lineChangedFlags;
@@ -48,7 +49,8 @@ typedef struct PageFormatter
 
 void PageFormatter_init
         ( PageFormatter * o,
-          const Modules * modules );
+          const Modules * modules,
+          LPM_UnicodeDisplay * display );
 
 void PageFormatter_startWithPageAtTextPosition
         ( PageFormatter * o,

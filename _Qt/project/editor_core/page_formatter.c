@@ -124,10 +124,12 @@ void test_beep();
 
 void PageFormatter_init
         ( PageFormatter * o,
-          const Modules * modules )
+          const Modules * modules,
+          LPM_UnicodeDisplay * display)
 {
     memset(o, 0, sizeof(PageFormatter));
     o->modules = modules;
+    o->display = display;
 }
 
 void PageFormatter_startWithPageAtTextPosition
@@ -183,7 +185,7 @@ void PageFormatter_updateDisplay
             lineBuf.size = lineMap->payloadLen + lineMap->restLen;
             _displayCursorToLineCursor(o, lineIndex, lineBuf.size, &lineCursor);
             _formatLineForDisplay(o, lineMap, lineBase);
-            LPM_UnicodeDisplay_writeLine( o->modules->display,
+            LPM_UnicodeDisplay_writeLine( o->display,
                                           lineIndex,
                                           &lineBuf,
                                           &lineCursor);

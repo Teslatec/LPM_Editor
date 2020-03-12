@@ -35,6 +35,7 @@ static const size_t PAGE_IN_GROUP_AMOUNT = 4;
 static const size_t PAGE_GROUP_AMOUNT = 4;
 static const LPM_EndOfLineType DEFAULT_END_OF_LINE_TYPE = LPM_END_OF_LINE_TYPE_CRLF;
 static const LPM_insertionInputPolicy INSERTION_INPUT_POLICY = LPM_INSERTION_INPUT_POLICY_NO_INPUT;
+static const uint32_t KEYBOARD_TIMEOUT = 1000;
 
 static const LPM_EditorSettings editorSettings =
 {
@@ -47,6 +48,7 @@ static const LPM_EditorSettings editorSettings =
     MAX_METEO_SIZE,
     MAX_FAX_CHAIN_SIZE,
     MAX_TEMPLATE_SIZE,
+    KEYBOARD_TIMEOUT,
     LINE_BUFFER_SIZE,
     CHAR_BUFFER_SIZE,
     SCREEN_CHAR_AMOUNT,

@@ -13,6 +13,7 @@ typedef struct ScreenPainterTextTable
 typedef struct ScreenPainter
 {
     const Modules * modules;
+    LPM_UnicodeDisplay * display;
     const ScreenPainterTextTable * textTable;
 } ScreenPainter;
 
@@ -26,9 +27,11 @@ typedef enum EditorMessage
 static inline void ScreenPainter_init
     ( ScreenPainter * o,
       const Modules * modules,
+      LPM_UnicodeDisplay * display,
       const ScreenPainterTextTable * textTable )
 {
     o->modules   = modules;
+    o->display   = display;
     o->textTable = textTable;
 }
 

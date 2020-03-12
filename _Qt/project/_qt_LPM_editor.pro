@@ -43,7 +43,8 @@ SOURCES += \
     editor_core/text_storage_impl.c \
     editor_core/text_buffer.c \
     editor_core/screen_painter.c \
-    editor_support/lang_rus_eng.c
+    editor_support/lang_rus_eng.c \
+    tests/test_editor_sw_support.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -77,11 +78,11 @@ HEADERS += \
     editor_core/screen_painter.h \
     editor_api/lpm_editor_api.h \
     editor_api/lpm_lang_api.h \
-    editor_api/lpm_settings_api.h \
     editor_api/lpm_gui_texts_api.h \
     editor_api/lpm_encoding_api.h \
     editor_api/lpm_meteo_api.h \
-    editor_support/lang_rus_eng.h
+    editor_support/lang_rus_eng.h \
+    tests/test_editor_sw_support.h
 
 FORMS += \
         mainwindow.ui

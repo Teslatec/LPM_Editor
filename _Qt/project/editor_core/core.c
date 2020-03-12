@@ -87,14 +87,27 @@ static const CmdHandler cmdHandlerTable[] =
     &_timeoutCmdHandler,
 };
 
-void Core_init(Core * o, Modules * modules, LPM_EndOfLineType endOfLineType)
+//void Core_init(Core * o, Modules * modules, LPM_EndOfLineType endOfLineType)
+//{
+//    o->modules = modules;
+//    o->endOfLine = endOfLineType;
+//    o->hasActionToUndo = false;
+//}
+
+//extern Unicode_Buf testTextBuf;
+
+void Core_init
+        ( Core * o,
+          Modules * modules,
+          LPM_UnicodeDisplay * display,
+          LPM_EndOfLineType endOfLine )
 {
     o->modules = modules;
-    o->endOfLineType = endOfLineType;
+    o->display = display;
+    o->endOfLine = endOfLine;
     o->hasActionToUndo = false;
 }
 
-extern Unicode_Buf testTextBuf;
 
 void Core_exec(Core * o)
 {
@@ -111,7 +124,7 @@ void Core_exec(Core * o)
             (*(cmdHandlerTable[cmd]))(o);
     }
 
-    LPM_UnicodeDisplay_clearScreen(o->modules->display);
+    LPM_UnicodeDisplay_clearScreen(o->display);
 }
 
 void _prepare(Obj * o)
@@ -524,12 +537,12 @@ void _setTextBufToEndlSeq(Core * o, Unicode_Buf * text)
 {
     static const unicode_t endlSeq[2] = { 0x000D, 0x000A };
 
-    if(o->endOfLineType == LPM_END_OF_LINE_TYPE_CR)
+    if(o->endOfLine == LPM_END_OF_LINE_TYPE_CR)
     {
         text->data = (unicode_t*)endlSeq;
         text->size = 1;
     }
-    else if(o->endOfLineType == LPM_END_OF_LINE_TYPE_LF)
+    else if(o->endOfLine == LPM_END_OF_LINE_TYPE_LF)
     {
         text->data = (unicode_t*)endlSeq+1;
         text->size = 1;

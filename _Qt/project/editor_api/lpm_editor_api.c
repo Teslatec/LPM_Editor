@@ -1,8 +1,9 @@
 #include "lpm_editor_api.h"
 #include "controller.h"
 
-uint32_t LPM_API_execEditor(const LPM_EditorParams * params)
+uint32_t LPM_API_execEditor
+    ( const LPM_EditorUserParams * userParams,
+      const LPM_EditorSystemParams * systemParams )
 {
-    Controller_exec(params);
-    return 0;
+    return Controller_exec(userParams, systemParams);
 }

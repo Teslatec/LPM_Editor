@@ -41,7 +41,7 @@ const unicode_t * _editorMessageToTextPointer(Obj * o, EditorMessage msg)
 
 void _drawText(Obj * o, const unicode_t * text)
 {
-    LPM_UnicodeDisplay_clearScreen(o->modules->display);
+    LPM_UnicodeDisplay_clearScreen(o->display);
 
     _drawBorderLine(o, true);
 
@@ -80,7 +80,7 @@ void _drawLineBuffer(Obj * o, size_t size, size_t lineIndex)
 {
     Unicode_Buf buf = { o->modules->lineBuffer.data, size };
     LPM_SelectionCursor curs = { size, 0 };
-    LPM_UnicodeDisplay_writeLine(o->modules->display, lineIndex, &buf, &curs);
+    LPM_UnicodeDisplay_writeLine(o->display, lineIndex, &buf, &curs);
 }
 
 size_t _formatBorderLine(Obj * o, bool isUp)

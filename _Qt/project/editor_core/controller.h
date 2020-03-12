@@ -6,6 +6,10 @@
 typedef struct Controller
 {} Controller;
 
-void Controller_exec(const LPM_EditorParams * param);
+uint32_t Controller_exec
+        ( const LPM_EditorUserParams * userParams,
+          const LPM_EditorSystemParams * systemParams );
+
+size_t Controller_calcDesiredHeapSize(const LPM_EditorSystemParams * p);
 
 #endif // CONTROLLER_H
