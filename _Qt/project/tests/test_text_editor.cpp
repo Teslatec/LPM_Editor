@@ -55,15 +55,15 @@ void TestTextEditor::start(const Param & param)
         ttb.buffer(&textBuf);
 
         LPM_EditorUserParams userParams;
-        userParams.mode            = LPM_EDITOR_MODE_TEXT_EDIT;
+        userParams.mode            = LPM_EDITOR_MODE_METEO_EDIT;
         userParams.endOfLineType   = LPM_END_OF_LINE_TYPE_AUTO;
         userParams.cursorInitPos   = LPM_CURSOR_INIT_POS_BEGIN;
-        userParams.encodingTo      = LPM_ENCODING_UNICODE_UCS2LE;
-        userParams.encodingFrom    = LPM_ENCODING_UNICODE_UCS2LE;
+        userParams.encodingTo      = LPM_ENCODING_ASCII;
+        userParams.encodingFrom    = LPM_ENCODING_KOI_8;
         userParams.prepareToPrint  = true;
         userParams.lineBeginSpaces = 4;
         userParams.lang            = LPM_LANG_RUS_ENG;
-//        userParams.meteoFormat     = LPM_METEO_GSM_CURR_ADDR_1;
+        userParams.meteoFormat     = LPM_METEO_GSM_CURR_ADDR_1;
 
         LPM_EditorSettings settings;
         TestEditorSwSupport::readSettings(&settings);
@@ -79,8 +79,11 @@ void TestTextEditor::start(const Param & param)
 
         qDebug() << "Начинаю работу редактора в потоке" << QThread::currentThreadId();
         qDebug() << "Служебная память:" <<  LPM_API_getDesiredHeapSize(&systemParams);
-        LPM_API_execEditor(&userParams, &systemParams);
-        qDebug() << "Работа завершена";
+        uint32_t result = LPM_API_execEditor(&userParams, &systemParams);
+        if(result == LPM_EDITOR_OK)
+            qDebug() << "Работа завершена без ошибок";
+        else
+            qDebug() << "Работа завершена с ошибкой";
 
         //QThread::msleep(5);
         emit _editingFinished();

@@ -31,6 +31,11 @@ static inline void TextStorage_init
     o->storage = storageImpl;
 }
 
+static inline void TextStorage_clear(TextStorage * o, bool deep)
+{
+    TextStorageImpl_clear(o->storage, deep);
+}
+
 static inline void TextStorage_sync(TextStorage * o)
 {
     return TextStorageImpl_sync(o->storage);

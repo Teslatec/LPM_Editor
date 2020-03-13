@@ -10,6 +10,11 @@
 #include <string.h>
 #include <stdio.h>
 
+#define FLAG_HAS_ACTION_TO_UNDO (0x01)
+#define FLAG_READ_ONLY          (0x02)
+#define FLAG_TEMPLATE_MODE      (0x04)
+#define FLAG_INSERTIONS_MODE    (0x08)
+
 typedef Core Obj;
 typedef LPM_SelectionCursor SlcCurs;
 typedef void(*CmdHandler)(Core*);
@@ -60,6 +65,11 @@ static bool _checkInputText(Core * o, Unicode_Buf * text);
 static void _setTextBufToEndlSeq(Core * o, Unicode_Buf * text);
 static bool _enterTextDespiteInertionMode(Core * o, const Unicode_Buf * text);
 
+static bool _readOnlyMode(Core * o);
+static bool _canEnterInsertionBorderChar(Core * o);
+static void _setHasActionToUndo(Core * o, bool state);
+static bool _hasNotActionToUndo(Core * o);
+
 static void _execStateScreen(Core * o);
 static void _execHelpScreen(Core * o);
 static void _outlineUnicodeBuffer(Core * o, const Unicode_Buf * buf);
@@ -87,21 +97,20 @@ static const CmdHandler cmdHandlerTable[] =
 
 void Core_init
         ( Core * o,
-          Modules * modules,
-          LPM_UnicodeDisplay * display,
-          unicode_t insertionBorderChar,
-          LPM_EndOfLineType endOfLine , uint8_t tabSpaceAmount)
+          const Modules * modules,
+          const LPM_EditorUserParams * userParams,
+          const LPM_EditorSystemParams * systemParams)
 {
     o->modules = modules;
-    o->display = display;
-    o->insertionBorderChar = insertionBorderChar;
-    o->endOfLine = endOfLine;
-    o->hasActionToUndo = false;
-    o->tabSpaceAmount = tabSpaceAmount;
+    o->display = systemParams->displayDriver;
+    o->insertionBorderChar = systemParams->settings->insertionBorderChar;
+    o->endOfLine = userParams->endOfLineType;
+    o->tabSpaceAmount = systemParams->settings->tabSpaceAmount;
+    o->flags = 0;
 }
 
 
-void Core_exec(Core * o)
+uint32_t Core_exec(Core * o)
 {
     _prepare(o);
 
@@ -116,6 +125,22 @@ void Core_exec(Core * o)
     }
 
     LPM_UnicodeDisplay_clearScreen(o->display);
+    return LPM_EDITOR_OK;
+}
+
+void Core_setReadOnly(Core * o)
+{
+    o->flags |= FLAG_READ_ONLY;
+}
+
+void Core_setTemplateMode(Core * o)
+{
+    o->flags |= FLAG_TEMPLATE_MODE;
+}
+
+void Core_setInsertionsMode(Core * o)
+{
+    o->flags |= FLAG_INSERTIONS_MODE;
 }
 
 void _prepare(Obj * o)
@@ -163,6 +188,9 @@ void _cursorChangedCmdHandler(Core * o)
 
 void _textChangedCmdHandler(Core * o)
 {
+    if(_readOnlyMode(o))
+        return;
+
     uint16_t flag = CmdReader_getFlags(o->modules->cmdReader);
     bool enoughPlaceInTextSrorage = true;
 
@@ -216,6 +244,9 @@ void _copyCmdHandler(Core * o)
 
 void _pastCmdHandler(Core * o)
 {
+    if(_readOnlyMode(o))
+        return;
+
     if(TextBuffer_checkPlaceInTextStorage(o->modules->clipboardTextBuffer, &o->textCursor))
     {
         _saveAction(o, o->modules->clipboardTextBuffer->usedSize);
@@ -231,6 +262,9 @@ void _pastCmdHandler(Core * o)
 
 void _cutCmdHandler(Core * o)
 {
+    if(_readOnlyMode(o))
+        return;
+
     if(o->textCursor.len > 0)
     {
         if(TextBuffer_push(o->modules->clipboardTextBuffer, &o->textCursor))
@@ -333,21 +367,10 @@ bool _processEnteredChar(Core * o)
 
 bool _processEnteredTab(Core * o)
 {
-    //static const unicode_t tabArray[5] = { 0x0020, 0x0020, 0x0020, 0x0020, 0x0020 };
     Unicode_Buf text = { o->modules->lineBuffer.data, o->tabSpaceAmount };
     for(uint8_t i = 0; i < text.size; i++)
         text.data[i] = chrSpace;
     return _enterTextDespiteInertionMode(o, &text);
-
-//    if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, &text))
-//    {
-//        _saveAction(o, text.size);
-//        TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
-//        o->textCursor.pos += text.size;
-//        o->textCursor.len = 0;
-//        return true;
-//    }
-//    return false;
 }
 
 bool _processEnteredNewLine(Core * o)
@@ -355,22 +378,16 @@ bool _processEnteredNewLine(Core * o)
     Unicode_Buf text;
     _setTextBufToEndlSeq(o, &text);
     return _enterTextDespiteInertionMode(o, &text);
-
-//    if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, &text))
-//    {
-//        _saveAction(o, text.size);
-//        TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
-//        o->textCursor.pos += text.size;
-//        o->textCursor.len = 0;
-//        return true;
-//    }
-//    return false;
 }
 
 bool _processEnteredInsertionBorder(Core * o)
 {
-    Unicode_Buf text = { &o->insertionBorderChar, 1 };
-    return _enterTextDespiteInertionMode(o, &text);
+    if(_canEnterInsertionBorderChar(o))
+    {
+        Unicode_Buf text = { &o->insertionBorderChar, 1 };
+        return _enterTextDespiteInertionMode(o, &text);
+    }
+    return true;
 }
 
 void _processRemoveNextChar(Core * o)
@@ -476,12 +493,12 @@ void _saveAction(Core * o, size_t insertTextSize)
 
     o->undoTextCursor.pos = o->textCursor.pos;
     o->undoTextCursor.len = insertTextSize;
-    o->hasActionToUndo = true;
+    _setHasActionToUndo(o, true);
 }
 
 void _undoAction(Core * o)
 {
-    if(!o->hasActionToUndo)
+    if(_hasNotActionToUndo(o))
         return;
 
     if(TextBuffer_isEmpty(o->modules->undoTextBuffer))
@@ -489,7 +506,7 @@ void _undoAction(Core * o)
         TextStorage_replace(o->modules->textStorage, &o->undoTextCursor, NULL);
         o->textCursor.pos = o->undoTextCursor.pos;
         o->textCursor.len = 0;
-        o->hasActionToUndo = false;
+        _setHasActionToUndo(o, false);
     }
     else
     {
@@ -498,7 +515,7 @@ void _undoAction(Core * o)
             o->textCursor.pos = o->undoTextCursor.pos;
             o->textCursor.len = 0;
             TextBuffer_clear(o->modules->undoTextBuffer);
-            o->hasActionToUndo = false;
+            _setHasActionToUndo(o, false);
         }
         else
         {
@@ -569,6 +586,29 @@ bool _enterTextDespiteInertionMode(Core * o, const Unicode_Buf * text)
         return true;
     }
     return false;
+}
+
+bool _readOnlyMode(Core * o)
+{
+    return o->flags & FLAG_READ_ONLY;
+}
+
+bool _canEnterInsertionBorderChar(Core * o)
+{
+    return o->flags & FLAG_TEMPLATE_MODE;
+}
+
+void _setHasActionToUndo(Core * o, bool state)
+{
+    if(state)
+        o->flags |= FLAG_HAS_ACTION_TO_UNDO;
+    else
+        o->flags &= ~FLAG_HAS_ACTION_TO_UNDO;
+}
+
+bool _hasNotActionToUndo(Core * o)
+{
+    return !(o->flags & FLAG_HAS_ACTION_TO_UNDO);
 }
 
 void _execStateScreen(Core * o)

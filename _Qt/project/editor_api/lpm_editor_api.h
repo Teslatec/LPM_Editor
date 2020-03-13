@@ -41,23 +41,24 @@ typedef enum LPM_CursorInitPos
 
 typedef enum LPM_EditorMode
 {
-    LPM_EDITOR_MODE_TEXT_NEW,
-    LPM_EDITOR_MODE_TEXT_EDIT,
-    LPM_EDITOR_MODE_TEXT_VIEW,
-    LPM_EDITOR_MODE_METEO_NEW,
-    LPM_EDITOR_MODE_METEO_EDIT,
-    LPM_EDITOR_MODE_FAX_CHAIN,
-    LPM_EDITOR_MODE_TEMPLATE_NEW,
-    LPM_EDITOR_MODE_TEMPLATE_EDIT,
-    LPM_EDITOR_MODE_TEMP_INS_NEW,
-    LPM_EDITOR_MODE_TEMP_INS_EDIT,
-    LPM_EDITOR_MODE_TEMP_INS_VIEW
+    LPM_EDITOR_MODE_TEXT_NEW      = 0x00,
+    LPM_EDITOR_MODE_TEXT_EDIT     = 0x01,
+    LPM_EDITOR_MODE_TEXT_VIEW     = 0x02,
+    LPM_EDITOR_MODE_METEO_NEW     = 0x10,
+    LPM_EDITOR_MODE_METEO_EDIT    = 0x11,
+    LPM_EDITOR_MODE_METEO_VIEW    = 0x12,
+    LPM_EDITOR_MODE_TEMPLATE_NEW  = 0x20,
+    LPM_EDITOR_MODE_TEMPLATE_EDIT = 0x21,
+    LPM_EDITOR_MODE_TEMPLATE_VIEW = 0x22,
+    LPM_EDITOR_MODE_TEMP_INS_NEW  = 0x30,
+    LPM_EDITOR_MODE_TEMP_INS_EDIT = 0x31,
+    LPM_EDITOR_MODE_TEMP_INS_VIEW = 0x32
 } LPM_EditorMode;
 
-typedef enum LPM_EditorError
+typedef enum LPM_EditorResult
 {
-    LPM_EDITOR_ERROR_TEXT_SIZE           = (1u << 31),
-    LPM_EDITOR_ERROR_NO_TEXT             = (1u << 30),
+    // Ошибки
+    LPM_EDITOR_ERROR_BAD_ENCODING        = (1u << 31),
     LPM_EDITOR_ERROR_NO_PLACE_TO_PRINT   = (1u << 29),
     LPM_EDITOR_ERROR_DISPLAY             = (1u << 28),
     LPM_EDITOR_ERROR_KEYBOARD            = (1u << 27),
@@ -67,13 +68,13 @@ typedef enum LPM_EditorError
     LPM_EDITOR_ERROR_BAD_TEMPLATE_FORMAT = (1u << 23),
     LPM_EDITOR_ERROR_BAD_TEMPLATE_NAME   = (1u << 22),
     LPM_EDITOR_ERROR_BAD_HEAP_SIZE       = (1u << 21),
-} LPM_EditorError;
-
-typedef enum LPM_EditorWarning
-{
+    // Предупреждения
     LPM_EDITOR_WARNING_DIFF_ENDLS   = (1u <<  1),
     LPM_EDITOR_WARNING_BAD_CHAR_SEQ = (1u <<  0),
-} LPM_EditorWarning;
+    // ОК
+    LPM_EDITOR_OK = 0,
+    LPM_EDITOR_CANCELED_BY_USER = (1u << 2),
+} LPM_EditorResult;
 
 typedef enum LPM_insertionInputPolicy
 {

@@ -11,6 +11,8 @@ typedef struct TextStorageImpl
 } TextStorageImpl;
 
 void TextStorageImpl_init(TextStorageImpl * o, const Unicode_Buf * textBuffer);
+void TextStorageImpl_recalcEndOfText(TextStorageImpl * o);
+void TextStorageImpl_clear(TextStorageImpl * o, bool deep);
 void TextStorageImpl_append(TextStorageImpl * o, const Unicode_Buf * text );
 void TextStorageImpl_insert(TextStorageImpl * o, const Unicode_Buf * text, size_t pos);
 void TextStorageImpl_replace(TextStorageImpl * o, const Unicode_Buf * text, size_t pos );

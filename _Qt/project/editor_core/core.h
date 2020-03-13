@@ -7,24 +7,26 @@
 
 typedef struct Core
 {
-    Modules * modules;
+    const Modules * modules;
     LPM_UnicodeDisplay * display;
     LPM_SelectionCursor textCursor;
     LPM_SelectionCursor undoTextCursor;
     unicode_t insertionBorderChar;
     LPM_EndOfLineType endOfLine;
     uint8_t tabSpaceAmount;
-    bool hasActionToUndo;
+    uint8_t flags;
 } Core;
 
 void Core_init
         ( Core * o,
-          Modules * modules,
-          LPM_UnicodeDisplay * display,
-          unicode_t insertionBorderChar,
-          LPM_EndOfLineType endOfLine,
-          uint8_t tabSpaceAmount );
+          const Modules * modules,
+          const LPM_EditorUserParams * userParams,
+          const LPM_EditorSystemParams * systemParams );
 
-void Core_exec(Core * o);
+uint32_t Core_exec(Core * o);
+
+void Core_setReadOnly(Core * o);
+void Core_setTemplateMode(Core * o);
+void Core_setInsertionsMode(Core * o);
 
 #endif // CORE_H

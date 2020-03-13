@@ -143,10 +143,8 @@ Cmd _processAsWithCtrlAndConvertToCmd(Obj * obj, const UBuf * buf)
             break;
 
         case ' ':
-            obj->receivedSize = 1;
-            //obj->kbdBuf.data[0] = UNICODE_LIGHT_SHADE;
             cmd = EDITOR_CMD_TEXT_CHANGED;
-            obj->flags = TEXT_FLAG_INSERTION_BORDER;//TEXT_FLAG_TEXT;
+            obj->flags = TEXT_FLAG_INSERTION_BORDER;
             break;
 
         case 'e':

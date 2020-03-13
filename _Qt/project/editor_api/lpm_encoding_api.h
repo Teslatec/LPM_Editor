@@ -14,17 +14,19 @@ typedef enum LPM_Encoding
 
 typedef struct LPM_EncodingFxns
 {
-    bool (*check)(const LPM_Buf * text, LPM_Encoding encoding);
+    // maxSize - масимальный размер текста в байтах ДЛЯ КОДИРОВКИ UNICODE!!!
+    bool (*checkText)(const LPM_Buf * text, LPM_Encoding encoding, size_t maxSize);
     void (*encodeTo)(LPM_Buf * text, LPM_Encoding encoding);
     void (*decodeFrom)(LPM_Buf * text, LPM_Encoding encoding);
 } LPM_EncodingFxns;
 
-static inline bool LPM_Encoding_checkFormat
+static inline bool LPM_Encoding_checkText
         ( const LPM_EncodingFxns * fxns,
           const LPM_Buf * text,
-          LPM_Encoding encoding )
+          LPM_Encoding encoding,
+          size_t maxSize )
 {
-    return (*fxns->check)(text, encoding);
+    return (*fxns->checkText)(text, encoding, maxSize);
 }
 
 static inline void LPM_Encoding_encodeTo

@@ -7,14 +7,14 @@ typedef struct TextBuffer
 {
     Unicode_Buf buffer;
     size_t usedSize;
-    Modules * modules;
+    const Modules * modules;
 } TextBuffer;
 
 
 void TextBuffer_init
-    (TextBuffer * o,
+    ( TextBuffer * o,
       const Unicode_Buf * buffer,
-      Modules * modules );
+      const Modules * modules );
 
 void TextBuffer_clear(TextBuffer * o);
 

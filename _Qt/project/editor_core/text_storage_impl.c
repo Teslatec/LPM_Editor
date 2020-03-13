@@ -11,6 +11,20 @@ void TextStorageImpl_init(TextStorageImpl * o, const Unicode_Buf * textBuffer)
     o->endOfText       = _calcEndOfTextPosition(o);
 }
 
+void TextStorageImpl_recalcEndOfText(TextStorageImpl * o)
+{
+    o->endOfText = _calcEndOfTextPosition(o);
+}
+
+void TextStorageImpl_clear(TextStorageImpl * o, bool deep)
+{
+    o->endOfText = 0;
+    if(deep)
+        memset(o->textBuffer.data, 0, o->textBuffer.size * sizeof(unicode_t));
+    else
+        _markEndOfText(o);
+}
+
 void TextStorageImpl_append(TextStorageImpl * o, const Unicode_Buf * text)
 {
     memcpy( o->textBuffer.data + o->endOfText,

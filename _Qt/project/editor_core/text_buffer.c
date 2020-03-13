@@ -16,7 +16,7 @@ static size_t _calcPartialRemoveLen(size_t enterTextPos, size_t removeEndPos, si
 void TextBuffer_init
     ( TextBuffer * o,
       const Unicode_Buf * buffer,
-      Modules * modules )
+      const Modules * modules )
 {
     o->buffer.data = buffer->data;
     o->buffer.size = buffer->size;

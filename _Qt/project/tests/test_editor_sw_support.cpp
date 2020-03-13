@@ -1,4 +1,5 @@
 #include "test_editor_sw_support.h"
+#include <QDebug>
 
 extern "C"
 {
@@ -71,6 +72,53 @@ bool TestEditorSwSupport::readSettings(LPM_EditorSettings * setting)
 
 bool TestEditorSwSupport::readSupportFxns(LPM_SupportFxns * fxns, LPM_Lang lang)
 {
+    auto meteoCheckFormat = [](const LPM_Buf * msgBuffer, LPM_Meteo format)
+    {
+        Q_UNUSED(msgBuffer);
+        qDebug() << "Проверяю формат метеосообщения:" << format;
+        return true;
+    };
+
+    auto meteoDecodeFrom = [](LPM_Buf * msgBuffer, LPM_Meteo format)
+    {
+        Q_UNUSED(msgBuffer);
+        qDebug() << "Преобразую метеосообщение в текст:" << format;
+    };
+
+    auto meteoEncodeTo = [](LPM_Buf * msgBuffer, LPM_Meteo format)
+    {
+        Q_UNUSED(msgBuffer);
+        qDebug() << "Преобразую метеосообщение в текст:" << format;
+    };
+
+    auto encodingCheckText = [](const LPM_Buf * text, LPM_Encoding encoding, size_t maxTextSize)
+    {
+        Q_UNUSED(text);
+        qDebug() << "Проверяю текст размером:" << maxTextSize
+                 << "на соотвествие кодировке:" << encoding;
+        return true;
+    };
+
+    auto encodingDecodeFrom = [](LPM_Buf * text, LPM_Encoding encoding)
+    {
+        Q_UNUSED(text);
+        qDebug() << "Перекодирую из кодировки" << encoding << "в UCS2-LE";
+    };
+
+    auto encodingEncodeTo = [](LPM_Buf * text, LPM_Encoding encoding)
+    {
+        Q_UNUSED(text);
+        qDebug() << "Перекодирую из UCS2-LE в кодировку" << encoding;
+    };
+
+    fxns->meteo->checkFormat = meteoCheckFormat;
+    fxns->meteo->decodeFrom  = meteoDecodeFrom;
+    fxns->meteo->encodeTo    = meteoEncodeTo;
+
+    fxns->encoding->checkText  = encodingCheckText;
+    fxns->encoding->encodeTo   = encodingEncodeTo;
+    fxns->encoding->decodeFrom = encodingDecodeFrom;
+
     if(lang == LPM_LANG_RUS_ENG)
     {
         fxns->lang->checkInputChar = &Lang_RusEng_checkInputChar;

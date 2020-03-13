@@ -20,35 +20,145 @@ extern const unicode_t * editorTextClipboardFull;
 
 static ScreenPainterTextTable screenPainterTextTable;
 
+static bool _insufficientHeapSize(const LPM_EditorSystemParams * sp);
 static Modules * _allocateModules(const LPM_EditorSystemParams * sp);
 static void _clearHeap(const LPM_EditorSystemParams * sp);
 static void _initModules
-        ( Modules * m,
+        ( const Modules * m,
           const LPM_EditorUserParams * up,
           const LPM_EditorSystemParams * sp);
 static size_t _alignSize(size_t size);
+
+static void _clearServiceBuffers(const LPM_EditorSystemParams * sp);
+
+static bool _modeIsOneOfTemplatesModes(LPM_EditorMode mode);
+static bool _modeIsOneOfInsertionsModes(LPM_EditorMode mode);
+static bool _modeIsOneOfMeteoModes(LPM_EditorMode mode);
+
+static bool _modeIsOneOfCreationModes(LPM_EditorMode mode);
+static bool _modeIsOneOfViewModes(LPM_EditorMode mode);
+
+static uint32_t _execEditorInTextOrMeteoMode
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp );
+
+static uint32_t _execEditorInTemplateMode
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp );
+
+static uint32_t _execEditorInInsertionsMode
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp );
+
+
+
+static uint32_t _prepareEditorInTextOrMeteoMode
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp );
+
+
+
+static uint32_t _shutDownEditorInTextOrMeteoMode
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp );
+
+
+static uint32_t _checkTextAndTranscodeToUnicodeIfOk
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp ,
+          size_t maxSize );
+
+static uint32_t _transformToPrintFormat
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp );
+
+static uint32_t _createNewTemplateByGui
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp,
+          uint16_t * templateName );
+
+static uint32_t _loadExistedTemplateByGui
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp,
+          uint16_t * templateName );
+
+static uint32_t _loadExistedTemplateByNameFromInsertionsText
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp,
+          uint16_t * templateName );
+
+static uint32_t _selectTemplateNameByGui
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp,
+          uint16_t * templateName );
+
+static uint32_t _checkTemplateFormat
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp );
+
+static uint32_t _outlineTemplateFormateErrors
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp );
+
+static uint32_t _readTemplateNameFromInsertionsText
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp,
+          uint16_t * templateName );
+
+static uint32_t _loadTemplateText
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp,
+          uint16_t templateName );
+
+static uint32_t _saveTemplateText
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp,
+          uint16_t templateName );
+
+
+static uint32_t _execEditor(const Modules * m, LPM_EditorMode mode);
+
 
 uint32_t Controller_exec
         ( const LPM_EditorUserParams * userParams,
           const LPM_EditorSystemParams * systemParams )
 {
-    // Создаем объекты (пока что они статические и глобальные)
-    Modules * modules = _allocateModules(systemParams);
-    if(modules == NULL)
+    if(_insufficientHeapSize(systemParams))
         return LPM_EDITOR_ERROR_BAD_HEAP_SIZE;
 
+    Modules * modules = _allocateModules(systemParams);
+    _clearServiceBuffers(systemParams);
     _initModules(modules, userParams, systemParams);
 
-    // Выполняем действия при запуске
+    uint32_t result;
 
-    Core_exec(modules->core);
+    if(_modeIsOneOfTemplatesModes(userParams->mode))
+        result = _execEditorInTemplateMode(modules, userParams, systemParams);
+    else if(_modeIsOneOfInsertionsModes(userParams->mode))
+        result = _execEditorInInsertionsMode(modules, userParams, systemParams);
+    else
+        result = _execEditorInTextOrMeteoMode(modules, userParams, systemParams);
 
-    // Выполняем действия при завершении работы
-
-    // Очищаем память
+    _clearServiceBuffers(systemParams);
     _clearHeap(systemParams);
 
-    return 0;
+    return result;
 }
 
 
@@ -74,6 +184,11 @@ size_t Controller_calcDesiredHeapSize(const LPM_EditorSystemParams * p)
             _alignSize(p->settings->pageParams.pageGroupAmount * sizeof(size_t) );
 }
 
+bool _insufficientHeapSize(const LPM_EditorSystemParams * sp)
+{
+    return Controller_calcDesiredHeapSize(sp) > sp->settings->heap.size;
+}
+
 Modules * _allocateModules(const LPM_EditorSystemParams * sp)
 {
     static const size_t moduleSizeTable[MODULES_AMOUNT] =
@@ -91,10 +206,6 @@ Modules * _allocateModules(const LPM_EditorSystemParams * sp)
         sizeof(LPM_EncodingFxns),
         sizeof(LPM_MeteoFxns),
     };
-
-    // Проверить размер кучи
-    if(Controller_calcDesiredHeapSize(sp) > sp->settings->heap.size)
-        return NULL;
 
     // Разместить Modules
     Modules * m = (Modules*)sp->settings->heap.data;
@@ -134,16 +245,19 @@ void _clearHeap(const LPM_EditorSystemParams * sp)
     memset(sp->settings->heap.data, 0, _alignSize(sp->settings->heap.size));
 }
 
-void _initModules(Modules * m, const LPM_EditorUserParams * up, const LPM_EditorSystemParams * sp)
+void _initModules
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp )
 {
     Unicode_Buf tmp;
 
-    Core_init(m->core, m, sp->displayDriver, sp->settings->insertionBorderChar, up->endOfLineType, sp->settings->tabSpaceAmount);
+    Core_init(m->core, m, up, sp);
 
     CmdReader_init(m->cmdReader, sp->keyboardDriver, &m->charBuffer, sp->settings->keyboardTimeout);
 
     tmp.data = (unicode_t*)sp->settings->textBuffer.data;
-    tmp.size = sp->settings->textBuffer.size;
+    tmp.size = sp->settings->textBuffer.size / sizeof(unicode_t);
     TextStorageImpl_init(m->textStorageImpl, &tmp);
     TextStorage_init(m->textStorage, m->textStorageImpl);
 
@@ -156,11 +270,11 @@ void _initModules(Modules * m, const LPM_EditorUserParams * up, const LPM_Editor
     TextOperator_init(m->textOperator, m->langFxns);
 
     tmp.data = (unicode_t*)sp->settings->clipboard.data;
-    tmp.size = sp->settings->clipboard.size;
+    tmp.size = sp->settings->clipboard.size / sizeof(unicode_t);
     TextBuffer_init(m->clipboardTextBuffer, &tmp, m);
 
     tmp.data = (unicode_t*)sp->settings->undoBuffer.data;
-    tmp.size = sp->settings->undoBuffer.size;
+    tmp.size = sp->settings->undoBuffer.size / sizeof(unicode_t);
     TextBuffer_init(m->undoTextBuffer, &tmp, m);
 
     PageFormatter_init(m->pageFormatter, m, sp->displayDriver, &sp->settings->pageParams);
@@ -174,4 +288,237 @@ void _initModules(Modules * m, const LPM_EditorUserParams * up, const LPM_Editor
 size_t _alignSize(size_t size)
 {
     return (size + 3) & (~3);
+}
+
+void _clearServiceBuffers(const LPM_EditorSystemParams * sp)
+{
+    memset( sp->settings->undoBuffer.data,       0, sp->settings->undoBuffer.size       );
+    memset( sp->settings->clipboard.data,        0, sp->settings->clipboard.size        );
+    memset( sp->settings->insertionsBuffer.data, 0, sp->settings->insertionsBuffer.size );
+    memset( sp->settings->encodingBuffer.data,   0, sp->settings->encodingBuffer.size   );
+}
+
+void _clearTextBuffer(LPM_Buf * textBuffer)
+{
+    memset(textBuffer->data, 0, textBuffer->size);
+}
+
+bool _modeIsOneOfTemplatesModes(LPM_EditorMode mode)
+{
+    return (mode == LPM_EDITOR_MODE_TEMPLATE_NEW) ||
+            (mode == LPM_EDITOR_MODE_TEMPLATE_EDIT);
+}
+
+bool _modeIsOneOfInsertionsModes(LPM_EditorMode mode)
+{
+    // Поскольку режим просмотра шаблонов - это на самом деле режим создания
+    //  вставок, но без сохранения текста вставок, значение
+    //  LPM_EDITOR_MODE_TEMPLATE_VIEW относится к режиму вставок
+    return (mode == LPM_EDITOR_MODE_TEMPLATE_VIEW) ||
+            (((uint8_t)mode & 0x30) == 0x30);
+}
+
+bool _modeIsOneOfMeteoModes(LPM_EditorMode mode)
+{
+    return ((uint8_t)mode & 0x30) == 0x10;
+}
+
+bool _modeIsOneOfCreationModes(LPM_EditorMode mode)
+{
+    return ((uint8_t)mode & 0x03) == 0x00;
+}
+
+bool _modeIsOneOfViewModes(LPM_EditorMode mode)
+{
+    return ((uint8_t)mode & 0x03) == 0x02;
+}
+
+uint32_t _execEditorInTextOrMeteoMode
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp )
+{
+    uint32_t result = LPM_EDITOR_OK;
+
+    if(_modeIsOneOfCreationModes(up->mode))
+        TextStorage_clear(m->textStorage, true);
+    else
+        result = _prepareEditorInTextOrMeteoMode(m, up, sp);
+
+    if(result != LPM_EDITOR_OK)
+        return result;
+
+    result = _execEditor(m, up->mode);
+
+    result |= _shutDownEditorInTextOrMeteoMode(m, up, sp);
+    return result;
+}
+
+uint32_t _execEditorInTemplateMode
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp )
+{
+    uint16_t templateName;
+    uint32_t result = up->mode == LPM_EDITOR_MODE_TEMPLATE_NEW ?
+                _createNewTemplateByGui(m, up, sp, &templateName) :
+                _loadExistedTemplateByGui(m, up, sp, &templateName);
+
+    if(result != LPM_EDITOR_OK)
+        return result;
+
+    Core_setTemplateMode(m->core);
+
+    do
+    {
+        result = _execEditor(m, up->mode);
+        if(result != LPM_EDITOR_OK)
+            return result;
+
+        result = _checkTemplateFormat(m, up, sp);
+        if(result != LPM_EDITOR_OK)
+        {
+            // Выводим на экран информацию об ошибках и просим пользователя
+            //  выбрать, исправить их или завершить работу. Если функция
+            //  _outlineTemplateFormateErrors вернет LPM_EDITOR_OK, это значит,
+            //  что пользователь согласился исправить ошибки
+            result = _outlineTemplateFormateErrors(m, up, sp);
+            if(result == LPM_EDITOR_OK)
+                continue;
+
+            // Если пользователь не согласился, то функция вернет ошибку
+            //  LPM_EDITOR_ERROR_BAD_TEMPLATE_FORMAT
+            return result;
+        }
+    } while(false);
+
+    result = _saveTemplateText(m, up, sp, templateName);
+    return result;
+}
+
+uint32_t _execEditorInInsertionsMode
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp )
+{
+    (void)m; (void)up; (void)sp;
+    return LPM_EDITOR_OK;
+}
+
+
+uint32_t _prepareEditorInTextOrMeteoMode
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp )
+{
+    size_t maxTextSize = sp->settings->textBuffer.size;
+    if(_modeIsOneOfMeteoModes(up->mode))
+    {
+        if(!LPM_Meteo_checkFormat( m->meteoFxns,
+                                   &sp->settings->textBuffer,
+                                   up->meteoFormat ))
+            return LPM_EDITOR_ERROR_BAD_METEO_FORMAT;
+
+        LPM_Meteo_decodeFrom( m->meteoFxns,
+                              &sp->settings->textBuffer,
+                              up->meteoFormat );
+        maxTextSize = sp->settings->maxMeteoSize;
+    }
+
+    return _checkTextAndTranscodeToUnicodeIfOk(m, up, sp, maxTextSize);
+}
+
+
+
+
+uint32_t _shutDownEditorInTextOrMeteoMode
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp )
+{
+    if(up->prepareToPrint)
+    {
+        uint32_t result = _transformToPrintFormat(m, up, sp);
+        if(result != LPM_EDITOR_OK)
+            return result;
+    }
+
+    LPM_Encoding_encodeTo( m->encodingFxns,
+                           &sp->settings->textBuffer,
+                           up->encodingTo );
+
+    if(_modeIsOneOfMeteoModes(up->mode))
+    {
+        LPM_Meteo_encodeTo( m->meteoFxns,
+                            &sp->settings->textBuffer,
+                            up->meteoFormat );
+
+        if(!LPM_Meteo_checkFormat( m->meteoFxns,
+                                   &sp->settings->textBuffer,
+                                   up->meteoFormat ))
+            return LPM_EDITOR_ERROR_BAD_METEO_FORMAT;
+    }
+
+    return LPM_EDITOR_OK;
+}
+
+uint32_t _checkTextAndTranscodeToUnicodeIfOk
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp,
+          size_t maxSize )
+{
+    if(!LPM_Encoding_checkText( m->encodingFxns,
+                                &sp->settings->textBuffer,
+                                up->encodingFrom,
+                                maxSize ))
+        return LPM_EDITOR_ERROR_BAD_ENCODING;
+
+    LPM_Encoding_decodeFrom( m->encodingFxns,
+                             &sp->settings->textBuffer,
+                             up->encodingFrom );
+
+    return LPM_EDITOR_OK;
+}
+
+uint32_t _transformToPrintFormat
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp )
+{
+    // TODO: написать преобразование в формат для печати
+    (void)m; (void)up; (void)sp;
+    return LPM_EDITOR_OK;
+}
+
+uint32_t _loadExistedTemplateByGui
+        ( const Modules * m,
+          const LPM_EditorUserParams * up,
+          const LPM_EditorSystemParams * sp,
+          uint16_t * templateName )
+{
+    uint32_t result;
+
+    result = _selectTemplateNameByGui(m, up, sp, templateName);
+    if(result != LPM_EDITOR_OK)
+        return result;
+
+    result = _loadTemplateText(m, up, sp, *templateName);
+    if(result != LPM_EDITOR_OK)
+        return result;
+
+    result = _checkTextAndTranscodeToUnicodeIfOk(m, up, sp, sp->settings->maxTemplateSize);
+    if(result != LPM_EDITOR_OK)
+        return result;
+
+    return result;
+}
+
+
+uint32_t _execEditor(const Modules * m, LPM_EditorMode mode)
+{
+    if(_modeIsOneOfViewModes(mode))
+        Core_setReadOnly(m->core);
+    TextStorageImpl_recalcEndOfText(m->textStorageImpl);
+    return Core_exec(m->core);
 }
