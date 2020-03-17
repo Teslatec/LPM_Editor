@@ -143,6 +143,12 @@ void Core_setInsertionsMode(Core * o)
     o->flags |= FLAG_INSERTIONS_MODE;
 }
 
+void Core_checkTemplateFormat(Core * o, uint32_t * badPageMap)
+{
+    (void)o;
+    *badPageMap = 0;
+}
+
 void _prepare(Obj * o)
 {
     size_t endOfText = TextStorage_endOfText(o->modules->textStorage);
@@ -612,7 +618,8 @@ bool _hasNotActionToUndo(Core * o)
 }
 
 void _execStateScreen(Core * o)
-{}
+{
+}
 
 void _execHelpScreen(Core * o)
 {

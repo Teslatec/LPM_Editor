@@ -58,16 +58,17 @@ typedef enum LPM_EditorMode
 typedef enum LPM_EditorResult
 {
     // Ошибки
-    LPM_EDITOR_ERROR_BAD_ENCODING        = (1u << 31),
-    LPM_EDITOR_ERROR_NO_PLACE_TO_PRINT   = (1u << 29),
-    LPM_EDITOR_ERROR_DISPLAY             = (1u << 28),
-    LPM_EDITOR_ERROR_KEYBOARD            = (1u << 27),
-    LPM_EDITOR_ERROR_FLASH_READ          = (1u << 26),
-    LPM_EDITOR_ERROR_FLASH_WRITE         = (1u << 25),
-    LPM_EDITOR_ERROR_BAD_METEO_FORMAT    = (1u << 24),
-    LPM_EDITOR_ERROR_BAD_TEMPLATE_FORMAT = (1u << 23),
-    LPM_EDITOR_ERROR_BAD_TEMPLATE_NAME   = (1u << 22),
-    LPM_EDITOR_ERROR_BAD_HEAP_SIZE       = (1u << 21),
+    LPM_EDITOR_ERROR_BAD_ENCODING         = (1u << 31),
+    LPM_EDITOR_ERROR_NO_PLACE_TO_PRINT    = (1u << 29),
+    LPM_EDITOR_ERROR_DISPLAY              = (1u << 28),
+    LPM_EDITOR_ERROR_KEYBOARD             = (1u << 27),
+    LPM_EDITOR_ERROR_FLASH_READ           = (1u << 26),
+    LPM_EDITOR_ERROR_FLASH_WRITE          = (1u << 25),
+    LPM_EDITOR_ERROR_BAD_METEO_FORMAT     = (1u << 24),
+    LPM_EDITOR_ERROR_BAD_TEMPLATE_FORMAT  = (1u << 23),
+    LPM_EDITOR_ERROR_BAD_TEMPLATE_NAME    = (1u << 22),
+    LPM_EDITOR_ERROR_BAD_INSERTION_FORMAT = (1u << 21),
+    LPM_EDITOR_ERROR_BAD_HEAP_SIZE        = (1u << 20),
     // Предупреждения
     LPM_EDITOR_WARNING_DIFF_ENDLS   = (1u <<  1),
     LPM_EDITOR_WARNING_BAD_CHAR_SEQ = (1u <<  0),
@@ -112,6 +113,7 @@ typedef struct LPM_EditorSettings
     size_t maxMeteoSize;
     size_t maxFaxChainSize;
     size_t maxTemplateSize;
+    uint16_t maxTemplateAmount;
     uint16_t keyboardTimeout;
     uint16_t lineBufferSize;
     uint16_t charBufferSize;

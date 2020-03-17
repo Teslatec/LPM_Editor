@@ -28,5 +28,7 @@ uint32_t Core_exec(Core * o);
 void Core_setReadOnly(Core * o);
 void Core_setTemplateMode(Core * o);
 void Core_setInsertionsMode(Core * o);
+void Core_checkTemplateFormat(Core * o, uint32_t * badPageMap);
+bool Core_checkInsertionFormatAndReadNameIfOk(Core * o, uint16_t * templateName);
 
 #endif // CORE_H

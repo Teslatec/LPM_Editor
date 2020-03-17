@@ -33,6 +33,30 @@ void ScreenPainter_drawEditorMessage
     _waitForAnyKeyPressed(o);
 }
 
+uint32_t ScreenPainter_drawTemplateFormatErrors
+    ( ScreenPainter * o,
+      uint32_t badPageMap )
+{
+    (void)o; (void)badPageMap;
+    return LPM_EDITOR_OK;
+}
+
+uint32_t ScreenPainter_selectTemplateName
+    ( ScreenPainter * o, uint8_t * templateIndex )
+{
+    *templateIndex = 0;
+    (void)o;
+    return LPM_EDITOR_OK;
+}
+
+uint32_t ScreenPainter_createTemplateName
+    ( ScreenPainter * o, uint8_t * templateIndex )
+{
+    *templateIndex = 0;
+    (void)o;
+    return LPM_EDITOR_OK;
+}
+
 const unicode_t * _editorMessageToTextPointer(Obj * o, EditorMessage msg)
 {
     uint32_t tableAddr = (uint32_t)o->textTable;

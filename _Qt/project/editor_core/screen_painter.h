@@ -45,6 +45,16 @@ void ScreenPainter_drawEditorMessage
 
 void ScreenPainter_drawEditorState();
 
+uint32_t ScreenPainter_drawTemplateFormatErrors
+    ( ScreenPainter * o,
+      uint32_t badPageMap );
+
+uint32_t ScreenPainter_selectTemplateName
+    ( ScreenPainter * o, uint8_t * templateIndex );
+
+uint32_t ScreenPainter_createTemplateName
+    ( ScreenPainter * o, uint8_t * templateIndex );
+
 /*
  * 1. Информационные строки
  * 2. Строка состояния текстового редактора

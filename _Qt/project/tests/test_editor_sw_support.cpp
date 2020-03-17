@@ -28,6 +28,7 @@ static uint32_t heap[HEAP_SIZE/4];
 static const size_t MAX_METEO_SIZE = 14000;
 static const size_t MAX_FAX_CHAIN_SIZE = 14000;
 static const size_t MAX_TEMPLATE_SIZE = 16384;
+static const size_t MAX_TEMPLATE_AMOUNT = 16;
 static const size_t LINE_BUFFER_SIZE = 256;
 static const size_t CHAR_BUFFER_SIZE = 10;
 static const size_t SCREEN_CHAR_AMOUNT = 64;
@@ -51,6 +52,7 @@ static const LPM_EditorSettings editorSettings =
     MAX_METEO_SIZE,
     MAX_FAX_CHAIN_SIZE,
     MAX_TEMPLATE_SIZE,
+    MAX_TEMPLATE_AMOUNT,
     KEYBOARD_TIMEOUT,
     LINE_BUFFER_SIZE,
     CHAR_BUFFER_SIZE,
