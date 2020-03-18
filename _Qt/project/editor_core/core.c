@@ -149,6 +149,12 @@ void Core_checkTemplateFormat(Core * o, uint32_t * badPageMap)
     *badPageMap = 0;
 }
 
+bool Core_checkInsertionFormatAndReadNameIfOk(Core * o, uint16_t * templateName)
+{
+    (void)o, (void)templateName;
+    return true;
+}
+
 void _prepare(Obj * o)
 {
     size_t endOfText = TextStorage_endOfText(o->modules->textStorage);

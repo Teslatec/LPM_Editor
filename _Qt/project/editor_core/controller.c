@@ -15,9 +15,6 @@
 
 #include <string.h>
 
-// TODO: не забыть обносвить модуль TextStorage после того, как прочитаем
-//       текст шаблона из ПЗУ в буфер текста
-
 extern const unicode_t * editorTextShortcut;
 extern const unicode_t * editorTextTextBufferFull;
 extern const unicode_t * editorTextClipboardFull;
@@ -40,8 +37,8 @@ static bool _modeIsOneOfTemplatesModes(LPM_EditorMode mode);
 static bool _modeIsOneOfInsertionsModes(LPM_EditorMode mode);
 static bool _modeIsOneOfMeteoModes(LPM_EditorMode mode);
 
-static bool _modeIsOneOfCreationModes(LPM_EditorMode mode);
-static bool _modeIsOneOfViewModes(LPM_EditorMode mode);
+//static bool _modeIsOneOfCreationModes(LPM_EditorMode mode);
+//static bool _modeIsOneOfViewModes(LPM_EditorMode mode);
 
 static uint32_t _execEditorInTextOrMeteoMode
         ( const Modules * m,
@@ -85,13 +82,12 @@ static uint32_t _transformToPrintFormat
           const LPM_EditorSystemParams * sp );
 
 static uint32_t _createNewTemplateByGui
-        (const Modules * m,
+        ( const Modules * m,
           const LPM_EditorSystemParams * sp,
           uint8_t * templateIndex );
 
 static uint32_t _loadExistedTemplateByGui
-        ( const Modules * m,
-          const LPM_EditorUserParams * up,
+        (const Modules * m,
           const LPM_EditorSystemParams * sp,
           uint8_t * templateIndex );
 
@@ -101,20 +97,15 @@ static uint32_t _loadExistedTemplateByNameFromInsertionsText
           const LPM_EditorSystemParams * sp,
           uint8_t * templateIndex );
 
-static uint32_t _readTemplateNameFromInsertionsText
-        ( const Modules * m,
-          const LPM_EditorUserParams * up,
-          const LPM_EditorSystemParams * sp,
-          uint16_t * templateName );
-
 static uint32_t _saveTemplate
         ( const Modules * m,
-          const LPM_EditorUserParams * up,
           const LPM_EditorSystemParams * sp,
           uint8_t templateIndex );
 
+static void _copyInsertionToTextBuffer(const Modules * m);
+static void _copyInsertionToInsertionsBuffer(const Modules * m);
 
-static uint32_t _execEditor(const Modules * m, LPM_EditorMode mode);
+static uint32_t _execEditor(const Modules * m);
 
 
 uint32_t Controller_exec
@@ -309,15 +300,15 @@ bool _modeIsOneOfMeteoModes(LPM_EditorMode mode)
     return ((uint8_t)mode & 0x30) == 0x10;
 }
 
-bool _modeIsOneOfCreationModes(LPM_EditorMode mode)
-{
-    return ((uint8_t)mode & 0x03) == 0x00;
-}
+//bool _modeIsOneOfCreationModes(LPM_EditorMode mode)
+//{
+//    return ((uint8_t)mode & 0x03) == 0x00;
+//}
 
-bool _modeIsOneOfViewModes(LPM_EditorMode mode)
-{
-    return ((uint8_t)mode & 0x03) == 0x02;
-}
+//bool _modeIsOneOfViewModes(LPM_EditorMode mode)
+//{
+//    return ((uint8_t)mode & 0x03) == 0x02;
+//}
 
 uint32_t _execEditorInTextOrMeteoMode
         ( const Modules * m,
@@ -339,7 +330,7 @@ uint32_t _execEditorInTextOrMeteoMode
         up->mode == LPM_EDITOR_MODE_METEO_VIEW )
         Core_setReadOnly(m->core);
 
-    result = _execEditor(m, up->mode);
+    result = _execEditor(m);
 
     result |= _shutDownEditorInTextOrMeteoMode(m, up, sp);
     return result;
@@ -353,7 +344,7 @@ uint32_t _execEditorInTemplateMode
     uint8_t templateIndex;
     uint32_t result = up->mode == LPM_EDITOR_MODE_TEMPLATE_NEW ?
                 _createNewTemplateByGui(m, sp, &templateIndex) :
-                _loadExistedTemplateByGui(m, up, sp, &templateIndex);
+                _loadExistedTemplateByGui(m, sp, &templateIndex);
 
     if(result != LPM_EDITOR_OK)
         return result;
@@ -362,7 +353,7 @@ uint32_t _execEditorInTemplateMode
 
     do
     {
-        result = _execEditor(m, up->mode);
+        result = _execEditor(m);
         if(result != LPM_EDITOR_OK)
             return result;
 
@@ -384,7 +375,7 @@ uint32_t _execEditorInTemplateMode
         }
     } while(false);
 
-    result = _saveTemplate(m, up, sp, templateIndex);
+    result = _saveTemplate(m, sp, templateIndex);
     return result;
 }
 
@@ -401,9 +392,9 @@ uint32_t _execEditorInInsertionsMode
 
     if( up->mode == LPM_EDITOR_MODE_TEMP_INS_EDIT ||
         up->mode == LPM_EDITOR_MODE_TEMP_INS_VIEW )
-        result = _loadExistedTemplateByNameFromInsertionsText(m, up, sp, templateIndex);
+        result = _loadExistedTemplateByNameFromInsertionsText(m, up, sp, &templateIndex);
     else
-        result = _loadExistedTemplateByGui(m, up, sp, templateIndex);
+        result = _loadExistedTemplateByGui(m, sp, &templateIndex);
 
     if(result != LPM_EDITOR_OK)
         return result;
@@ -536,7 +527,6 @@ uint32_t _createNewTemplateByGui
 
 uint32_t _loadExistedTemplateByGui
         ( const Modules * m,
-          const LPM_EditorUserParams * up,
           const LPM_EditorSystemParams * sp,
           uint8_t * templateIndex )
 {
@@ -573,27 +563,16 @@ uint32_t _loadExistedTemplateByNameFromInsertionsText
     if(!Core_checkInsertionFormatAndReadNameIfOk(m->core, &templateName))
         return LPM_EDITOR_ERROR_BAD_INSERTION_FORMAT;
 
-    if(!_findTemplateIndexByName(m, templateName, &templateIndex))
+    if(!TemplateLoader_findTemplateIndexByName(m, templateName, templateIndex))
         return LPM_EDITOR_ERROR_BAD_TEMPLATE_NAME;
 
     _copyInsertionToInsertionsBuffer(m);
 
-    return TemplateLoader_readText(m, sp->templatesFile, templateIndex);
-}
-
-uint32_t _readTemplateNameFromInsertionsText
-        ( const Modules * m,
-          const LPM_EditorUserParams * up,
-          const LPM_EditorSystemParams * sp,
-          uint16_t * templateName )
-{
-    (void)m; (void)up; (void)sp; (void)templateName;
-    return 0;
+    return TemplateLoader_readText(m, sp->templatesFile, *templateIndex);
 }
 
 uint32_t _saveTemplate
         ( const Modules * m,
-          const LPM_EditorUserParams * up,
           const LPM_EditorSystemParams * sp,
           uint8_t templateIndex )
 {
@@ -605,7 +584,19 @@ uint32_t _saveTemplate
     return result;
 }
 
-uint32_t _execEditor(const Modules * m, LPM_EditorMode mode)
+void _copyInsertionToTextBuffer(const Modules * m)
+{
+    (void)m;
+    // TODO: копирование вставок в буфер текста
+}
+
+void _copyInsertionToInsertionsBuffer(const Modules * m)
+{
+    (void)m;
+    // TODO: копирование вставок в буфер вставок
+}
+
+uint32_t _execEditor(const Modules * m)
 {
     TextStorageImpl_recalcEndOfText(m->textStorageImpl);
     return Core_exec(m->core);

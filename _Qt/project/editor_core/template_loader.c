@@ -31,3 +31,13 @@ uint32_t TemplateLoader_removeAllTemplates(const Modules * m, LPM_File * f)
     (void)f; (void)m;
     return LPM_EDITOR_OK;
 }
+
+bool TemplateLoader_findTemplateIndexByName
+        ( const Modules * m,
+          uint16_t templateName,
+          uint8_t * templateIndex )
+{
+    (void)m, (void)templateName;
+    *templateIndex = 0;
+    return true;
+}
