@@ -53,16 +53,16 @@ void PageFormatter_init
 
 void PageFormatter_startWithPageAtTextPosition
         ( PageFormatter * o,
-          const LPM_SelectionCursor * curs );
+          const LPM_SelectionCursor * txtCurs );
 
 void PageFormatter_updatePageWhenTextChanged
         ( PageFormatter * o,
-          const LPM_SelectionCursor * curs );
+          const LPM_SelectionCursor * txtCurs );
 
 void PageFormatter_updatePageWhenCursorMoved
         ( PageFormatter * o,
           uint32_t moveFlags ,
-          LPM_SelectionCursor * textCurs );
+          LPM_SelectionCursor * txtCurs );
 
 void PageFormatter_updateWholePage(PageFormatter * o);
 
