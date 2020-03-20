@@ -32,15 +32,15 @@ static bool _thereIsShiftModifier(Obj * obj);
 
 void CmdReader_init
         ( CmdReader * obj,
-          LPM_UnicodeKeyboard * keyboard,
           const Unicode_Buf * kbdBuf,
-          uint16_t timeout)
+          const LPM_EditorSystemParams * sp )
 {
-    obj->keyboard     = keyboard;
+    obj->keyboard     = sp->keyboardDriver;
     obj->kbdBuf.data  = kbdBuf->data;
     obj->kbdBuf.size  = kbdBuf->size;
     obj->receivedSize = 0;
-    obj->timeout      = timeout;
+    obj->insertionBorderChar = sp->settings->insertionBorderChar;
+    obj->timeout      = sp->settings->keyboardTimeout;
     obj->flags        = 0;
     obj->modifiers    = 0;
     obj->isReplacementMode = false;
@@ -144,6 +144,8 @@ Cmd _processAsWithCtrlAndConvertToCmd(Obj * obj, const UBuf * buf)
 
         case ' ':
             cmd = EDITOR_CMD_TEXT_CHANGED;
+            obj->receivedSize = 1;
+            obj->kbdBuf.data[0] = obj->insertionBorderChar;
             obj->flags = TEXT_FLAG_INSERTION_BORDER;
             break;
 

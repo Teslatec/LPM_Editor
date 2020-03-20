@@ -11,7 +11,6 @@ typedef struct Core
     LPM_UnicodeDisplay * display;
     LPM_SelectionCursor textCursor;
     LPM_SelectionCursor undoTextCursor;
-    unicode_t insertionBorderChar;
     LPM_EndOfLineType endOfLine;
     uint8_t tabSpaceAmount;
     uint8_t flags;
@@ -20,7 +19,6 @@ typedef struct Core
 void Core_init
         ( Core * o,
           const Modules * modules,
-          const LPM_EditorUserParams * userParams,
           const LPM_EditorSystemParams * systemParams );
 
 uint32_t Core_exec(Core * o);

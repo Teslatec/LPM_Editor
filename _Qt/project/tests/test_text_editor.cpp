@@ -55,8 +55,8 @@ void TestTextEditor::start(const Param & param)
         ttb.buffer(&textBuf);
 
         LPM_EditorUserParams userParams;
-        userParams.mode            = LPM_EDITOR_MODE_TEMPLATE_VIEW;
-        userParams.endOfLineType   = LPM_END_OF_LINE_TYPE_AUTO;
+        userParams.mode            = LPM_EDITOR_MODE_TEMPLATE_EDIT;
+        userParams.endOfLineType   = LPM_END_OF_LINE_TYPE_LF;
         userParams.cursorInitPos   = LPM_CURSOR_INIT_POS_BEGIN;
         userParams.encodingTo      = LPM_ENCODING_ASCII;
         userParams.encodingFrom    = LPM_ENCODING_KOI_8;

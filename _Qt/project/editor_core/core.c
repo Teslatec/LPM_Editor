@@ -62,8 +62,10 @@ static void _handleNotEnoughPlaceInTextStorage(Core * o);
 static void _handleNotEnoughPlaceInClipboard(Core * o);
 
 static bool _checkInputText(Core * o, Unicode_Buf * text);
+static bool _insertAdditionalChars(Core * o, Unicode_Buf * text);
+static void _setTextBufToTabSeq(Core * o, Unicode_Buf * text);
 static void _setTextBufToEndlSeq(Core * o, Unicode_Buf * text);
-static bool _enterTextDespiteInertionMode(Core * o, const Unicode_Buf * text);
+static bool _enterTextDespiteInsertionMode(Core * o, const Unicode_Buf * text);
 
 static bool _readOnlyMode(Core * o);
 static bool _canEnterInsertionBorderChar(Core * o);
@@ -98,13 +100,11 @@ static const CmdHandler cmdHandlerTable[] =
 void Core_init
         ( Core * o,
           const Modules * modules,
-          const LPM_EditorUserParams * userParams,
           const LPM_EditorSystemParams * systemParams)
 {
     o->modules = modules;
     o->display = systemParams->displayDriver;
-    o->insertionBorderChar = systemParams->settings->insertionBorderChar;
-    o->endOfLine = userParams->endOfLineType;
+    o->endOfLine = systemParams->settings->defaultEndOfLineType;
     o->tabSpaceAmount = systemParams->settings->tabSpaceAmount;
     o->flags = 0;
 }
@@ -122,14 +122,6 @@ uint32_t Core_exec(Core * o)
             break;
         else if(cmd < __EDITOR_NO_CMD)
             (*(cmdHandlerTable[cmd]))(o);
-        test_print("Spaces: ", o->modules->pageFormatter->spaceAmount, 0);
-//        test_print_text_cursor(o->textCursor.pos, o->textCursor.len);
-//        test_print_page_map(o->modules->pageFormatter->pageStruct.base,
-//                            &o->modules->pageFormatter->pageStruct.prevLastLine,
-//                            o->modules->pageFormatter->pageStruct.lineMapTable );
-
-//        test_print("Spaces: ", o->modules->pageFormatter->pageStruct.lineMapTable[15].payloadLen,
-//                o->modules->pageFormatter->pageStruct.lineMapTable[15].restLen );
     }
 
     LPM_UnicodeDisplay_clearScreen(o->display);
@@ -267,10 +259,12 @@ void _pastCmdHandler(Core * o)
     if(_readOnlyMode(o))
         return;
 
-    if(TextBuffer_checkPlaceInTextStorage(o->modules->clipboardTextBuffer, &o->textCursor))
+    size_t addCharsAmount = PageFormatter_addCharsAmount(o->modules->pageFormatter);
+
+    if(TextBuffer_checkPlaceInTextStorage(o->modules->clipboardTextBuffer, &o->textCursor, addCharsAmount))
     {
-        _saveAction(o, o->modules->clipboardTextBuffer->usedSize);
-        TextBuffer_pop(o->modules->clipboardTextBuffer, &o->textCursor);
+        _saveAction(o, o->modules->clipboardTextBuffer->usedSize + addCharsAmount);
+        TextBuffer_pop(o->modules->clipboardTextBuffer, &o->textCursor, true);
         PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
         PageFormatter_updateDisplay(o->modules->pageFormatter);
     }
@@ -342,12 +336,20 @@ bool _processEnteredChar(Core * o)
     if(!_checkInputText(o, &text))
         return true;
 
+    if(PageFormatter_hasAddChars(o->modules->pageFormatter))
+    {
+        if(_insertAdditionalChars(o, &text))
+            return _enterTextDespiteInsertionMode(o, &text);
+        return true;
+    }
+
     if(CmdReader_isReplacementMode(o->modules->cmdReader))
     {
         if(o->textCursor.len == 0)
         {
             const unicode_t * pchr = LineBuffer_LoadText(o->modules, o->textCursor.pos, o->modules->charBuffer.size);
-            o->textCursor.len = TextOperator_nextChar(o->modules->textOperator, pchr) - pchr;
+            if(!TextOperator_atEndOfLine(o->modules->textOperator, pchr))
+                o->textCursor.len = TextOperator_nextChar(o->modules->textOperator, pchr) - pchr;
 
             if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, &text))
             {
@@ -373,39 +375,32 @@ bool _processEnteredChar(Core * o)
     }
     else
     {
-        if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, &text))
-        {
-            _saveAction(o, text.size);
-            TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
-            o->textCursor.pos += text.size;
-            o->textCursor.len = 0;
-            return true;
-        }
+        return _enterTextDespiteInsertionMode(o, &text);
     }
     return false;
 }
 
 bool _processEnteredTab(Core * o)
 {
-    Unicode_Buf text = { o->modules->lineBuffer.data, o->tabSpaceAmount };
-    for(uint8_t i = 0; i < text.size; i++)
-        text.data[i] = chrSpace;
-    return _enterTextDespiteInertionMode(o, &text);
+    Unicode_Buf text;
+    _setTextBufToTabSeq(o, &text);
+    return _enterTextDespiteInsertionMode(o, &text);
 }
 
 bool _processEnteredNewLine(Core * o)
 {
     Unicode_Buf text;
     _setTextBufToEndlSeq(o, &text);
-    return _enterTextDespiteInertionMode(o, &text);
+    return _enterTextDespiteInsertionMode(o, &text);
 }
 
 bool _processEnteredInsertionBorder(Core * o)
 {
     if(_canEnterInsertionBorderChar(o))
     {
-        Unicode_Buf text = { &o->insertionBorderChar, 1 };
-        return _enterTextDespiteInertionMode(o, &text);
+        return _processEnteredChar(o);
+//        Unicode_Buf text = { &o->insertionBorderChar, 1 };
+//        return _enterTextDespiteInsertionMode(o, &text);
     }
     return true;
 }
@@ -530,7 +525,7 @@ void _undoAction(Core * o)
     }
     else
     {
-        if(TextBuffer_pop(o->modules->undoTextBuffer, &o->undoTextCursor))
+        if(TextBuffer_pop(o->modules->undoTextBuffer, &o->undoTextCursor, false))
         {
             o->textCursor.pos = o->undoTextCursor.pos;
             o->textCursor.len = 0;
@@ -560,6 +555,8 @@ void _handleNotEnoughPlaceInClipboard(Core *o)
 
 bool _checkInputText(Core * o, Unicode_Buf * text)
 {
+    // Проверяем введенную последовательность символов.
+    //  Вводятся только те, которые прошли проверку модулем TextOperator
     unicode_t * const inputBegin = LineBuffer_LoadTextBack(o->modules, o->textCursor.pos, o->modules->charBuffer.size);
     unicode_t * inputPtr = inputBegin;
     const unicode_t * textPtr = text->data;
@@ -574,28 +571,100 @@ bool _checkInputText(Core * o, Unicode_Buf * text)
     return text->size != 0;
 }
 
-void _setTextBufToEndlSeq(Core * o, Unicode_Buf * text)
+bool _insertAdditionalChars(Core * o, Unicode_Buf * text)
 {
-    static const unicode_t endlSeq[2] = { 0x000D, 0x000A };
+    const AddChars * addChars = PageFormatter_addChars(o->modules->pageFormatter);
+    size_t addLinesAmount = addChars->lines;
+    if(o->endOfLine == LPM_END_OF_LINE_TYPE_CRLF)
+        addLinesAmount *= 2;
+    size_t addCharsAmount = addChars->spaces + addLinesAmount;
 
+    if(addCharsAmount + text->size > o->modules->lineBuffer.size)
+        return false;
+
+    unicode_t * psrc = text->data + text->size-1;
+    unicode_t * pdst = psrc + addCharsAmount;
+    unicode_t * pend = text->data-1;
+    for( ; psrc != pend; psrc--, pdst--)
+        *pdst = *psrc;
+
+    pend = pdst - addChars->spaces;
+    for( ; pdst != pend; pdst--)
+        *pdst = chrSpace;
+
+    pend = pdst - addLinesAmount;
     if(o->endOfLine == LPM_END_OF_LINE_TYPE_CR)
     {
-        text->data = (unicode_t*)endlSeq;
-        text->size = 1;
+        for( ; pdst != pend; pdst--)
+            *pdst = chrCr;
     }
     else if(o->endOfLine == LPM_END_OF_LINE_TYPE_LF)
     {
-        text->data = (unicode_t*)endlSeq+1;
-        text->size = 1;
+        for( ; pdst != pend; pdst--)
+            *pdst = chrLf;
     }
     else
     {
-        text->data = (unicode_t*)endlSeq;
-        text->size = 2;
+        for( ; pdst != pend; pdst--)
+        {
+            *pdst-- = chrLf;
+            *pdst = chrCr;
+        }
     }
+
+    text->size += addCharsAmount;
+
+    return true;
 }
 
-bool _enterTextDespiteInertionMode(Core * o, const Unicode_Buf * text)
+void _setTextBufToTabSeq(Core * o, Unicode_Buf * text)
+{
+    text->data = o->modules->lineBuffer.data;
+    text->size = o->tabSpaceAmount;
+    for(uint8_t i = 0; i < text->size; i++)
+        text->data[i] = chrSpace;
+}
+
+void _setTextBufToEndlSeq(Core * o, Unicode_Buf * text)
+{
+    text->data = o->modules->lineBuffer.data;
+
+    if(o->endOfLine == LPM_END_OF_LINE_TYPE_CR)
+    {
+        text->size = 1;
+        text->data[0] = chrCr;
+    }
+    else if(o->endOfLine == LPM_END_OF_LINE_TYPE_LF)
+    {
+        text->size = 1;
+        text->data[0] = chrLf;
+    }
+    else
+    {
+        text->size = 2;
+        text->data[0] = chrCr;
+        text->data[1] = chrLf;
+    }
+//    static const unicode_t endlSeq[2] = { 0x000D, 0x000A };
+
+//    if(o->endOfLine == LPM_END_OF_LINE_TYPE_CR)
+//    {
+//        text->data = (unicode_t*)endlSeq;
+//        text->size = 1;
+//    }
+//    else if(o->endOfLine == LPM_END_OF_LINE_TYPE_LF)
+//    {
+//        text->data = (unicode_t*)endlSeq+1;
+//        text->size = 1;
+//    }
+//    else
+//    {
+//        text->data = (unicode_t*)endlSeq;
+//        text->size = 2;
+//    }
+}
+
+bool _enterTextDespiteInsertionMode(Core * o, const Unicode_Buf * text)
 {
     if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, text))
     {

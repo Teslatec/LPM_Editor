@@ -103,8 +103,9 @@ static void _displayCursorToTextCursor(Obj * o, SlcCurs * textCursor);
 
 static bool _dspXPosIsAfterLinePayloadPart(Obj * o, const LineMap * lm, size_t xPos);
 static size_t _calcTextPosByDisplayXPos(Obj * o, size_t lineBase, const LineMap * lm, size_t xPos);
-static void _resetSpaceAmount(Obj * o);
-static void _calcSpaceAmount(Obj * o, const LineMap * lm, size_t xPos);
+static void _resetAddChars(Obj * o);
+static void _calcAddSpaceAmount(Obj * o, const LineMap * lm, size_t xPos);
+static void _calcAddLineAmount(Obj * o, size_t firstEmptyLineIndex);
 
 static void _textCursorToDisplayCursor(Obj * o, DspCurs * dspCurs, const SlcCurs * txtCurs);
 static void _setInvalidDisplayCursorValue(Obj * o, DspCurs * dspCurs);
@@ -154,7 +155,7 @@ void PageFormatter_startWithPageAtTextPosition
           const LPM_SelectionCursor * txtCurs )
 {
     DspCurs dspCurs;
-    _resetSpaceAmount(o);
+    _resetAddChars(o);
     _setFirstPageInGroup(o, 0);
     _changePageIfNotOnCurrTextPosition(o, txtCurs->pos);
     _textCursorToDisplayCursor(o, &dspCurs, txtCurs);
@@ -167,7 +168,7 @@ void PageFormatter_updatePageWhenTextChanged
 {
     DspCurs dspCurs;
 
-    _resetSpaceAmount(o);
+    _resetAddChars(o);
     _resetAllLineChangedFlags(o);
 
     _updateLinesMap(o);
@@ -193,6 +194,7 @@ void PageFormatter_updatePageWhenCursorMoved
       LPM_SelectionCursor * txtCurs )
 {
     _resetAllLineChangedFlags(o);
+    _resetAddChars(o);
 
     DspCurs dspCurs;
     _copyDisplayCursor(&dspCurs, &o->displayCursor);
@@ -959,21 +961,27 @@ void _displayCursorToTextCursor(Obj * o, SlcCurs * textCursor)
     const LineMap * const end = lm + o->pageParams->lineAmount;
     size_t lineIndex = 0;
     size_t lineBase = _calcCurrPageFirstLineBase(o);
+    size_t firstEmptyLineIndex = o->pageParams->lineAmount;
     for( ; lm < end; lineBase += lm->fullLen, lm++, lineIndex++)
     {
         if(lineIndex == o->displayCursor.begin.y)
         {
             cursBegin = _calcTextPosByDisplayXPos(o, lineBase, lm, o->displayCursor.begin.x);
-            _calcSpaceAmount(o, lm, o->displayCursor.begin.x);
+            _calcAddSpaceAmount(o, lm, o->displayCursor.begin.x);
         }
 
         if(lineIndex == o->displayCursor.end.y)
         {
             cursEnd = _calcTextPosByDisplayXPos(o, lineBase, lm, o->displayCursor.end.x);
         }
+
+        if(lm->fullLen == 0)
+            if(firstEmptyLineIndex == o->pageParams->lineAmount)
+                firstEmptyLineIndex = lineIndex;
     }
     textCursor->pos = cursBegin;
     textCursor->len = cursEnd - cursBegin;
+    _calcAddLineAmount(o, firstEmptyLineIndex);
 }
 
 bool _dspXPosIsAfterLinePayloadPart(Obj * o, const LineMap * lm, size_t xPos)
@@ -1003,15 +1011,47 @@ size_t _calcTextPosByDisplayXPos(Obj * o, size_t lineBase, const LineMap * lm, s
     return lineBase + lineX;
 }
 
-void _resetSpaceAmount(Obj * o)
+void _resetAddChars(Obj * o)
 {
-    o->spaceAmount = 0;
+    o->addChars.spaces = 0;
+    o->addChars.lines = 0;
 }
 
-void _calcSpaceAmount(Obj * o, const LineMap * lm, size_t xPos)
+void _calcAddSpaceAmount(Obj * o, const LineMap * lm, size_t xPos)
 {
-    o->spaceAmount = _dspXPosIsAfterLinePayloadPart(o, lm, xPos) ?
+    o->addChars.spaces = _dspXPosIsAfterLinePayloadPart(o, lm, xPos) ?
                 lm->restLen + xPos - o->pageParams->charAmount : 0;
+}
+
+void _calcAddLineAmount(Obj * o, size_t firstEmptyLineIndex)
+{
+    if(firstEmptyLineIndex == o->pageParams->lineAmount)
+        return;
+
+    const LineMap * prevLine = (firstEmptyLineIndex == 0) ?
+                (&o->pageStruct.prevLastLine) :
+                (o->pageStruct.lineMapTable + firstEmptyLineIndex-1);
+
+    if(o->displayCursor.begin.y >= firstEmptyLineIndex)
+    {
+        if(!prevLine->endsWithEndl)
+            firstEmptyLineIndex--;
+        o->addChars.lines = o->displayCursor.begin.y - firstEmptyLineIndex;
+    }
+//    if(prevLine->endsWithEndl)
+//    {
+//        if(o->displayCursor.begin.y >= firstEmptyLineIndex)
+//        {
+//            o->addChars.lines = o->displayCursor.begin.y - firstEmptyLineIndex;
+//        }
+//    }
+//    else
+//    {
+//        if(o->displayCursor.begin.y >= firstEmptyLineIndex)
+//        {
+//            o->addChars.lines = o->displayCursor.begin.y - firstEmptyLineIndex+1;
+//        }
+//    }
 }
 
 void _textCursorToDisplayCursor(Obj * o, DspCurs * dspCurs, const SlcCurs * txtCurs)

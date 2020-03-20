@@ -30,6 +30,11 @@ typedef struct PageStruct
     bool lastPageReached;
 } PageStruct;
 
+typedef struct AddChars
+{
+    uint8_t spaces;
+    uint8_t lines;
+} AddChars;
 
 typedef struct PageFormatter
 {
@@ -41,7 +46,7 @@ typedef struct PageFormatter
     uint32_t lineChangedFlags;
     LPM_DisplayCursor displayCursor;
     LPM_SelectionCursor textCursor;
-    uint8_t spaceAmount;
+    AddChars addChars;
     bool selectBackward;
 } PageFormatter;
 
@@ -73,5 +78,20 @@ size_t PageFormatter_getCurrLineLen(PageFormatter * o);
 
 size_t PageFormatter_getCurrPagePos(PageFormatter * o);
 size_t PageFormatter_getCurrPageLen(PageFormatter * o);
+
+static inline bool PageFormatter_hasAddChars(PageFormatter * o)
+{
+    return o->addChars.lines + o->addChars.spaces > 0;
+}
+
+static inline const AddChars * PageFormatter_addChars(PageFormatter * o)
+{
+    return &o->addChars;
+}
+
+static inline size_t PageFormatter_addCharsAmount(PageFormatter * o)
+{
+    return o->addChars.lines + o->addChars.spaces;
+}
 
 #endif // PAGE_FORMATTER_H

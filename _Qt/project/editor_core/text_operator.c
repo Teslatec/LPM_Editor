@@ -233,7 +233,11 @@ const unicode_t * _nextCharWhenEndOfLine(const unicode_t * pchr)
 const unicode_t * _prevCharWhenEndOfLine(const unicode_t * pchr)
 {
     if(*pchr == chrLf)
+    {
         --pchr;
+        if(*pchr == chrLf)
+            pchr++;
+    }
     return pchr;
 }
 

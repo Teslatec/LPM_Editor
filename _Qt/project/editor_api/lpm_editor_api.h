@@ -117,6 +117,7 @@ typedef struct LPM_EditorSettings
     uint16_t keyboardTimeout;
     uint16_t lineBufferSize;
     uint16_t charBufferSize;
+    uint16_t copyBufferSize;
     LPM_EditorPageParams pageParams;
     unicode_t insertionBorderChar;
     LPM_EndOfLineType defaultEndOfLineType;

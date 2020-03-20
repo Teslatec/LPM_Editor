@@ -22,6 +22,7 @@ typedef struct Modules
 {
     Unicode_Buf lineBuffer;
     Unicode_Buf charBuffer;
+    Unicode_Buf copyBuffer;
     uint16_t * templateNameTable;
     size_t * pageGroupBaseTable;
     struct LineMap * lineMapTable;

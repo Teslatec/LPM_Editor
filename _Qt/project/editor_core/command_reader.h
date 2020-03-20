@@ -3,6 +3,7 @@
 
 #include "lpm_unicode_keyboard.h"
 #include "editor_flags.h"
+#include "lpm_editor_api.h"
 
 typedef enum EditorCmd
 {
@@ -27,6 +28,7 @@ typedef struct CmdReader
     LPM_UnicodeKeyboard * keyboard;
     Unicode_Buf kbdBuf;
     size_t receivedSize;
+    unicode_t insertionBorderChar;
     uint16_t timeout;
     uint16_t flags;
     uint8_t modifiers;
@@ -35,9 +37,8 @@ typedef struct CmdReader
 
 void CmdReader_init
         ( CmdReader * obj,
-          LPM_UnicodeKeyboard * keyboard,
           const Unicode_Buf * kbdBuf,
-          uint16_t timeout );
+          const LPM_EditorSystemParams * sp );
 
 EditorCmd CmdReader_read(CmdReader * obj);
 

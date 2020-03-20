@@ -16,7 +16,7 @@ static const size_t UNDO_BUFFER_SIZE = 4096;
 static const size_t CLIPBOARD_SIZE = 4096;
 static const size_t INSERTIONS_BUFFER_SIZE = 4096;
 static const size_t ENCODING_BUFFER_SIZE = 4096;
-static const size_t HEAP_SIZE = 1024;
+static const size_t HEAP_SIZE = 1200;
 
 static uint32_t textBuffer[TEXT_BUFFER_SIZE/4];
 static uint32_t undoBuffer[UNDO_BUFFER_SIZE/4];
@@ -31,6 +31,7 @@ static const size_t MAX_TEMPLATE_SIZE = 16384;
 static const size_t MAX_TEMPLATE_AMOUNT = 16;
 static const size_t LINE_BUFFER_SIZE = 256;
 static const size_t CHAR_BUFFER_SIZE = 10;
+static const size_t COPY_BUFFER_SIZE = 256;
 static const size_t SCREEN_CHAR_AMOUNT = 64;
 static const size_t SCREEN_LINE_AMOUNT = 16;
 static const size_t PAGE_IN_GROUP_AMOUNT = 32;
@@ -56,6 +57,7 @@ static const LPM_EditorSettings editorSettings =
     KEYBOARD_TIMEOUT,
     LINE_BUFFER_SIZE,
     CHAR_BUFFER_SIZE,
+    COPY_BUFFER_SIZE,
     { SCREEN_CHAR_AMOUNT,
       SCREEN_LINE_AMOUNT,
       PAGE_IN_GROUP_AMOUNT,

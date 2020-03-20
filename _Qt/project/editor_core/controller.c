@@ -153,6 +153,7 @@ size_t Controller_calcDesiredHeapSize(const LPM_EditorSystemParams * p)
             _alignSize(sizeof( LPM_MeteoFxns    )) +
             _alignSize(p->settings->lineBufferSize) +
             _alignSize(p->settings->charBufferSize) +
+            _alignSize(p->settings->copyBufferSize) +
             _alignSize(p->settings->maxTemplateAmount * sizeof(uint16_t)) +
             _alignSize(p->settings->pageParams.lineAmount * sizeof(LineMap)) +
             _alignSize(p->settings->pageParams.pageGroupAmount * sizeof(size_t) );
@@ -205,6 +206,11 @@ Modules * _allocateModules(const LPM_EditorSystemParams * sp)
     m->charBuffer.size = alignedSize / sizeof(unicode_t);
     heapAddr += alignedSize;
 
+    alignedSize = _alignSize(sp->settings->copyBufferSize);
+    m->copyBuffer.data = (unicode_t*)heapAddr;
+    m->copyBuffer.size = alignedSize / sizeof(unicode_t);
+    heapAddr += alignedSize;
+
     // Разместить таблицы карт строк и базовых адресов групп страниц
     m->templateNameTable = (uint16_t*)heapAddr;
     heapAddr += _alignSize(sp->settings->maxTemplateAmount * sizeof(uint16_t));
@@ -229,9 +235,9 @@ void _initModules
 {
     Unicode_Buf tmp;
 
-    Core_init(m->core, m, up, sp);
+    Core_init(m->core, m, sp);
 
-    CmdReader_init(m->cmdReader, sp->keyboardDriver, &m->charBuffer, sp->settings->keyboardTimeout);
+    CmdReader_init(m->cmdReader, &m->charBuffer, sp);
 
     tmp.data = (unicode_t*)sp->settings->textBuffer.data;
     tmp.size = sp->settings->textBuffer.size / sizeof(unicode_t);
