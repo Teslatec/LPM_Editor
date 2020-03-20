@@ -122,6 +122,14 @@ uint32_t Core_exec(Core * o)
             break;
         else if(cmd < __EDITOR_NO_CMD)
             (*(cmdHandlerTable[cmd]))(o);
+        test_print("Spaces: ", o->modules->pageFormatter->spaceAmount, 0);
+//        test_print_text_cursor(o->textCursor.pos, o->textCursor.len);
+//        test_print_page_map(o->modules->pageFormatter->pageStruct.base,
+//                            &o->modules->pageFormatter->pageStruct.prevLastLine,
+//                            o->modules->pageFormatter->pageStruct.lineMapTable );
+
+//        test_print("Spaces: ", o->modules->pageFormatter->pageStruct.lineMapTable[15].payloadLen,
+//                o->modules->pageFormatter->pageStruct.lineMapTable[15].restLen );
     }
 
     LPM_UnicodeDisplay_clearScreen(o->display);
