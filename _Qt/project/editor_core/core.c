@@ -51,7 +51,7 @@ static bool _processEnteredNewLine(Core * o);
 static bool _processEnteredInsertionBorder(Core * o);
 static void _processRemoveNextChar(Core * o);
 static void _processRemovePrevChar(Core * o);
-static void _processRemovePage(Core * o);
+static bool _processRemovePage(Core * o);
 static bool _processTruncateLine(Core * o);
 
 static void _saveAction(Core * o, size_t insertTextSize);
@@ -61,14 +61,15 @@ static void _handleNotEnoughPlaceInTextStorage(Core * o);
 static void _handleNotEnoughPlaceInClipboard(Core * o);
 
 static bool _checkCharsAndPrepareToWrite(Core * o, Unicode_Buf * text, bool * pureDiacritic);
-size_t _insertPrevCharsToLineBuffer(Core * o);
-size_t _insertAddCharsToLineBuffer(Core * o, size_t offset);
-size_t _insertInputCharsToLineBuffer(Core * o, size_t offset, bool * pureDiacritic);
+static size_t _insertPrevCharsToLineBuffer(Core * o);
+static size_t _insertAddCharsToLineBuffer(Core * o, size_t offset);
+static size_t _insertInputCharsToLineBuffer(Core * o, size_t offset, bool * pureDiacritic);
 
-bool _checkPastSizeWriteAddCharsAndSaveAction(Core * o);
+static bool _checkPastSizeWriteAddCharsAndSaveAction(Core * o);
 
 static void _setTextBufToTabSeq(Core * o, Unicode_Buf * text);
 static void _setTextBufToEndlSeq(Core * o, Unicode_Buf * text);
+
 static bool _enterTextDespiteInsertionMode(Core * o, const Unicode_Buf * text);
 
 static bool _readOnlyMode(Core * o);
@@ -220,7 +221,7 @@ void _textChangedCmdHandler(Core * o)
         _processRemovePrevChar(o);
 
     else if(flag == TEXT_FLAG_REMOVE_PAGE)
-        _processRemovePage(o);
+        enoughPlaceInTextSrorage = _processRemovePage(o);
 
     else if(flag == TEXT_FLAG_TRUCATE_LINE)
         enoughPlaceInTextSrorage = _processTruncateLine(o);
@@ -251,6 +252,9 @@ void _copyCmdHandler(Core * o)
 void _pastCmdHandler(Core * o)
 {
     if(_readOnlyMode(o))
+        return;
+
+    if(o->modules->clipboardTextBuffer->usedSize == 0)
         return;
 
     if(_checkPastSizeWriteAddCharsAndSaveAction(o))
@@ -420,18 +424,38 @@ void _processRemovePrevChar(Core * o)
     }
 }
 
-void _processRemovePage(Core * o)
+bool _processRemovePage(Core * o)
 {
     size_t currPagePos = PageFormatter_getCurrPagePos(o->modules->pageFormatter);
     size_t currPageLen = PageFormatter_getCurrPageLen(o->modules->pageFormatter);
     if(currPagePos <= o->textCursor.pos)
     {
-        o->textCursor.pos = currPagePos;
-        o->textCursor.len = currPageLen;
-        _saveAction(o, 0);
-        TextStorage_replace(o->modules->textStorage, &o->textCursor, NULL);
-        o->textCursor.len = 0;
+        Unicode_Buf text;
+        size_t offset = PageFormatter_fillPageWithEmptyLines
+                (o->modules->pageFormatter, &text, o->endlType);
+
+        SlcCurs removingArea = { currPagePos, currPageLen };
+
+        if(TextStorage_enoughPlace(o->modules->textStorage, &removingArea, text.size))
+        {
+            o->textCursor.pos = currPagePos;
+            o->textCursor.len = currPageLen;
+            _saveAction(o, text.size);
+            TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
+            o->textCursor.pos += offset;
+            o->textCursor.len = 0;
+
+            return true;
+        }
+        return false;
+
+//        o->textCursor.pos = currPagePos;
+//        o->textCursor.len = currPageLen;
+//        _saveAction(o, 0);
+//        TextStorage_replace(o->modules->textStorage, &o->textCursor, NULL);
+//        o->textCursor.len = 0;
     }
+    return true;
 }
 
 bool _processTruncateLine(Core * o)

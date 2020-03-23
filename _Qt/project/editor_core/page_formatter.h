@@ -84,6 +84,11 @@ bool PageFormatter_fillBuffWithAddChars
           Unicode_Buf * buf,
           LPM_EndlType endlType );
 
+size_t PageFormatter_fillPageWithEmptyLines
+        ( PageFormatter * o,
+          Unicode_Buf * buf,
+          LPM_EndlType endlType );
+
 static inline bool PageFormatter_hasAddChars(PageFormatter * o)
 {
     return o->addChars.lines + o->addChars.spaces > 0;

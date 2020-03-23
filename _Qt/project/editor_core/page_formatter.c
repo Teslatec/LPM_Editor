@@ -312,45 +312,57 @@ bool PageFormatter_fillBuffWithAddChars
 
     buf->size = pend - buf->data;
     return true;
+}
 
-//    unicode_t * pchr = buf->data;
-//    unicode_t * pend = pchr + o->addChars.spaces;
 
-//    for( ; pchr != pend; pchr++)
-//        *pchr = chrSpace;
+size_t PageFormatter_fillPageWithEmptyLines
+        ( PageFormatter * o,
+          Unicode_Buf * buf,
+          LPM_EndlType endlType )
+{
+    buf->data = o->modules->lineBuffer.data;
+    buf->size = o->pageParams->lineAmount;
+    size_t offset = 0;
 
-//    if(endlType == LPM_ENDL_TYPE_CRLF)
-//    {
-//        pend += o->addChars.lines * 2;
-//        for( ; pchr != pend; pchr++)
-//        {
-//            *pchr++ = chrCr;
-//            *pchr   = chrLf;
-//        }
+    if(!o->pageStruct.prevLastLine.endsWithEndl)
+    {
+        buf->size++;
+        offset = 1;
+    }
 
-//        buf->size = o->addChars.spaces + o->addChars.lines*2;
-//        return true;
-//    }
+    unicode_t * pchr = buf->data;
+    unicode_t * pend = pchr + buf->size;
 
-//    else if(endlType == LPM_ENDL_TYPE_CR)
-//    {
-//        pend += o->addChars.lines;
-//        for( ; pchr != pend; pchr++)
-//            *pchr = chrCr;
-//        buf->size = o->addChars.spaces + o->addChars.lines;
-//        return true;
-//    }
+    if(endlType == LPM_ENDL_TYPE_CRLF)
+    {
+        pend += buf->size;
+        buf->size *= 2;
+        offset *= 2;
+        for( ; pchr != pend; pchr++)
+        {
+            *pchr++ = chrCr;
+            *pchr   = chrLf;
+        }
+    }
 
-//    else if(endlType == LPM_ENDL_TYPE_LF)
-//    {
-//        pend += o->addChars.lines;
-//        for( ; pchr != pend; pchr++)
-//            *pchr = chrLf;
-//        buf->size = o->addChars.spaces + o->addChars.lines;
-//        return true;
-//    }
+    else if(endlType == LPM_ENDL_TYPE_CR)
+    {
+        for( ; pchr != pend; pchr++)
+            *pchr = chrCr;
+    }
 
-//    return false;
+    else if(endlType == LPM_ENDL_TYPE_LF)
+    {
+        for( ; pchr != pend; pchr++)
+            *pchr = chrLf;
+    }
+
+    else
+    {
+        buf->size = 0;
+    }
+
+    return offset;
 }
 
 void _setFirstPageInGroup(Obj * o, size_t groupIndex)
