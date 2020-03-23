@@ -67,7 +67,7 @@ static size_t _insertInputCharsToLineBuffer(Core * o, size_t offset, bool * pure
 
 static bool _checkPastSizeWriteAddCharsAndSaveAction(Core * o);
 
-static void _setTextBufToTabSeq(Core * o, Unicode_Buf * text);
+static void _insertTabSeqToLineBuffer(Core * o, size_t offset);
 static void _setTextBufToEndlSeq(Core * o, Unicode_Buf * text);
 
 static bool _enterTextDespiteInsertionMode(Core * o, const Unicode_Buf * text);
@@ -215,10 +215,25 @@ void _textChangedCmdHandler(Core * o)
 
 
     else if(flag == TEXT_FLAG_REMOVE_NEXT_CHAR)
+    {
+        if(PageFormatter_hasAddChars(o->modules->pageFormatter))
+            return;
         _processRemoveNextChar(o);
+    }
 
     else if(flag == TEXT_FLAG_REMOVE_PREV_CHAR)
+    {
+        if(PageFormatter_hasAddChars(o->modules->pageFormatter))
+        {
+            PageFormatter_updatePageWhenCursorMoved
+                    ( o->modules->pageFormatter,
+                      CURSOR_FLAG_MOVE | CURSOR_FLAG_CHAR | CURSOR_FLAG_LEFT,
+                      &o->textCursor);
+            PageFormatter_updateDisplay(o->modules->pageFormatter);
+            return;
+        }
         _processRemovePrevChar(o);
+    }
 
     else if(flag == TEXT_FLAG_REMOVE_PAGE)
         enoughPlaceInTextSrorage = _processRemovePage(o);
@@ -361,9 +376,19 @@ bool _processEnteredChar(Core * o)
 
 bool _processEnteredTab(Core * o)
 {
-    Unicode_Buf text;
-    _setTextBufToTabSeq(o, &text);
+    size_t addCharsAmount   = _insertAddCharsToLineBuffer(o, 0);
+    _insertTabSeqToLineBuffer(o, addCharsAmount);
+    Unicode_Buf text = { o->modules->lineBuffer.data, addCharsAmount + o->tabSpaceAmount };
     return _enterTextDespiteInsertionMode(o, &text);
+
+//    if(inputCharsAmount > 0)
+//    {
+//        textToWrite->data = o->modules->lineBuffer.data + prevCharsAmount;
+//        textToWrite->size = addCharsAmount + inputCharsAmount;
+//        return true;
+//    }
+//    return false;
+//    return _enterTextDespiteInsertionMode(o, &text);
 }
 
 bool _processEnteredNewLine(Core * o)
@@ -659,12 +684,12 @@ bool _checkPastSizeWriteAddCharsAndSaveAction(Core * o)
     return true;
 }
 
-void _setTextBufToTabSeq(Core * o, Unicode_Buf * text)
+void _insertTabSeqToLineBuffer(Core * o, size_t offset)
 {
-    text->data = o->modules->lineBuffer.data;
-    text->size = o->tabSpaceAmount;
-    for(uint8_t i = 0; i < text->size; i++)
-        text->data[i] = chrSpace;
+    unicode_t * pchr = o->modules->lineBuffer.data + offset;
+    unicode_t * const pend = pchr + o->tabSpaceAmount;
+    for( ; pchr != pend; pchr++)
+        *pchr = chrSpace;
 }
 
 void _setTextBufToEndlSeq(Core * o, Unicode_Buf * text)
