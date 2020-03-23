@@ -40,14 +40,16 @@ static void _fillLineMapWhenWordWrapped
 bool TextOperator_checkInputChar
     ( TextOperator * o,
       unicode_t inputChr,
-      const unicode_t * pchr )
+      const unicode_t * pchr,
+      bool * isDiacritic)
 {
+    *isDiacritic = false;
     if( _charBelongsToBasicLatin(inputChr) ||
             _atEndOfLine(inputChr) ||
             _atEndOfText(inputChr))
         return true;
 
-    return LPM_Lang_checkInputChar(o->lang, inputChr, pchr);
+    return LPM_Lang_checkInputChar(o->lang, inputChr, pchr, isDiacritic);
 }
 
 const unicode_t * TextOperator_nextChar

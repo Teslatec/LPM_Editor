@@ -11,7 +11,7 @@ typedef struct Core
     LPM_UnicodeDisplay * display;
     LPM_SelectionCursor textCursor;
     LPM_SelectionCursor undoTextCursor;
-    LPM_EndOfLineType endOfLine;
+    LPM_EndlType endlType;
     uint8_t tabSpaceAmount;
     uint8_t flags;
 } Core;

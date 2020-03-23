@@ -14,7 +14,7 @@ static void _initTextBuffer( Unicode_Buf * localBuffer,
 
 static bool _notEnoughSpaceToRemoveAndWrite( const TextStorageImpl * o,
                                              const LPM_SelectionCursor * removingArea,
-                                             const Unicode_Buf * textToWrite );
+                                             size_t writeTextSize );
 
 static void _decomposeToSimpleFxns( TextStorageImpl * textStorage,
                                     const LPM_SelectionCursor * removingArea,
@@ -51,7 +51,7 @@ bool TextStorage_replace
     //printf("before ");
 
     if(_notEnoughSpaceToRemoveAndWrite(
-                o->storage, removingArea, &textBuffer))
+                o->storage, removingArea, textBuffer.size))
     {
         //printf("pos: %d, rmlen: %d, txtlen: %d\n", removingArea->pos, removingArea->len, textBuffer.size);
         return false;
@@ -89,13 +89,13 @@ void TextStorage_read
 bool TextStorage_enoughPlace
         ( TextStorage * o,
           const LPM_SelectionCursor * removingArea,
-          const Unicode_Buf * textToWrite )
+          size_t writeTextSize )
 {
-    Unicode_Buf textBuffer;
+    //Unicode_Buf textBuffer;
     LPM_SelectionCursor _remArea = { removingArea->pos, removingArea->len };
     _normalizeRemovingArea(o->storage, &_remArea);
-    _initTextBuffer(&textBuffer, textToWrite);
-    return !_notEnoughSpaceToRemoveAndWrite(o->storage, removingArea, &textBuffer);
+    //_initTextBuffer(&textBuffer, textToWrite);
+    return !_notEnoughSpaceToRemoveAndWrite(o->storage, removingArea, writeTextSize);
 }
 
 void _normalizeRemovingArea( const TextStorageImpl * textStorage,
@@ -146,12 +146,12 @@ void _initTextBuffer( Unicode_Buf * localBuffer,
 
 bool _notEnoughSpaceToRemoveAndWrite( const TextStorageImpl * o,
                                       const LPM_SelectionCursor * removingArea,
-                                      const Unicode_Buf * textToWrite )
+                                      size_t writeTextSize )
 {
-    if(removingArea->len >= textToWrite->size)
+    if(removingArea->len >= writeTextSize)
         return false;
 
-    size_t writeLen = textToWrite->size - removingArea->len;
+    size_t writeLen = writeTextSize - removingArea->len;
     return writeLen > TextStorageImpl_freeSize(o);
 }
 

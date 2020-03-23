@@ -11,7 +11,7 @@ typedef enum LPM_Lang
 
 typedef struct LPM_LangFxns
 {
-    bool (*checkInputChar)(unicode_t, const unicode_t *);
+    bool (*checkInputChar)(unicode_t, const unicode_t *, bool *);
     const unicode_t * (*nextChar)(const unicode_t *);
     const unicode_t * (*prevChar)(const unicode_t *);
 } LPM_LangFxns;
@@ -20,9 +20,10 @@ typedef struct LPM_LangFxns
 static inline bool LPM_Lang_checkInputChar
         ( const LPM_LangFxns * o,
           unicode_t inputChr,
-          const unicode_t * pchr )
+          const unicode_t * pchr,
+          bool * isDiacritic )
 {
-    return (*o->checkInputChar)(inputChr, pchr);
+    return (*o->checkInputChar)(inputChr, pchr, isDiacritic);
 }
 
 static inline const unicode_t * LPM_Lang_nextChar

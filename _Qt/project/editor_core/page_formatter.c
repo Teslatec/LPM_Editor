@@ -266,6 +266,93 @@ size_t PageFormatter_getCurrPageLen(PageFormatter * o)
     return _calcCurrPageLen(o);
 }
 
+bool PageFormatter_fillBuffWithAddChars
+    ( PageFormatter * o,
+      Unicode_Buf * buf,
+      LPM_EndlType endlType )
+{    
+    if(buf->size < PageFormatter_addCharsAmount(o, endlType))
+        return false;
+
+    unicode_t * pchr = buf->data;
+    unicode_t * pend;
+
+    if(endlType == LPM_ENDL_TYPE_CRLF)
+    {
+        pend = pchr + o->addChars.lines * 2;
+        for( ; pchr != pend; pchr++)
+        {
+            *pchr++ = chrCr;
+            *pchr   = chrLf;
+        }
+    }
+
+    else if(endlType == LPM_ENDL_TYPE_CR)
+    {
+        pend = pchr + o->addChars.lines;
+        for( ; pchr != pend; pchr++)
+            *pchr = chrCr;
+    }
+
+    else if(endlType == LPM_ENDL_TYPE_LF)
+    {
+        pend = pchr + o->addChars.lines;
+        for( ; pchr != pend; pchr++)
+            *pchr = chrLf;
+    }
+
+    else
+    {
+        return false;
+    }
+
+    pend += o->addChars.spaces;
+    for( ; pchr != pend; pchr++)
+        *pchr = chrSpace;
+
+    buf->size = pend - buf->data;
+    return true;
+
+//    unicode_t * pchr = buf->data;
+//    unicode_t * pend = pchr + o->addChars.spaces;
+
+//    for( ; pchr != pend; pchr++)
+//        *pchr = chrSpace;
+
+//    if(endlType == LPM_ENDL_TYPE_CRLF)
+//    {
+//        pend += o->addChars.lines * 2;
+//        for( ; pchr != pend; pchr++)
+//        {
+//            *pchr++ = chrCr;
+//            *pchr   = chrLf;
+//        }
+
+//        buf->size = o->addChars.spaces + o->addChars.lines*2;
+//        return true;
+//    }
+
+//    else if(endlType == LPM_ENDL_TYPE_CR)
+//    {
+//        pend += o->addChars.lines;
+//        for( ; pchr != pend; pchr++)
+//            *pchr = chrCr;
+//        buf->size = o->addChars.spaces + o->addChars.lines;
+//        return true;
+//    }
+
+//    else if(endlType == LPM_ENDL_TYPE_LF)
+//    {
+//        pend += o->addChars.lines;
+//        for( ; pchr != pend; pchr++)
+//            *pchr = chrLf;
+//        buf->size = o->addChars.spaces + o->addChars.lines;
+//        return true;
+//    }
+
+//    return false;
+}
+
 void _setFirstPageInGroup(Obj * o, size_t groupIndex)
 {
     _switchToFirstPageInGroup(o, groupIndex);

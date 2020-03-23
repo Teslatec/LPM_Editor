@@ -27,4 +27,20 @@ static inline unicode_t * LineBuffer_LoadTextBack(const Modules * m, size_t pos,
     return buf.data + actualAmount;
 }
 
+static inline unicode_t * Buffer_LoadTextBack
+        ( TextStorage * storage,
+          size_t pos,
+          Unicode_Buf * buf )
+{
+    buf->size = pos < buf->size ? pos : buf->size;
+    TextStorage_read(storage, pos - buf->size, buf);
+    return buf->data + buf->size;
+//    size_t actualAmount = pos < buf->size ? pos : buf->size;
+//    size_t restAmount = buf->size - actualAmount;
+//    memset(buf->data, 0, restAmount*sizeof(unicode_t));
+//    Unicode_Buf tmp = { buf->data+restAmount, actualAmount };
+//    TextStorage_read(storage, pos-actualAmount, &tmp);
+//    return tmp.data;
+}
+
 #endif // LINE_BUFFER_SUPPORT_H

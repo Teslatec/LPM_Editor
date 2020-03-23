@@ -17,7 +17,7 @@ static bool _isChrLetterE(unicode_t chr);
 static bool _isChrCratca(unicode_t chr);
 static bool _isChrUmlaut(unicode_t chr);
 
-bool Lang_RusEng_checkInputChar(unicode_t inputChr, const unicode_t * pchr)
+bool Lang_RusEng_checkInputChar(unicode_t inputChr, const unicode_t * pchr, bool * isDiacritic)
 {
     if(_belongsBaseRussian(inputChr))
         return true;
@@ -25,10 +25,16 @@ bool Lang_RusEng_checkInputChar(unicode_t inputChr, const unicode_t * pchr)
     --pchr;
 
     if(_isChrCratca(inputChr))
+    {
+        *isDiacritic = true;
         return _isChrLetterI(*pchr);
+    }
 
     if(_isChrUmlaut(inputChr))
+    {
+        *isDiacritic = true;
         return _isChrLetterE(*pchr);
+    }
 
     return true;
 }

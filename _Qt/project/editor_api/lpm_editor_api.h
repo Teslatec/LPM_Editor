@@ -25,13 +25,13 @@ typedef bool (*LPM_API_readGuiTextFxn)(Unicode_Buf*, LPM_Lang, LPM_GuiTextId);
  * Константы-перечисления
  */
 
-typedef enum LPM_EndOfLineType
+typedef enum LPM_EndlType
 {
-    LPM_END_OF_LINE_TYPE_CR,
-    LPM_END_OF_LINE_TYPE_LF,
-    LPM_END_OF_LINE_TYPE_CRLF,
-    LPM_END_OF_LINE_TYPE_AUTO
-} LPM_EndOfLineType;
+    LPM_ENDL_TYPE_CR,
+    LPM_ENDL_TYPE_LF,
+    LPM_ENDL_TYPE_CRLF,
+    LPM_ENDL_TYPE_AUTO
+} LPM_EndlType;
 
 typedef enum LPM_CursorInitPos
 {
@@ -120,7 +120,7 @@ typedef struct LPM_EditorSettings
     uint16_t copyBufferSize;
     LPM_EditorPageParams pageParams;
     unicode_t insertionBorderChar;
-    LPM_EndOfLineType defaultEndOfLineType;
+    LPM_EndlType defaultEndOfLineType;
     LPM_insertionInputPolicy insertionInputPolicy;
     uint8_t tabSpaceAmount;
 } LPM_EditorSettings;
@@ -151,7 +151,7 @@ typedef struct LPM_EditorSystemParams
 typedef struct LPM_EditorUserParams
 {
     LPM_EditorMode mode;
-    LPM_EndOfLineType endOfLineType;
+    LPM_EndlType endOfLineType;
     LPM_CursorInitPos cursorInitPos;
     LPM_Encoding encodingFrom;
     LPM_Encoding encodingTo;

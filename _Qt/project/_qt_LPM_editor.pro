@@ -8,7 +8,7 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets concurrent serialport
 
-TARGET = _qt_LPM_editor
+TARGET = _qt_LPM_editor_n1
 TEMPLATE = app
 
 # The following define makes your compiler emit warnings if you use

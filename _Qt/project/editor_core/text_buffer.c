@@ -8,12 +8,11 @@
  *  нужно переписать функции _read и _write
  */
 
-static bool _noEnoughPlaceInClipboard(TextBuffer * o, size_t len);
-static bool _noEnoughPlaceInTextStorage(TextBuffer * o, const LPM_SelectionCursor * removingArea, size_t addCharAmount);
+static bool _noEnoughPlaceInBuffer(TextBuffer * o, size_t len);
+static bool _noEnoughPlaceInTextStorage(TextBuffer * o, const LPM_SelectionCursor * removingArea);
 static void _write(TextBuffer * o, size_t pos, size_t len);
 static void _read(TextBuffer * o, size_t pos, size_t len);
 static size_t _calcPartialRemoveLen(size_t enterTextPos, size_t removeEndPos, size_t loadSize);
-static void _insertAddChars(TextBuffer * o);
 
 void TextBuffer_init
     ( TextBuffer * o,
@@ -35,7 +34,7 @@ bool TextBuffer_push
     ( TextBuffer * o,
       const LPM_SelectionCursor * textCursor )
 {
-    if(_noEnoughPlaceInClipboard(o, textCursor->len))
+    if(_noEnoughPlaceInBuffer(o, textCursor->len))
         return false;
 
     o->usedSize = textCursor->len;
@@ -68,19 +67,15 @@ bool TextBuffer_push
 
 bool TextBuffer_pop
     ( TextBuffer * o,
-      LPM_SelectionCursor * textCursor,
-      bool insertAddChars )
+      LPM_SelectionCursor * textCursor )
 {
     if(o->usedSize == 0)
         return true;
 
-    size_t addCharsAmount = insertAddChars ? PageFormatter_addChars(o->modules->pageFormatter) : 0;
+    //size_t addCharsAmount = insertAddChars ? PageFormatter_addChars(o->modules->pageFormatter) : 0;
 
-    if(_noEnoughPlaceInTextStorage(o, textCursor, addCharsAmount))
+    if(_noEnoughPlaceInTextStorage(o, textCursor))
         return false;
-
-    if(insertAddChars)
-        _insertAddChars(o);
 
     const size_t partSize     = o->modules->copyBuffer.size;
     const size_t removeEndPos = textCursor->pos + textCursor->len;
@@ -128,25 +123,17 @@ bool TextBuffer_pop
     return true;
 }
 
-bool TextBuffer_checkPlaceInTextStorage
-    ( TextBuffer * o,
-      const LPM_SelectionCursor * textCursor,
-      size_t addCharsAmount )
-{
-    return !_noEnoughPlaceInTextStorage(o, textCursor, addCharsAmount);
-}
-
-bool _noEnoughPlaceInClipboard(TextBuffer * o, size_t len)
+bool _noEnoughPlaceInBuffer(TextBuffer * o, size_t len)
 {
     return len > o->buffer.size;
 }
 
-bool _noEnoughPlaceInTextStorage(TextBuffer * o, const LPM_SelectionCursor * removingArea, size_t addCharAmount)
+bool _noEnoughPlaceInTextStorage(TextBuffer * o, const LPM_SelectionCursor * removingArea)
 {
-    Unicode_Buf textToWrite = { o->buffer.data, o->usedSize + addCharAmount };
+    //Unicode_Buf textToWrite = { o->buffer.data, o->usedSize };
     return !TextStorage_enoughPlace( o->modules->textStorage,
-                                         removingArea,
-                                         &textToWrite );
+                                     removingArea,
+                                     o->usedSize );
 }
 
 void _write(TextBuffer * o, size_t pos, size_t len)
@@ -171,8 +158,3 @@ size_t _calcPartialRemoveLen(size_t enterTextPos, size_t removeEndPos, size_t lo
     size_t fullRemoveLen = removeEndPos - enterTextPos;
     return fullRemoveLen >= loadSize ? loadSize : fullRemoveLen;
 }
-
-void _insertAddChars(TextBuffer * o)
-{
-}
-

@@ -3,7 +3,7 @@
 
 #include "lpm_unicode.h"
 
-bool Lang_RusEng_checkInputChar(unicode_t inputChr, const unicode_t * pchr);
+bool Lang_RusEng_checkInputChar(unicode_t inputChr, const unicode_t * pchr, bool * isDiacritic);
 const unicode_t * Lang_RusEng_nextChar(const unicode_t * pchr);
 const unicode_t * Lang_RusEng_prevChar(const unicode_t * pchr);
 

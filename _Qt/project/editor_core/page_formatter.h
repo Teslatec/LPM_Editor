@@ -79,6 +79,11 @@ size_t PageFormatter_getCurrLineLen(PageFormatter * o);
 size_t PageFormatter_getCurrPagePos(PageFormatter * o);
 size_t PageFormatter_getCurrPageLen(PageFormatter * o);
 
+bool PageFormatter_fillBuffWithAddChars
+        ( PageFormatter * o,
+          Unicode_Buf * buf,
+          LPM_EndlType endlType );
+
 static inline bool PageFormatter_hasAddChars(PageFormatter * o)
 {
     return o->addChars.lines + o->addChars.spaces > 0;
@@ -89,9 +94,12 @@ static inline const AddChars * PageFormatter_addChars(PageFormatter * o)
     return &o->addChars;
 }
 
-static inline size_t PageFormatter_addCharsAmount(PageFormatter * o)
+static inline size_t PageFormatter_addCharsAmount(PageFormatter * o, LPM_EndlType endlType)
 {
-    return o->addChars.lines + o->addChars.spaces;
+    if(endlType == LPM_ENDL_TYPE_CRLF)
+        return o->addChars.spaces + o->addChars.lines*2;
+    else
+        return o->addChars.spaces + o->addChars.lines;
 }
 
 #endif // PAGE_FORMATTER_H

@@ -24,13 +24,7 @@ bool TextBuffer_push
 
 bool TextBuffer_pop
     ( TextBuffer * o,
-      LPM_SelectionCursor * textCursor,
-      bool insertAddChars );
-
-bool TextBuffer_checkPlaceInTextStorage
-    ( TextBuffer * o,
-      const LPM_SelectionCursor * textCursor,
-      size_t addCharsAmount );
+      LPM_SelectionCursor * textCursor );
 
 static inline bool TextBuffer_isEmpty(TextBuffer * o)
 {

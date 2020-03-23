@@ -31,7 +31,6 @@ void test_print_unicode(const unicode_t * buf, size_t size);
 void test_beep();
 
 static void _prepare(Obj * o);
-static void _copyTextCursor(SlcCurs * dst, const SlcCurs * src);
 
 static void _cursorChangedCmdHandler(Core * o);
 static void _textChangedCmdHandler(Core * o);
@@ -61,8 +60,13 @@ static void _undoAction(Core * o);
 static void _handleNotEnoughPlaceInTextStorage(Core * o);
 static void _handleNotEnoughPlaceInClipboard(Core * o);
 
-static bool _checkInputText(Core * o, Unicode_Buf * text);
-static bool _insertAdditionalChars(Core * o, Unicode_Buf * text);
+static bool _checkCharsAndPrepareToWrite(Core * o, Unicode_Buf * text, bool * pureDiacritic);
+size_t _insertPrevCharsToLineBuffer(Core * o);
+size_t _insertAddCharsToLineBuffer(Core * o, size_t offset);
+size_t _insertInputCharsToLineBuffer(Core * o, size_t offset, bool * pureDiacritic);
+
+bool _checkPastSizeWriteAddCharsAndSaveAction(Core * o);
+
 static void _setTextBufToTabSeq(Core * o, Unicode_Buf * text);
 static void _setTextBufToEndlSeq(Core * o, Unicode_Buf * text);
 static bool _enterTextDespiteInsertionMode(Core * o, const Unicode_Buf * text);
@@ -72,13 +76,9 @@ static bool _canEnterInsertionBorderChar(Core * o);
 static void _setHasActionToUndo(Core * o, bool state);
 static bool _hasNotActionToUndo(Core * o);
 
-static void _execStateScreen(Core * o);
-static void _execHelpScreen(Core * o);
-static void _outlineUnicodeBuffer(Core * o, const Unicode_Buf * buf);
-
-static void _printLineMap(Core * o);
-static void _printDisplayCursor(Core * o);
-static void _printTextCursor(Core * o);
+void _printLineMap(Core * o);
+void _printDisplayCursor(Core * o);
+void _printTextCursor(Core * o);
 
 static const CmdHandler cmdHandlerTable[] =
 {
@@ -104,7 +104,7 @@ void Core_init
 {
     o->modules = modules;
     o->display = systemParams->displayDriver;
-    o->endOfLine = systemParams->settings->defaultEndOfLineType;
+    o->endlType = systemParams->settings->defaultEndOfLineType;
     o->tabSpaceAmount = systemParams->settings->tabSpaceAmount;
     o->flags = 0;
 }
@@ -162,12 +162,6 @@ void _prepare(Obj * o)
     o->textCursor.len = 0;
     PageFormatter_startWithPageAtTextPosition(o->modules->pageFormatter, &o->textCursor);
     PageFormatter_updateDisplay(o->modules->pageFormatter);
-}
-
-void _copyTextCursor(SlcCurs * dst, const SlcCurs * src)
-{
-    dst->pos = src->pos;
-    dst->len = src->len;
 }
 
 void _printLineMap(Core * o)
@@ -259,12 +253,9 @@ void _pastCmdHandler(Core * o)
     if(_readOnlyMode(o))
         return;
 
-    size_t addCharsAmount = PageFormatter_addCharsAmount(o->modules->pageFormatter);
-
-    if(TextBuffer_checkPlaceInTextStorage(o->modules->clipboardTextBuffer, &o->textCursor, addCharsAmount))
+    if(_checkPastSizeWriteAddCharsAndSaveAction(o))
     {
-        _saveAction(o, o->modules->clipboardTextBuffer->usedSize + addCharsAmount);
-        TextBuffer_pop(o->modules->clipboardTextBuffer, &o->textCursor, true);
+        TextBuffer_pop(o->modules->clipboardTextBuffer, &o->textCursor);
         PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
         PageFormatter_updateDisplay(o->modules->pageFormatter);
     }
@@ -331,51 +322,35 @@ void _timeoutCmdHandler(Core * o)
 
 bool _processEnteredChar(Core * o)
 {
-    Unicode_Buf text;
-    CmdReader_getText(o->modules->cmdReader, &text);
-    if(!_checkInputText(o, &text))
+    Unicode_Buf textToWrite;
+    bool pureDiacritic;
+    if(!_checkCharsAndPrepareToWrite(o, &textToWrite, &pureDiacritic))
         return true;
-
-    if(PageFormatter_hasAddChars(o->modules->pageFormatter))
-    {
-        if(_insertAdditionalChars(o, &text))
-            return _enterTextDespiteInsertionMode(o, &text);
-        return true;
-    }
 
     if(CmdReader_isReplacementMode(o->modules->cmdReader))
     {
+        if(pureDiacritic || o->textCursor.len > 0)
+            return _enterTextDespiteInsertionMode(o, &textToWrite);
+
         if(o->textCursor.len == 0)
         {
             const unicode_t * pchr = LineBuffer_LoadText(o->modules, o->textCursor.pos, o->modules->charBuffer.size);
             if(!TextOperator_atEndOfLine(o->modules->textOperator, pchr))
                 o->textCursor.len = TextOperator_nextChar(o->modules->textOperator, pchr) - pchr;
 
-            if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, &text))
-            {
-                _saveAction(o, text.size);
-                TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
-                o->textCursor.pos += text.size;
-                o->textCursor.len = 0;
+            if(_enterTextDespiteInsertionMode(o, &textToWrite))
                 return true;
-            }
+
             o->textCursor.len = 0;
         }
         else
         {
-            if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, &text))
-            {
-                _saveAction(o, text.size);
-                TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
-                o->textCursor.pos += text.size;
-                o->textCursor.len = 0;
-                return true;
-            }
+            return _enterTextDespiteInsertionMode(o, &textToWrite);
         }
     }
     else
     {
-        return _enterTextDespiteInsertionMode(o, &text);
+        return _enterTextDespiteInsertionMode(o, &textToWrite);
     }
     return false;
 }
@@ -397,11 +372,8 @@ bool _processEnteredNewLine(Core * o)
 bool _processEnteredInsertionBorder(Core * o)
 {
     if(_canEnterInsertionBorderChar(o))
-    {
         return _processEnteredChar(o);
-//        Unicode_Buf text = { &o->insertionBorderChar, 1 };
-//        return _enterTextDespiteInsertionMode(o, &text);
-    }
+
     return true;
 }
 
@@ -479,7 +451,7 @@ bool _processTruncateLine(Core * o)
             size_t prevLen = o->textCursor.len;
             o->textCursor.len = currLineLen - offset;
 
-            if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, &text))
+            if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, text.size))
             {
                 _saveAction(o, text.size);
                 TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
@@ -508,6 +480,7 @@ void _saveAction(Core * o, size_t insertTextSize)
 
     o->undoTextCursor.pos = o->textCursor.pos;
     o->undoTextCursor.len = insertTextSize;
+
     _setHasActionToUndo(o, true);
 }
 
@@ -525,7 +498,7 @@ void _undoAction(Core * o)
     }
     else
     {
-        if(TextBuffer_pop(o->modules->undoTextBuffer, &o->undoTextCursor, false))
+        if(TextBuffer_pop(o->modules->undoTextBuffer, &o->undoTextCursor))
         {
             o->textCursor.pos = o->undoTextCursor.pos;
             o->textCursor.len = 0;
@@ -553,66 +526,111 @@ void _handleNotEnoughPlaceInClipboard(Core *o)
     test_beep();
 }
 
-bool _checkInputText(Core * o, Unicode_Buf * text)
+bool _checkCharsAndPrepareToWrite(Core * o, Unicode_Buf * textToWrite, bool * pureDiacritic)
 {
-    // Проверяем введенную последовательность символов.
-    //  Вводятся только те, которые прошли проверку модулем TextOperator
-    unicode_t * const inputBegin = LineBuffer_LoadTextBack(o->modules, o->textCursor.pos, o->modules->charBuffer.size);
-    unicode_t * inputPtr = inputBegin;
-    const unicode_t * textPtr = text->data;
-    const unicode_t * const textEnd = textPtr + text->size;
+    // false, если нет ни одного символа для ввода (не прошли проверку)
+    // true, если есть символы для ввода
 
-    for( ; textPtr != textEnd; textPtr++)
-        if(TextOperator_checkInputChar(o->modules->textOperator, *textPtr, inputPtr))
-            *inputPtr++ = *textPtr;
+    size_t prevCharsAmount  = _insertPrevCharsToLineBuffer(o);
+    size_t addCharsAmount   = _insertAddCharsToLineBuffer(o, prevCharsAmount);
+    size_t inputCharsAmount = _insertInputCharsToLineBuffer(o, prevCharsAmount + addCharsAmount, pureDiacritic);
 
-    text->data = inputBegin;
-    text->size = inputPtr - inputBegin;
-    return text->size != 0;
+    if(inputCharsAmount > 0)
+    {
+        textToWrite->data = o->modules->lineBuffer.data + prevCharsAmount;
+        textToWrite->size = addCharsAmount + inputCharsAmount;
+        return true;
+    }
+    return false;
 }
 
-bool _insertAdditionalChars(Core * o, Unicode_Buf * text)
+size_t _insertPrevCharsToLineBuffer(Core * o)
 {
-    const AddChars * addChars = PageFormatter_addChars(o->modules->pageFormatter);
-    size_t addLinesAmount = addChars->lines;
-    if(o->endOfLine == LPM_END_OF_LINE_TYPE_CRLF)
-        addLinesAmount *= 2;
-    size_t addCharsAmount = addChars->spaces + addLinesAmount;
-
-    if(addCharsAmount + text->size > o->modules->lineBuffer.size)
-        return false;
-
-    unicode_t * psrc = text->data + text->size-1;
-    unicode_t * pdst = psrc + addCharsAmount;
-    unicode_t * pend = text->data-1;
-    for( ; psrc != pend; psrc--, pdst--)
-        *pdst = *psrc;
-
-    pend = pdst - addChars->spaces;
-    for( ; pdst != pend; pdst--)
-        *pdst = chrSpace;
-
-    pend = pdst - addLinesAmount;
-    if(o->endOfLine == LPM_END_OF_LINE_TYPE_CR)
+    Unicode_Buf buf =
     {
-        for( ; pdst != pend; pdst--)
-            *pdst = chrCr;
-    }
-    else if(o->endOfLine == LPM_END_OF_LINE_TYPE_LF)
+        o->modules->lineBuffer.data,
+        o->modules->charBuffer.size
+    };
+    Buffer_LoadTextBack(o->modules->textStorage, o->textCursor.pos, &buf);
+    return buf.size;
+}
+
+size_t _insertAddCharsToLineBuffer(Core * o, size_t offset)
+{
+    if(PageFormatter_hasAddChars(o->modules->pageFormatter))
     {
-        for( ; pdst != pend; pdst--)
-            *pdst = chrLf;
-    }
-    else
-    {
-        for( ; pdst != pend; pdst--)
+        // Буфер строки должен вместить предыдущий текст, размером до размера
+        //  буфера символа и введенный текст, так же размером до размера буфера
+        //  символа. Поэтому максмальное количество добавочных символов - размер
+        //  буфера строки минус два размера буфера символа
+        Unicode_Buf buf =
         {
-            *pdst-- = chrLf;
-            *pdst = chrCr;
+            o->modules->lineBuffer.data + offset,
+            o->modules->lineBuffer.size - o->modules->charBuffer.size*2,
+        };
+        if(PageFormatter_fillBuffWithAddChars
+                (o->modules->pageFormatter, &buf, o->endlType))
+            return buf.size;
+    }
+    return 0;
+}
+
+size_t _insertInputCharsToLineBuffer(Core * o, size_t offset, bool * pureDiacritic)
+{
+    // Проверяем введенную последовательность символов.
+    //  Копируем в буфер строки только те, которые прошли проверку модулем TextOperator
+
+    unicode_t * linePtr = o->modules->lineBuffer.data + offset;
+    unicode_t * const lineBegin = linePtr;
+
+    Unicode_Buf tmp;
+    CmdReader_getText(o->modules->cmdReader, &tmp);
+
+    const unicode_t * textPtr = tmp.data;
+    const unicode_t * const textEnd = textPtr + tmp.size;
+
+    *pureDiacritic = true;
+    for( ; textPtr != textEnd; textPtr++)
+    {
+        bool isDiacritic;
+        if(TextOperator_checkInputChar(o->modules->textOperator, *textPtr, linePtr, &isDiacritic))
+        {
+            *linePtr++ = *textPtr;
+            if(!isDiacritic)
+                *pureDiacritic = false;
         }
     }
 
-    text->size += addCharsAmount;
+    return linePtr - lineBegin;
+}
+
+
+bool _checkPastSizeWriteAddCharsAndSaveAction(Core * o)
+{
+    size_t addCharsAmount = PageFormatter_addCharsAmount(o->modules->pageFormatter, o->endlType);
+    size_t fullTextSize = addCharsAmount + o->modules->clipboardTextBuffer->usedSize;
+
+    if(!TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, fullTextSize))
+        return false;
+
+    Unicode_Buf text =
+    {
+        o->modules->lineBuffer.data,
+        o->modules->lineBuffer.size
+    };
+
+    if(PageFormatter_fillBuffWithAddChars
+            (o->modules->pageFormatter, &text, o->endlType))
+    {
+        _saveAction(o, fullTextSize);
+        TextStorage_replace(o->modules->textStorage, &o->textCursor, &text);
+        o->textCursor.pos += text.size;
+        o->textCursor.len = 0;
+    }
+    else
+    {
+        _saveAction(o, o->modules->clipboardTextBuffer->usedSize);
+    }
 
     return true;
 }
@@ -629,12 +647,12 @@ void _setTextBufToEndlSeq(Core * o, Unicode_Buf * text)
 {
     text->data = o->modules->lineBuffer.data;
 
-    if(o->endOfLine == LPM_END_OF_LINE_TYPE_CR)
+    if(o->endlType == LPM_ENDL_TYPE_CR)
     {
         text->size = 1;
         text->data[0] = chrCr;
     }
-    else if(o->endOfLine == LPM_END_OF_LINE_TYPE_LF)
+    else if(o->endlType == LPM_ENDL_TYPE_LF)
     {
         text->size = 1;
         text->data[0] = chrLf;
@@ -645,28 +663,11 @@ void _setTextBufToEndlSeq(Core * o, Unicode_Buf * text)
         text->data[0] = chrCr;
         text->data[1] = chrLf;
     }
-//    static const unicode_t endlSeq[2] = { 0x000D, 0x000A };
-
-//    if(o->endOfLine == LPM_END_OF_LINE_TYPE_CR)
-//    {
-//        text->data = (unicode_t*)endlSeq;
-//        text->size = 1;
-//    }
-//    else if(o->endOfLine == LPM_END_OF_LINE_TYPE_LF)
-//    {
-//        text->data = (unicode_t*)endlSeq+1;
-//        text->size = 1;
-//    }
-//    else
-//    {
-//        text->data = (unicode_t*)endlSeq;
-//        text->size = 2;
-//    }
 }
 
 bool _enterTextDespiteInsertionMode(Core * o, const Unicode_Buf * text)
 {
-    if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, text))
+    if(TextStorage_enoughPlace(o->modules->textStorage, &o->textCursor, text->size))
     {
         _saveAction(o, text->size);
         TextStorage_replace(o->modules->textStorage, &o->textCursor, text);
@@ -698,17 +699,4 @@ void _setHasActionToUndo(Core * o, bool state)
 bool _hasNotActionToUndo(Core * o)
 {
     return !(o->flags & FLAG_HAS_ACTION_TO_UNDO);
-}
-
-void _execStateScreen(Core * o)
-{
-}
-
-void _execHelpScreen(Core * o)
-{
-}
-
-void _outlineUnicodeBuffer(Core * o, const Unicode_Buf * buf)
-{
-
 }

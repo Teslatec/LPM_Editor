@@ -24,7 +24,8 @@ static inline void TextOperator_init
 bool TextOperator_checkInputChar
     ( TextOperator * o,
       unicode_t inputChr,
-      const unicode_t * pchr );
+      const unicode_t * pchr,
+      bool * isDiacritic);
 
 const unicode_t * TextOperator_nextChar
     ( TextOperator * o,

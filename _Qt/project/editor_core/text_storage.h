@@ -19,10 +19,15 @@ void TextStorage_read
           size_t readPosition,
           Unicode_Buf * readTextBuffer );
 
+//bool TextStorage_enoughPlace
+//        ( TextStorage * o,
+//          const LPM_SelectionCursor * removingArea,
+//          const Unicode_Buf * textToWrite );
+
 bool TextStorage_enoughPlace
         ( TextStorage * o,
           const LPM_SelectionCursor * removingArea,
-          const Unicode_Buf * textToWrite );
+          size_t writeTextSize );
 
 static inline void TextStorage_init
         ( TextStorage * o,
