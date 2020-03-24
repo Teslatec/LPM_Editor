@@ -27,8 +27,12 @@ static uint32_t heap[HEAP_SIZE/4];
 
 static const size_t MAX_METEO_SIZE = 14000;
 static const size_t MAX_FAX_CHAIN_SIZE = 14000;
-static const size_t MAX_TEMPLATE_SIZE = 16384;
+static const size_t MAX_TEMPLATE_SIZE = 16128;
 static const size_t MAX_TEMPLATE_AMOUNT = 16;
+static const size_t TEMPLATE_BAD_NAME_AMOUNT = 2;
+static const uint16_t templateBadNameTable[TEMPLATE_BAD_NAME_AMOUNT] =
+{ 0x0000, 0xFFFF };
+
 static const size_t LINE_BUFFER_SIZE = 256;
 static const size_t CHAR_BUFFER_SIZE = 10;
 static const size_t COPY_BUFFER_SIZE = 256;
@@ -54,6 +58,8 @@ static const LPM_EditorSettings editorSettings =
     MAX_FAX_CHAIN_SIZE,
     MAX_TEMPLATE_SIZE,
     MAX_TEMPLATE_AMOUNT,
+    templateBadNameTable,
+    TEMPLATE_BAD_NAME_AMOUNT,
     KEYBOARD_TIMEOUT,
     LINE_BUFFER_SIZE,
     CHAR_BUFFER_SIZE,
@@ -71,6 +77,7 @@ static const LPM_EditorSettings editorSettings =
 bool TestEditorSwSupport::readSettings(LPM_EditorSettings * setting)
 {
     *setting = editorSettings;
+    qDebug() << (int)textBuffer;
     return true;
 }
 

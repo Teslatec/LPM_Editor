@@ -5,6 +5,7 @@
 #include "test_text_buffer.h"
 #include "test_text_editor.h"
 #include "test_editor_sw_support.h"
+#include "test_file.h"
 
 extern "C"
 {
@@ -54,6 +55,12 @@ void TestTextEditor::start(const Param & param)
         LPM_Buf textBuf;
         ttb.buffer(&textBuf);
 
+        TestFileImpl fileImpl;
+        TestFile templateFile;
+        TestFile_init(&templateFile, &fileImpl);
+
+        fileImpl.load("template_file.bin");
+
         LPM_EditorUserParams userParams;
         userParams.mode            = LPM_EDITOR_MODE_TEMPLATE_EDIT;
         userParams.endOfLineType   = LPM_ENDL_TYPE_LF;
@@ -72,7 +79,7 @@ void TestTextEditor::start(const Param & param)
         LPM_EditorSystemParams systemParams;
         systemParams.keyboardDriver     = TestKeyboard_base(&kbrd);
         systemParams.displayDriver      = TestDisplay_base(&dsp);
-//        systemParam.templatesFile      = ;
+        systemParams.templatesFile      = TestFile_base(&templateFile);
         systemParams.settings           = &settings;
         systemParams.readSupportFxnsFxn = &TestEditorSwSupport::readSupportFxns;
         systemParams.readGuiTextFxn     = &TestEditorSwSupport::readGuiText;
@@ -84,6 +91,8 @@ void TestTextEditor::start(const Param & param)
             qDebug() << "Работа завершена без ошибок";
         else
             qDebug() << "Работа завершена с ошибкой";
+
+        fileImpl.save("template_file.bin");
 
         //QThread::msleep(5);
         emit _editingFinished();

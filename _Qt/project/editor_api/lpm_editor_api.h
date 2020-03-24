@@ -110,10 +110,15 @@ typedef struct LPM_EditorSettings
     LPM_Buf insertionsBuffer;
     LPM_Buf encodingBuffer; // ??
     LPM_Buf heap;
+
     size_t maxMeteoSize;
     size_t maxFaxChainSize;
+
     size_t maxTemplateSize;
     uint16_t maxTemplateAmount;
+    const uint16_t * templateBadNameTable;
+    size_t templatebadNameAmount;
+
     uint16_t keyboardTimeout;
     uint16_t lineBufferSize;
     uint16_t charBufferSize;

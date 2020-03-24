@@ -380,15 +380,6 @@ bool _processEnteredTab(Core * o)
     _insertTabSeqToLineBuffer(o, addCharsAmount);
     Unicode_Buf text = { o->modules->lineBuffer.data, addCharsAmount + o->tabSpaceAmount };
     return _enterTextDespiteInsertionMode(o, &text);
-
-//    if(inputCharsAmount > 0)
-//    {
-//        textToWrite->data = o->modules->lineBuffer.data + prevCharsAmount;
-//        textToWrite->size = addCharsAmount + inputCharsAmount;
-//        return true;
-//    }
-//    return false;
-//    return _enterTextDespiteInsertionMode(o, &text);
 }
 
 bool _processEnteredNewLine(Core * o)

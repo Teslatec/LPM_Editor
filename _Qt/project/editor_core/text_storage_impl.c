@@ -11,6 +11,11 @@ void TextStorageImpl_init(TextStorageImpl * o, const Unicode_Buf * textBuffer)
     o->endOfText       = _calcEndOfTextPosition(o);
 }
 
+void TextStorageImpl_setMaxSize(TextStorageImpl * o, size_t maxSize)
+{
+    o->textBuffer.size = maxSize;
+}
+
 void TextStorageImpl_recalcEndOfText(TextStorageImpl * o)
 {
     o->endOfText = _calcEndOfTextPosition(o);

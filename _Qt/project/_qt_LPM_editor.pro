@@ -45,7 +45,8 @@ SOURCES += \
     editor_core/screen_painter.c \
     editor_support/lang_rus_eng.c \
     tests/test_editor_sw_support.cpp \
-    editor_core/template_loader.c
+    editor_core/template_loader.c \
+    tests/test_file.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -84,7 +85,8 @@ HEADERS += \
     editor_api/lpm_meteo_api.h \
     editor_support/lang_rus_eng.h \
     tests/test_editor_sw_support.h \
-    editor_core/template_loader.h
+    editor_core/template_loader.h \
+    tests/test_file.h
 
 FORMS += \
         mainwindow.ui

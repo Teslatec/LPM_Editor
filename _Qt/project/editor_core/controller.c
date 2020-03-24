@@ -355,6 +355,7 @@ uint32_t _execEditorInTemplateMode
     if(result != LPM_EDITOR_OK)
         return result;
 
+    TextStorageImpl_setMaxSize(m->textStorageImpl, sp->settings->maxTemplateSize/sizeof(unicode_t));
     Core_setTemplateMode(m->core);
 
     do
@@ -518,7 +519,7 @@ uint32_t _createNewTemplateByGui
 {
     uint32_t result;
 
-    result = TemplateLoader_readTemplateNames(m, sp->templatesFile);
+    result = TemplateLoader_readTemplateNames(m, sp);
     if(result != LPM_EDITOR_OK)
         return result;
 
@@ -538,7 +539,7 @@ uint32_t _loadExistedTemplateByGui
 {
     uint32_t result;
 
-    result = TemplateLoader_readTemplateNames(m, sp->templatesFile);
+    result = TemplateLoader_readTemplateNames(m, sp);
     if(result != LPM_EDITOR_OK)
         return result;
 
@@ -546,7 +547,7 @@ uint32_t _loadExistedTemplateByGui
     if(result != LPM_EDITOR_OK)
         return result;
 
-    return TemplateLoader_readText(m, sp->templatesFile, *templateIndex);
+    return TemplateLoader_readText(m, sp, *templateIndex);
 }
 
 uint32_t _loadExistedTemplateByNameFromInsertionsText
@@ -558,7 +559,7 @@ uint32_t _loadExistedTemplateByNameFromInsertionsText
     uint32_t result;
     uint16_t templateName;
 
-    result = TemplateLoader_readTemplateNames(m, sp->templatesFile);
+    result = TemplateLoader_readTemplateNames(m, sp);
     if(result != LPM_EDITOR_OK)
         return result;
 
@@ -569,12 +570,13 @@ uint32_t _loadExistedTemplateByNameFromInsertionsText
     if(!Core_checkInsertionFormatAndReadNameIfOk(m->core, &templateName))
         return LPM_EDITOR_ERROR_BAD_INSERTION_FORMAT;
 
-    if(!TemplateLoader_findTemplateIndexByName(m, templateName, templateIndex))
-        return LPM_EDITOR_ERROR_BAD_TEMPLATE_NAME;
+    result = TemplateLoader_findTemplateIndexByName(m, sp, templateName, templateIndex);
+    if(result != LPM_EDITOR_OK)
+        return result;
 
     _copyInsertionToInsertionsBuffer(m);
 
-    return TemplateLoader_readText(m, sp->templatesFile, *templateIndex);
+    return TemplateLoader_readText(m, sp, *templateIndex);
 }
 
 uint32_t _saveTemplate
@@ -582,7 +584,7 @@ uint32_t _saveTemplate
           const LPM_EditorSystemParams * sp,
           uint8_t templateIndex )
 {
-    uint32_t result = TemplateLoader_saveText(m, sp->templatesFile, templateIndex);
+    uint32_t result = TemplateLoader_saveText(m, sp, templateIndex);
     if(result != LPM_EDITOR_OK)
         return result;
 
