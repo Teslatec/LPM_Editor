@@ -3,10 +3,13 @@
 
 #include "lpm_structs.h"
 #include "text_storage_impl.h"
+#include "modules.h"
 
 typedef struct TextStorage
 {
-    TextStorageImpl * storage;
+    const Modules * m;
+    LPM_SelectionCursor recvCursor;
+    bool needToSync;
 } TextStorage;
 
 bool TextStorage_replace
@@ -29,31 +32,35 @@ bool TextStorage_enoughPlace
           const LPM_SelectionCursor * removingArea,
           size_t writeTextSize );
 
+void TextStorage_sync(TextStorage * o, size_t pos);
+void TextStorage_recv(TextStorage * o, LPM_SelectionCursor * cursor);
+
 static inline void TextStorage_init
         ( TextStorage * o,
-          TextStorageImpl * storageImpl)
+          const Modules * m )
 {
-    o->storage = storageImpl;
+    o->m = m;
+    o->needToSync = false;
 }
 
 static inline void TextStorage_clear(TextStorage * o, bool deep)
 {
-    TextStorageImpl_clear(o->storage, deep);
-}
-
-static inline void TextStorage_sync(TextStorage * o)
-{
-    return TextStorageImpl_sync(o->storage);
+    TextStorageImpl_clear(o->m->textStorageImpl, deep);
 }
 
 static inline size_t TextStorage_freeSize(TextStorage * o)
 {
-    return TextStorageImpl_freeSize(o->storage);
+    return TextStorageImpl_freeSize(o->m->textStorageImpl);
 }
 
 static inline size_t TextStorage_endOfText(TextStorage * o)
 {
-    return TextStorageImpl_endOfText(o->storage);
+    return TextStorageImpl_endOfText(o->m->textStorageImpl);
+}
+
+static inline bool TextStorage_needToSync(TextStorage * o)
+{
+    return o->needToSync;
 }
 
 #endif // TEXT_STORAGE_H

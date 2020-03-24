@@ -15,14 +15,14 @@ static const size_t TEXT_BUFFER_SIZE = 1024*1024;
 static const size_t UNDO_BUFFER_SIZE = 4096;
 static const size_t CLIPBOARD_SIZE = 4096;
 static const size_t INSERTIONS_BUFFER_SIZE = 4096;
-static const size_t ENCODING_BUFFER_SIZE = 4096;
+static const size_t RECOVERY_BUFFER_SIZE = 4096;
 static const size_t HEAP_SIZE = 1200;
 
 static uint32_t textBuffer[TEXT_BUFFER_SIZE/4];
 static uint32_t undoBuffer[UNDO_BUFFER_SIZE/4];
 static uint32_t clipboard[CLIPBOARD_SIZE/4];
 static uint32_t insertionsBuffer[INSERTIONS_BUFFER_SIZE/4];
-static uint32_t encodingBuffer[ENCODING_BUFFER_SIZE/4];
+static uint32_t recoveryBuffer[RECOVERY_BUFFER_SIZE/4];
 static uint32_t heap[HEAP_SIZE/4];
 
 static const size_t MAX_METEO_SIZE = 14000;
@@ -52,7 +52,7 @@ static const LPM_EditorSettings editorSettings =
     { (uint8_t*)undoBuffer,       UNDO_BUFFER_SIZE       },
     { (uint8_t*)clipboard,        CLIPBOARD_SIZE         },
     { (uint8_t*)insertionsBuffer, INSERTIONS_BUFFER_SIZE },
-    { (uint8_t*)encodingBuffer,   ENCODING_BUFFER_SIZE   },
+    { (uint8_t*)recoveryBuffer,   RECOVERY_BUFFER_SIZE   },
     { (uint8_t*)heap, HEAP_SIZE },
     MAX_METEO_SIZE,
     MAX_FAX_CHAIN_SIZE,

@@ -62,7 +62,7 @@ void TestTextEditor::start(const Param & param)
         fileImpl.load("template_file.bin");
 
         LPM_EditorUserParams userParams;
-        userParams.mode            = LPM_EDITOR_MODE_TEMPLATE_EDIT;
+        userParams.mode            = LPM_EDITOR_MODE_TEXT_EDIT;
         userParams.endOfLineType   = LPM_ENDL_TYPE_LF;
         userParams.cursorInitPos   = LPM_CURSOR_INIT_POS_BEGIN;
         userParams.encodingTo      = LPM_ENCODING_ASCII;

@@ -72,7 +72,7 @@ void TextOperatorAndStorageTester::exec( const QString & logFileName,
         TextStorage op;
         TextStorageImpl impl;
         TextStorageImpl_init(&impl, &bfrSrc);
-        TextStorage_init(&op, &impl);
+        //TextStorage_init(&op, &);
         LPM_SelectionCursor rmar = { .pos = (size_t)rmawrPos, .len = (size_t)rmLen };
         bool writtenOp = TextStorage_replace(&op, &rmar, &bfrIns);
 

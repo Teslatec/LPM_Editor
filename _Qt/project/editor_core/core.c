@@ -41,6 +41,7 @@ static void _cutCmdHandler(Core * o);
 static void _saveCmdHandler(Core * o);
 static void _clearClipboardCmdHandler(Core * o);
 static void _undoHandler(Core * o);
+static void _recvHandler(Core * o);
 static void _outlineHelpCmdHandler(Core * o);
 static void _outlineStateHandler(Core * o);
 static void _timeoutCmdHandler(Core * o);
@@ -77,6 +78,8 @@ static bool _canEnterInsertionBorderChar(Core * o);
 static void _setHasActionToUndo(Core * o, bool state);
 static bool _hasNotActionToUndo(Core * o);
 
+static void _syncTextStorage(Core * o);
+
 void _printLineMap(Core * o);
 void _printDisplayCursor(Core * o);
 void _printTextCursor(Core * o);
@@ -92,6 +95,7 @@ static const CmdHandler cmdHandlerTable[] =
     &_saveCmdHandler,
     &_clearClipboardCmdHandler,
     &_undoHandler,
+    &_recvHandler,
     NULL,   // exitHandler - Обрабатывается в TextEditorCore_exec
     &_outlineHelpCmdHandler,
     &_outlineStateHandler,
@@ -123,6 +127,14 @@ uint32_t Core_exec(Core * o)
             break;
         else if(cmd < __EDITOR_NO_CMD)
             (*(cmdHandlerTable[cmd]))(o);
+
+        if(TextStorage_needToSync(o->modules->textStorage))
+            _syncTextStorage(o);
+
+        test_print_text_cursor(o->modules->textStorage->recvCursor.pos,
+                               o->modules->textStorage->recvCursor.len );
+        test_print_text_cursor(o->textCursor.pos,
+                               o->textCursor.len );
     }
 
     LPM_UnicodeDisplay_clearScreen(o->display);
@@ -163,6 +175,7 @@ void _prepare(Obj * o)
     o->textCursor.len = 0;
     PageFormatter_startWithPageAtTextPosition(o->modules->pageFormatter, &o->textCursor);
     PageFormatter_updateDisplay(o->modules->pageFormatter);
+    _syncTextStorage(o);
 }
 
 void _printLineMap(Core * o)
@@ -313,12 +326,21 @@ void _clearClipboardCmdHandler(Core * o)
 
 void _saveCmdHandler(Core * o)
 {
-    TextStorage_sync(o->modules->textStorage);
+    _syncTextStorage(o);
 }
 
 void _undoHandler(Core * o)
 {
     _undoAction(o);
+    PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
+    PageFormatter_updateDisplay(o->modules->pageFormatter);
+}
+
+void _recvHandler(Core * o)
+{
+    test_print("RECV!",0,0);
+    TextStorage_recv(o->modules->textStorage, &o->textCursor);
+    _setHasActionToUndo(o, false);
     PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
     PageFormatter_updateDisplay(o->modules->pageFormatter);
 }
@@ -336,7 +358,7 @@ void _outlineStateHandler(Core * o)
 
 void _timeoutCmdHandler(Core * o)
 {
-    TextStorage_sync(o->modules->textStorage);
+    (void)o;
 }
 
 bool _processEnteredChar(Core * o)
@@ -739,4 +761,13 @@ void _setHasActionToUndo(Core * o, bool state)
 bool _hasNotActionToUndo(Core * o)
 {
     return !(o->flags & FLAG_HAS_ACTION_TO_UNDO);
+}
+
+void _syncTextStorage(Core * o)
+{
+    test_beep();
+    TextStorage_sync
+            ( o->modules->textStorage,
+              PageFormatter_getCurrPagePos(o->modules->pageFormatter) );
+    test_print_unicode(o->modules->recoveryBuffer->buffer.data, o->modules->recoveryBuffer->buffer.size);
 }

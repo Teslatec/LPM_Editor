@@ -108,7 +108,7 @@ typedef struct LPM_EditorSettings
     LPM_Buf undoBuffer;
     LPM_Buf clipboard;
     LPM_Buf insertionsBuffer;
-    LPM_Buf encodingBuffer; // ??
+    LPM_Buf recoveryBuffer; // ??
     LPM_Buf heap;
 
     size_t maxMeteoSize;

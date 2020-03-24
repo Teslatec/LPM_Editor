@@ -31,6 +31,7 @@ typedef struct Modules
     struct PageFormatter    * pageFormatter;
     struct TextBuffer       * clipboardTextBuffer;
     struct TextBuffer       * undoTextBuffer;
+    struct TextBuffer       * recoveryBuffer;
     struct TextStorage      * textStorage;
     struct TextStorageImpl  * textStorageImpl;
     struct TextOperator     * textOperator;
@@ -40,7 +41,7 @@ typedef struct Modules
     struct LPM_MeteoFxns    * meteoFxns;
 } Modules;
 
-#define MODULES_AMOUNT 12
+#define MODULES_AMOUNT 13
 #define POINTER_SIZE   4
 
 #endif // MODULES_H

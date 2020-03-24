@@ -137,6 +137,10 @@ Cmd _processAsWithCtrlAndConvertToCmd(Obj * obj, const UBuf * buf)
             cmd = EDITOR_CMD_UNDO;
             break;
 
+        case 'r':
+            cmd = EDITOR_CMD_RECV;
+            break;
+
         case 'b':
             cmd = EDITOR_CMD_TEXT_CHANGED;
             obj->flags = TEXT_FLAG_TRUCATE_LINE;

@@ -7,6 +7,7 @@
 #define EMPTY_NAME  0x0000
 #define NOINIT_NAME 0xFFFF
 
+// TODO: проверить все с внешней ОЗУ. Разобраться с удалением
 // Переписать _fillServicePart для работы с внешней памятью
 
 static size_t _fullSize(const LPM_EditorSystemParams * sp);
@@ -29,7 +30,6 @@ uint32_t TemplateLoader_readTemplateNames(const Modules * m, const LPM_EditorSys
             name = EMPTY_NAME;
         m->templateNameTable[i] = name;
         base += fullSize;
-        test_print("read names", i, name);
     }
 
 
@@ -38,8 +38,6 @@ uint32_t TemplateLoader_readTemplateNames(const Modules * m, const LPM_EditorSys
 
 uint32_t TemplateLoader_readText(const Modules * m, const LPM_EditorSystemParams * sp, uint8_t index)
 {
-    test_print("read text", index, m->templateNameTable[index]);
-
     size_t fullSize = _fullSize(sp);
     LPM_Buf buf = { sp->settings->textBuffer.data, sp->settings->maxTemplateSize };
     LPM_File_read(sp->templatesFile, &buf, fullSize*index);
@@ -50,8 +48,6 @@ uint32_t TemplateLoader_readText(const Modules * m, const LPM_EditorSystemParams
 
 uint32_t TemplateLoader_saveText(const Modules * m, const LPM_EditorSystemParams * sp, uint8_t index)
 {
-    test_print("save text", index, m->templateNameTable[index]);
-
     size_t fullSize = _fullSize(sp);
 
     LPM_Buf buf = { sp->settings->textBuffer.data, fullSize };

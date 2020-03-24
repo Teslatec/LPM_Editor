@@ -412,7 +412,6 @@ bool _changePageIfNotOnCurrTextPosition(Obj * o, size_t pos)
         else
             textPosIsOnCurrPage = _changePageIfNotOnCurrTextPositionWhenPageCommon(o, pos, &pa);
 
-
         if(textPosIsOnCurrPage)
             break;
     }

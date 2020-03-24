@@ -144,6 +144,7 @@ size_t Controller_calcDesiredHeapSize(const LPM_EditorSystemParams * p)
             _alignSize(sizeof( PageFormatter    )) +
             _alignSize(sizeof( TextBuffer       )) +
             _alignSize(sizeof( TextBuffer       )) +
+            _alignSize(sizeof( TextBuffer       )) +
             _alignSize(sizeof( TextStorage      )) +
             _alignSize(sizeof( TextStorageImpl  )) +
             _alignSize(sizeof( TextOperator     )) +
@@ -171,6 +172,7 @@ Modules * _allocateModules(const LPM_EditorSystemParams * sp)
         sizeof(Core),
         sizeof(CmdReader),
         sizeof(PageFormatter),
+        sizeof(TextBuffer),
         sizeof(TextBuffer),
         sizeof(TextBuffer),
         sizeof(TextStorage),
@@ -242,7 +244,7 @@ void _initModules
     tmp.data = (unicode_t*)sp->settings->textBuffer.data;
     tmp.size = sp->settings->textBuffer.size / sizeof(unicode_t);
     TextStorageImpl_init(m->textStorageImpl, &tmp);
-    TextStorage_init(m->textStorage, m->textStorageImpl);
+    TextStorage_init(m->textStorage, m);
 
     LPM_SupportFxns fxns;
     fxns.lang     = m->langFxns;
@@ -259,6 +261,10 @@ void _initModules
     tmp.data = (unicode_t*)sp->settings->undoBuffer.data;
     tmp.size = sp->settings->undoBuffer.size / sizeof(unicode_t);
     TextBuffer_init(m->undoTextBuffer, &tmp, m);
+
+    tmp.data = (unicode_t*)sp->settings->recoveryBuffer.data;
+    tmp.size = sp->settings->recoveryBuffer.size / sizeof(unicode_t);
+    TextBuffer_init(m->recoveryBuffer, &tmp, m);
 
     PageFormatter_init(m->pageFormatter, m, sp->displayDriver, &sp->settings->pageParams);
 
@@ -278,7 +284,7 @@ void _clearServiceBuffers(const LPM_EditorSystemParams * sp)
     memset( sp->settings->undoBuffer.data,       0, sp->settings->undoBuffer.size       );
     memset( sp->settings->clipboard.data,        0, sp->settings->clipboard.size        );
     memset( sp->settings->insertionsBuffer.data, 0, sp->settings->insertionsBuffer.size );
-    memset( sp->settings->encodingBuffer.data,   0, sp->settings->encodingBuffer.size   );
+    memset( sp->settings->recoveryBuffer.data,   0, sp->settings->recoveryBuffer.size   );
 }
 
 void _clearTextBuffer(LPM_Buf * textBuffer)
