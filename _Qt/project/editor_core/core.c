@@ -130,11 +130,6 @@ uint32_t Core_exec(Core * o)
 
         if(TextStorage_needToSync(o->modules->textStorage))
             _syncTextStorage(o);
-
-        test_print_text_cursor(o->modules->textStorage->recvCursor.pos,
-                               o->modules->textStorage->recvCursor.len );
-        test_print_text_cursor(o->textCursor.pos,
-                               o->textCursor.len );
     }
 
     LPM_UnicodeDisplay_clearScreen(o->display);

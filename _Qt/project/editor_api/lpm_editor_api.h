@@ -27,17 +27,23 @@ typedef bool (*LPM_API_readGuiTextFxn)(Unicode_Buf*, LPM_Lang, LPM_GuiTextId);
 
 typedef enum LPM_EndlType
 {
-    LPM_ENDL_TYPE_CR,
+    LPM_ENDL_TYPE_CR = 0,
     LPM_ENDL_TYPE_LF,
     LPM_ENDL_TYPE_CRLF,
     LPM_ENDL_TYPE_AUTO
 } LPM_EndlType;
 
-typedef enum LPM_CursorInitPos
+typedef enum LPM_InitPos
 {
-    LPM_CURSOR_INIT_POS_BEGIN,
-    LPM_CURSOR_INIT_POS_END,
-} LPM_CursorInitPos;
+    LPM_INIT_POS_BEGIN = 0,
+    LPM_INIT_POS_END,
+} LPM_InitPos;
+
+typedef enum LPM_InitMode
+{
+    LPM_INIT_MODE_REPLACE = 0,
+    LPM_INIT_MODE_INSERT,
+} LPM_InitMode;
 
 typedef enum LPM_EditorMode
 {
@@ -79,7 +85,7 @@ typedef enum LPM_EditorResult
 
 typedef enum LPM_insertionInputPolicy
 {
-    LPM_INSERTION_INPUT_POLICY_NO_INPUT,
+    LPM_INSERTION_INPUT_POLICY_NO_INPUT   = 0,
     LPM_INSERTION_INPUT_POLICY_BEGIN_ONLY,
     LPM_INSERTION_INPUT_POLICY_END_ONLY,
     LPM_INSERTION_INPUT_POLICY_BEGIN_END
@@ -153,17 +159,20 @@ typedef struct LPM_EditorSystemParams
     LPM_API_readGuiTextFxn     readGuiTextFxn;
 } LPM_EditorSystemParams;
 
+// Флаг шаблона, начальное положение курсора, режим по умолчанию: вставка/замена
 typedef struct LPM_EditorUserParams
 {
-    LPM_EditorMode mode;
-    LPM_EndlType endOfLineType;
-    LPM_CursorInitPos cursorInitPos;
-    LPM_Encoding encodingFrom;
-    LPM_Encoding encodingTo;
-    bool prepareToPrint;
-    uint8_t lineBeginSpaces;
-    LPM_Lang lang;
-    LPM_Meteo meteoFormat;
+    LPM_EditorMode mode;        // 1
+    LPM_EndlType endlType;      // 1
+    LPM_InitPos  initPos;       // 1
+    LPM_InitMode initMode;      // 1
+    LPM_Encoding beginEncoding; // 1
+    LPM_Encoding endEncoding;   // 1
+    bool prepareToPrint;        // 1
+    uint8_t lineBeginSpaces;    // 1
+    LPM_Lang lang;              // 1
+    LPM_Meteo meteoFormat;      // 1
+    uint16_t templateFlag;      // 2
 } LPM_EditorUserParams;
 
 uint32_t LPM_API_execEditor

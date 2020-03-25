@@ -435,9 +435,9 @@ uint32_t _execEditorInInsertionsMode
 
     // Текст вставок уже сформирован модулем Core и лежит в буфере вставок
     _copyInsertionToTextBuffer(m);
-    LPM_Encoding_encodeTo( m->encodingFxns,
-                           &sp->settings->textBuffer,
-                           up->encodingTo );
+    LPM_Encoding_fromUnicode( m->encodingFxns,
+                              &sp->settings->textBuffer,
+                              up->endEncoding );
     return result;
 }
 
@@ -469,20 +469,6 @@ uint32_t _prepareEditorInTextOrMeteoMode
     }
 
     return result;
-
-//    size_t maxTextSize = sp->settings->textBuffer.size;
-//    if(_modeIsOneOfMeteoModes(up->mode))
-//    {
-//        Unicode_Buf tmp;
-//        _lpmBufToUnicodeBuf(&tmp, &sp->settings->textBuffer);
-//        if(!LPM_Meteo_checkFormat(m->meteoFxns, &tmp, up->meteoFormat))
-//            return LPM_EDITOR_ERROR_BAD_METEO_FORMAT;
-
-//        LPM_Meteo_fromMeteo(m->meteoFxns, &tmp, up->meteoFormat);
-//        maxTextSize = sp->settings->maxMeteoSize;
-//    }
-
-//    return _checkTextAndTranscodeToUnicodeIfOk(m, up, sp, maxTextSize, false);
 }
 
 
@@ -511,9 +497,9 @@ uint32_t _shutDownEditorInTextOrMeteoMode
             return LPM_EDITOR_ERROR_BAD_METEO_FORMAT;
     }
 
-    LPM_Encoding_encodeTo( m->encodingFxns,
-                           &sp->settings->textBuffer,
-                           up->encodingTo );
+    LPM_Encoding_fromUnicode( m->encodingFxns,
+                              &sp->settings->textBuffer,
+                              up->endEncoding );
 
     return LPM_EDITOR_OK;
 }
@@ -527,14 +513,14 @@ uint32_t _checkTextAndTranscodeToUnicodeIfOk
 {
     if(!LPM_Encoding_checkText( m->encodingFxns,
                                 &sp->settings->textBuffer,
-                                up->encodingFrom,
+                                up->beginEncoding,
                                 maxSize,
                                 ignoreSpecChars ))
         return LPM_EDITOR_ERROR_BAD_ENCODING;
 
-    LPM_Encoding_decodeFrom( m->encodingFxns,
-                             &sp->settings->textBuffer,
-                             up->encodingFrom );
+    LPM_Encoding_toUnicode( m->encodingFxns,
+                            &sp->settings->textBuffer,
+                            up->beginEncoding );
 
     return LPM_EDITOR_OK;
 }

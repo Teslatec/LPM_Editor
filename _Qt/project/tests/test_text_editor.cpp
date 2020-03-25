@@ -63,10 +63,11 @@ void TestTextEditor::start(const Param & param)
 
         LPM_EditorUserParams userParams;
         userParams.mode            = LPM_EDITOR_MODE_TEXT_EDIT;
-        userParams.endOfLineType   = LPM_ENDL_TYPE_LF;
-        userParams.cursorInitPos   = LPM_CURSOR_INIT_POS_BEGIN;
-        userParams.encodingTo      = LPM_ENCODING_ASCII;
-        userParams.encodingFrom    = LPM_ENCODING_KOI_8;
+        userParams.endlType        = LPM_ENDL_TYPE_CRLF;
+        userParams.initPos         = LPM_INIT_POS_BEGIN;
+        userParams.initMode        = LPM_INIT_MODE_REPLACE;
+        userParams.beginEncoding   = LPM_ENCODING_KOI_8;
+        userParams.endEncoding     = LPM_ENCODING_ASCII;
         userParams.prepareToPrint  = true;
         userParams.lineBeginSpaces = 4;
         userParams.lang            = LPM_LANG_RUS_ENG;

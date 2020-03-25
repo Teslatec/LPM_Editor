@@ -30,7 +30,7 @@ static inline bool LPM_Encoding_checkText
     return (*fxns->checkText)(text, encoding, maxSize, ignoreSpecChars);
 }
 
-static inline void LPM_Encoding_encodeTo
+static inline void LPM_Encoding_toUnicode
         ( const LPM_EncodingFxns * fxns,
           const LPM_Buf * text,
           LPM_Encoding encoding )
@@ -38,7 +38,7 @@ static inline void LPM_Encoding_encodeTo
     (*fxns->toUnicode)(text, encoding);
 }
 
-static inline void LPM_Encoding_decodeFrom
+static inline void LPM_Encoding_fromUnicode
         ( const LPM_EncodingFxns * fxns,
           const LPM_Buf * text,
           LPM_Encoding encoding )
