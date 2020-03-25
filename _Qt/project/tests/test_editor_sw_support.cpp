@@ -83,52 +83,53 @@ bool TestEditorSwSupport::readSettings(LPM_EditorSettings * setting)
 
 bool TestEditorSwSupport::readSupportFxns(LPM_SupportFxns * fxns, LPM_Lang lang)
 {
-    auto meteoCheckFormat = [](const LPM_Buf * msgBuffer, LPM_Meteo format)
+    auto meteoCheckFormat = [](const Unicode_Buf * msgBuffer, LPM_Meteo format)
     {
         Q_UNUSED(msgBuffer);
         qDebug() << "Проверяю формат метеосообщения:" << format;
         return true;
     };
 
-    auto meteoDecodeFrom = [](LPM_Buf * msgBuffer, LPM_Meteo format)
+    auto fromMeteo = [](const Unicode_Buf * msgBuffer, LPM_Meteo format)
     {
         Q_UNUSED(msgBuffer);
-        qDebug() << "Преобразую метеосообщение в текст:" << format;
+        qDebug() << "Преобразую метеосообщение формата" << format << "в текст";
     };
 
-    auto meteoEncodeTo = [](LPM_Buf * msgBuffer, LPM_Meteo format)
+    auto toMeteo = [](const Unicode_Buf * msgBuffer, LPM_Meteo format)
     {
         Q_UNUSED(msgBuffer);
-        qDebug() << "Преобразую метеосообщение в текст:" << format;
+        qDebug() << "Преобразую текст в метеосообщение формата" << format;
     };
 
-    auto encodingCheckText = [](const LPM_Buf * text, LPM_Encoding encoding, size_t maxTextSize)
+    auto encodingCheckText = [](const LPM_Buf * text, LPM_Encoding encoding, size_t maxTextSize, bool ignoreSpecChars)
     {
         Q_UNUSED(text);
         qDebug() << "Проверяю текст размером:" << maxTextSize
-                 << "на соотвествие кодировке:" << encoding;
+                 << "на соотвествие кодировке:" << encoding << "спец. символы"
+                 << (ignoreSpecChars ? "считаю текстом" : "не считаю текстом");
         return true;
     };
 
-    auto encodingDecodeFrom = [](LPM_Buf * text, LPM_Encoding encoding)
+    auto encodingFromUnicode = [](const LPM_Buf * text, LPM_Encoding encoding)
     {
         Q_UNUSED(text);
         qDebug() << "Перекодирую из кодировки" << encoding << "в UCS2-LE";
     };
 
-    auto encodingEncodeTo = [](LPM_Buf * text, LPM_Encoding encoding)
+    auto encodingToUnicode = [](const LPM_Buf * text, LPM_Encoding encoding)
     {
         Q_UNUSED(text);
         qDebug() << "Перекодирую из UCS2-LE в кодировку" << encoding;
     };
 
     fxns->meteo->checkFormat = meteoCheckFormat;
-    fxns->meteo->decodeFrom  = meteoDecodeFrom;
-    fxns->meteo->encodeTo    = meteoEncodeTo;
+    fxns->meteo->fromMeteo   = fromMeteo;
+    fxns->meteo->toMeteo     = toMeteo;
 
-    fxns->encoding->checkText  = encodingCheckText;
-    fxns->encoding->encodeTo   = encodingEncodeTo;
-    fxns->encoding->decodeFrom = encodingDecodeFrom;
+    fxns->encoding->checkText   = encodingCheckText;
+    fxns->encoding->toUnicode   = encodingToUnicode;
+    fxns->encoding->fromUnicode = encodingFromUnicode;
 
     if(lang == LPM_LANG_RUS_ENG)
     {

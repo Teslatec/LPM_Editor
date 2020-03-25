@@ -2,6 +2,7 @@
 #define LPM_METEO_API_H
 
 #include "lpm_structs.h"
+#include "lpm_unicode.h"
 
 typedef enum LPM_Meteo
 {
@@ -19,33 +20,33 @@ typedef enum LPM_Meteo
 
 typedef struct LPM_MeteoFxns
 {
-    bool (*checkFormat)(const LPM_Buf * msgBuffer, LPM_Meteo format);
-    void (*encodeTo)(LPM_Buf * msgBuffer, LPM_Meteo format);
-    void (*decodeFrom)(LPM_Buf * msgBuffer, LPM_Meteo format);
+    bool (*checkFormat)(const Unicode_Buf * msgBuffer, LPM_Meteo format);
+    void (*toMeteo)    (const Unicode_Buf * msgBuffer, LPM_Meteo format);
+    void (*fromMeteo)  (const Unicode_Buf * msgBuffer, LPM_Meteo format);
 } LPM_MeteoFxns;
 
 static inline bool LPM_Meteo_checkFormat
         ( const LPM_MeteoFxns * fxns,
-          const LPM_Buf * msgBuffer,
+          const Unicode_Buf * msgBuffer,
           LPM_Meteo format )
 {
     return (*fxns->checkFormat)(msgBuffer, format);
 }
 
-static inline void LPM_Meteo_encodeTo
+static inline void LPM_Meteo_toMeteo
         ( const LPM_MeteoFxns * fxns,
-          LPM_Buf * msgBuffer,
+          const Unicode_Buf * msgBuffer,
           LPM_Meteo format )
 {
-    (*fxns->encodeTo)(msgBuffer, format);
+    (*fxns->toMeteo)(msgBuffer, format);
 }
 
-static inline void LPM_Meteo_decodeFrom
+static inline void LPM_Meteo_fromMeteo
         ( const LPM_MeteoFxns * fxns,
-          LPM_Buf * msgBuffer,
+          const Unicode_Buf * msgBuffer,
           LPM_Meteo format )
 {
-    (*fxns->decodeFrom)(msgBuffer, format);
+    (*fxns->fromMeteo)(msgBuffer, format);
 }
 
 

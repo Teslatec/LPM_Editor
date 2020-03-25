@@ -338,7 +338,6 @@ void _undoHandler(Core * o)
 
 void _recvHandler(Core * o)
 {
-    test_print("RECV!",0,0);
     TextStorage_recv(o->modules->textStorage, &o->textCursor);
     _setHasActionToUndo(o, false);
     PageFormatter_updatePageWhenTextChanged(o->modules->pageFormatter, &o->textCursor);
@@ -769,5 +768,5 @@ void _syncTextStorage(Core * o)
     TextStorage_sync
             ( o->modules->textStorage,
               PageFormatter_getCurrPagePos(o->modules->pageFormatter) );
-    test_print_unicode(o->modules->recoveryBuffer->buffer.data, o->modules->recoveryBuffer->buffer.size);
+    //test_print_unicode(o->modules->recoveryBuffer->buffer.data, o->modules->recoveryBuffer->buffer.size);
 }

@@ -15,34 +15,35 @@ typedef enum LPM_Encoding
 typedef struct LPM_EncodingFxns
 {
     // maxSize - масимальный размер текста в байтах ДЛЯ КОДИРОВКИ UNICODE!!!
-    bool (*checkText)(const LPM_Buf * text, LPM_Encoding encoding, size_t maxSize);
-    void (*encodeTo)(LPM_Buf * text, LPM_Encoding encoding);
-    void (*decodeFrom)(LPM_Buf * text, LPM_Encoding encoding);
+    bool (*checkText)  (const LPM_Buf * text, LPM_Encoding encoding, size_t maxSize, bool ignoreSpecChars);
+    void (*toUnicode)  (const LPM_Buf * text, LPM_Encoding encoding);
+    void (*fromUnicode)(const LPM_Buf * text, LPM_Encoding encoding);
 } LPM_EncodingFxns;
 
 static inline bool LPM_Encoding_checkText
         ( const LPM_EncodingFxns * fxns,
           const LPM_Buf * text,
           LPM_Encoding encoding,
-          size_t maxSize )
+          size_t maxSize,
+          bool ignoreSpecChars )
 {
-    return (*fxns->checkText)(text, encoding, maxSize);
+    return (*fxns->checkText)(text, encoding, maxSize, ignoreSpecChars);
 }
 
 static inline void LPM_Encoding_encodeTo
         ( const LPM_EncodingFxns * fxns,
-          LPM_Buf * text,
+          const LPM_Buf * text,
           LPM_Encoding encoding )
 {
-    (*fxns->encodeTo)(text, encoding);
+    (*fxns->toUnicode)(text, encoding);
 }
 
 static inline void LPM_Encoding_decodeFrom
         ( const LPM_EncodingFxns * fxns,
-          LPM_Buf * text,
+          const LPM_Buf * text,
           LPM_Encoding encoding )
 {
-    (*fxns->decodeFrom)(text, encoding);
+    (*fxns->fromUnicode)(text, encoding);
 }
 
 

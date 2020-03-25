@@ -90,7 +90,14 @@ void TestTextEditor::start(const Param & param)
         if(result == LPM_EDITOR_OK)
             qDebug() << "Работа завершена без ошибок";
         else
-            qDebug() << "Работа завершена с ошибкой";
+        {
+            QByteArray arr;
+            arr.append((uint8_t)(result >> 24));
+            arr.append((uint8_t)(result >> 16));
+            arr.append((uint8_t)(result >> 8));
+            arr.append((uint8_t)result);
+            qDebug() << "Работа завершена с ошибкой:" << arr.toHex();
+        }
 
         fileImpl.save("template_file.bin");
 

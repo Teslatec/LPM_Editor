@@ -37,6 +37,8 @@ static bool _modeIsOneOfTemplatesModes(LPM_EditorMode mode);
 static bool _modeIsOneOfInsertionsModes(LPM_EditorMode mode);
 static bool _modeIsOneOfMeteoModes(LPM_EditorMode mode);
 
+static void _lpmBufToUnicodeBuf(Unicode_Buf * unc, const LPM_Buf * lpm);
+
 //static bool _modeIsOneOfCreationModes(LPM_EditorMode mode);
 //static bool _modeIsOneOfViewModes(LPM_EditorMode mode);
 
@@ -74,7 +76,8 @@ static uint32_t _checkTextAndTranscodeToUnicodeIfOk
         ( const Modules * m,
           const LPM_EditorUserParams * up,
           const LPM_EditorSystemParams * sp ,
-          size_t maxSize );
+          size_t maxSize,
+          bool ignoreSpecChars );
 
 static uint32_t _transformToPrintFormat
         ( const Modules * m,
@@ -312,6 +315,12 @@ bool _modeIsOneOfMeteoModes(LPM_EditorMode mode)
     return ((uint8_t)mode & 0x30) == 0x10;
 }
 
+void _lpmBufToUnicodeBuf(Unicode_Buf * unc, const LPM_Buf * lpm)
+{
+    unc->data = (unicode_t*)lpm->data;
+    unc->size = lpm->size / sizeof(unicode_t);
+}
+
 //bool _modeIsOneOfCreationModes(LPM_EditorMode mode)
 //{
 //    return ((uint8_t)mode & 0x03) == 0x00;
@@ -438,21 +447,42 @@ uint32_t _prepareEditorInTextOrMeteoMode
           const LPM_EditorUserParams * up,
           const LPM_EditorSystemParams * sp )
 {
-    size_t maxTextSize = sp->settings->textBuffer.size;
-    if(_modeIsOneOfMeteoModes(up->mode))
+    bool modeIsMeteo = _modeIsOneOfMeteoModes(up->mode);
+    size_t maxTextSize = modeIsMeteo ? sp->settings->maxMeteoSize :
+                                       sp->settings->textBuffer.size;
+
+    size_t result = _checkTextAndTranscodeToUnicodeIfOk
+            (m, up, sp, maxTextSize, modeIsMeteo);
+    if(result != LPM_EDITOR_OK)
+        return result;
+
+    if(modeIsMeteo)
     {
-        if(!LPM_Meteo_checkFormat( m->meteoFxns,
-                                   &sp->settings->textBuffer,
-                                   up->meteoFormat ))
+        Unicode_Buf tmp;
+        _lpmBufToUnicodeBuf(&tmp, &sp->settings->textBuffer);
+
+        if(!LPM_Meteo_checkFormat(m->meteoFxns, &tmp, up->meteoFormat))
             return LPM_EDITOR_ERROR_BAD_METEO_FORMAT;
 
-        LPM_Meteo_decodeFrom( m->meteoFxns,
-                              &sp->settings->textBuffer,
-                              up->meteoFormat );
+        LPM_Meteo_fromMeteo(m->meteoFxns, &tmp, up->meteoFormat);
         maxTextSize = sp->settings->maxMeteoSize;
     }
 
-    return _checkTextAndTranscodeToUnicodeIfOk(m, up, sp, maxTextSize);
+    return result;
+
+//    size_t maxTextSize = sp->settings->textBuffer.size;
+//    if(_modeIsOneOfMeteoModes(up->mode))
+//    {
+//        Unicode_Buf tmp;
+//        _lpmBufToUnicodeBuf(&tmp, &sp->settings->textBuffer);
+//        if(!LPM_Meteo_checkFormat(m->meteoFxns, &tmp, up->meteoFormat))
+//            return LPM_EDITOR_ERROR_BAD_METEO_FORMAT;
+
+//        LPM_Meteo_fromMeteo(m->meteoFxns, &tmp, up->meteoFormat);
+//        maxTextSize = sp->settings->maxMeteoSize;
+//    }
+
+//    return _checkTextAndTranscodeToUnicodeIfOk(m, up, sp, maxTextSize, false);
 }
 
 
@@ -470,21 +500,20 @@ uint32_t _shutDownEditorInTextOrMeteoMode
             return result;
     }
 
+    if(_modeIsOneOfMeteoModes(up->mode))
+    {
+        Unicode_Buf tmp;
+        _lpmBufToUnicodeBuf(&tmp, &sp->settings->textBuffer);
+
+        LPM_Meteo_toMeteo(m->meteoFxns, &tmp, up->meteoFormat);
+
+        if(!LPM_Meteo_checkFormat(m->meteoFxns, &tmp, up->meteoFormat))
+            return LPM_EDITOR_ERROR_BAD_METEO_FORMAT;
+    }
+
     LPM_Encoding_encodeTo( m->encodingFxns,
                            &sp->settings->textBuffer,
                            up->encodingTo );
-
-    if(_modeIsOneOfMeteoModes(up->mode))
-    {
-        LPM_Meteo_encodeTo( m->meteoFxns,
-                            &sp->settings->textBuffer,
-                            up->meteoFormat );
-
-        if(!LPM_Meteo_checkFormat( m->meteoFxns,
-                                   &sp->settings->textBuffer,
-                                   up->meteoFormat ))
-            return LPM_EDITOR_ERROR_BAD_METEO_FORMAT;
-    }
 
     return LPM_EDITOR_OK;
 }
@@ -493,12 +522,14 @@ uint32_t _checkTextAndTranscodeToUnicodeIfOk
         ( const Modules * m,
           const LPM_EditorUserParams * up,
           const LPM_EditorSystemParams * sp,
-          size_t maxSize )
+          size_t maxSize,
+          bool ignoreSpecChars )
 {
     if(!LPM_Encoding_checkText( m->encodingFxns,
                                 &sp->settings->textBuffer,
                                 up->encodingFrom,
-                                maxSize ))
+                                maxSize,
+                                ignoreSpecChars ))
         return LPM_EDITOR_ERROR_BAD_ENCODING;
 
     LPM_Encoding_decodeFrom( m->encodingFxns,
@@ -569,7 +600,7 @@ uint32_t _loadExistedTemplateByNameFromInsertionsText
     if(result != LPM_EDITOR_OK)
         return result;
 
-    result = _checkTextAndTranscodeToUnicodeIfOk(m, up, sp, sp->settings->insertionsBuffer.size);
+    result = _checkTextAndTranscodeToUnicodeIfOk(m, up, sp, sp->settings->insertionsBuffer.size, false);
     if(result != LPM_EDITOR_OK)
         return result;
 
