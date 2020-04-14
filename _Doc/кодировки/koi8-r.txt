@@ -1,0 +1,29 @@
+ЪЧТест перекодировщика. Кодировка: КОИ8-Р
+"съешь еще этих мягких французских булок"
+"СЪЕШЬ ЕЩЕ ЭТИХ МЯГКИХ ФРАНЦУЗСКИХ БУЛОК"
+"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed id leo massa. Vivamus ,attis est felis, ac feugiat mauris dictum nec. !?"
+                                                    Конец строки
+
+
+
+
+
+
+
+
+                                                  Конец страницы Начало страницы
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                  Конец страницы
